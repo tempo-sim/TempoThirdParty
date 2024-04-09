@@ -2,6 +2,14 @@
 
 set -e
 
+if [[ "$OSTYPE" != "darwin"* ]]; then
+      echo "This script can only be run on Mac"
+      exit 1
+fi
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+ROOT_DIR=$(realpath "$SCRIPT_DIR/..")
+
 echo "Checking for prerequisites"
 
 # Check for git
@@ -20,11 +28,11 @@ echo ""
 
 # Check for tag
 if ! TAG=$(git describe --tags); then
-    echo "Could not find git tag";
+    echo "Could not find git tag"
     exit 1
 fi
 
-echo -e "Using git tag: $TAG\n";
+echo -e "Using git tag: $TAG\n"
 
 # Check for UNREAL_ENGINE_PATH
 if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
@@ -40,13 +48,10 @@ fi
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
-echo "All prerequisites satisfied. Starting build."
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-ROOT_DIR="$SCRIPT_DIR/.."
+echo -e "All prerequisites satisfied. Starting build.\n"
 
 echo "Removing contents of Output folder"
-find "$ROOT_DIR/Output" -type d -maxdepth 1 -mindepth 1 -exec rm -rf {} \;
+find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
 
 echo -e "\nBuilding re2..."
 cd "$ROOT_DIR/Source/re2"
@@ -54,7 +59,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
 mkdir -p "$ROOT_DIR/Build/Mac/re2" && cd "$ROOT_DIR/Build/Mac/re2"
 cmake -G "Unix Makefiles" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/RE2" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/apple.toolchain.cmake" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/apple.toolchain.cmake" \
  -DCMAKE_INSTALL_LIBDIR="Libraries/Mac" -DPLATFORM=MAC_UNIVERSAL -DDEPLOYMENT_TARGET=10.14 \
  -DCMAKE_INSTALL_CMAKEDIR="Libraries/Mac/cmake" \
  -DCMAKE_CXX_STANDARD=17 -DRE2_BUILD_TESTING=OFF \
@@ -69,7 +74,7 @@ mkdir -p "$ROOT_DIR/Build/Mac/abseil-cpp" && cd "$ROOT_DIR/Build/Mac/abseil-cpp"
 cmake -G "Unix Makefiles" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/Abseil" \
  -DCMAKE_INSTALL_LIBDIR="Libraries/Mac" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/apple.toolchain.cmake" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/apple.toolchain.cmake" \
  -DPLATFORM=MAC_UNIVERSAL -DDEPLOYMENT_TARGET=10.14 \
  -DCMAKE_INSTALL_CMAKEDIR="Libraries/Mac/cmake" \
  -DCMAKE_CXX_STANDARD=17 -DBUILD_TESTING=False -DABSL_PROPAGATE_CXX_STD=True \
@@ -83,7 +88,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
 mkdir -p "$ROOT_DIR/Build/Mac/protobuf" && cd "$ROOT_DIR/Build/Mac/protobuf"
 cmake -G "Unix Makefiles" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/Protobuf" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/apple.toolchain.cmake" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/apple.toolchain.cmake" \
  -DCMAKE_INSTALL_LIBDIR="Libraries/Mac" -DPLATFORM=MAC_UNIVERSAL -DDEPLOYMENT_TARGET=10.14 \
  -DCMAKE_INSTALL_CMAKEDIR="Libraries/Mac/cmake" -DCMAKE_CXX_STANDARD=17 \
  -Dprotobuf_BUILD_TESTS=false -Dprotobuf_WITH_ZLIB=false \
@@ -101,7 +106,7 @@ mkdir -p "$ROOT_DIR/Build/Mac/gRPC" && cd "$ROOT_DIR/Build/Mac/gRPC"
 cmake -G "Unix Makefiles" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
  -DgRPC_INSTALL_LIBDIR="Libraries/Mac" -DgRPC_INSTALL_CMAKEDIR="Libraries/Mac/cmake" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/apple.toolchain.cmake" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/apple.toolchain.cmake" \
  -DPLATFORM=MAC_UNIVERSAL -DDEPLOYMENT_TARGET=10.14 -DCMAKE_CXX_STANDARD=17 \
  -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="$ROOT_DIR/Output/Abseil/Libraries/Mac/cmake" \
  -DgRPC_RE2_PROVIDER=package -Dre2_DIR="$ROOT_DIR/Output/RE2/Libraries/Mac/cmake" \
@@ -124,6 +129,9 @@ cmake -G "Unix Makefiles" \
  -D_gRPC_PROTOBUF_PROTOC_EXECUTABLE="$ROOT_DIR/Output/Protobuf/bin/protoc.app/Contents/MacOS/protoc" \
  -DPACKAGE_PREFIX_DIR="$ROOT_DIR/Output/RE2" \
  "$ROOT_DIR/Source/gRPC"
+cmake --build . --target grpc_cpp_plugin --config Release
+cmake --build . --target grpc_python_plugin --config Release
+PATH=$PATH:"$ROOT_DIR/Output/Protobuf/Libraries/Mac"
 cmake --build . --target install --config Release
 echo -e "Successfully built gRPC.\n"
 
@@ -148,6 +156,9 @@ rm -rf "$ROOT_DIR/Output/gRPC/Binaries/grpc_cpp_plugin.app"
 mv "$ROOT_DIR/Output/gRPC/Binaries/grpc_python_plugin.app/Contents/MacOS/grpc_python_plugin" "$ROOT_DIR/Output/gRPC/Binaries"
 rm -rf "$ROOT_DIR/Output/gRPC/Binaries/grpc_python_plugin.app"
 
-ditto -ck "$ROOT_DIR/Output" "$ROOT_DIR/Output/TempoThirdParty-Mac-$TAG.zip"
+echo -e "Archiving outputs...\n"
+ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Mac-$TAG.tar.gz"
+rm -rf "$ARCHIVE"
+tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" "$(ls "$ROOT_DIR/Output")"
 
-echo "Done! Archive: $ROOT_DIR/Output/TempoThirdParty-Mac-$TAG.zip"
+echo "Done! Archive: $ARCHIVE"
