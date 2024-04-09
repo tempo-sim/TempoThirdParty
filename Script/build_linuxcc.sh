@@ -27,7 +27,8 @@ fi
 echo ""
 
 # Check for tag
-if ! TAG=$(git describe --tags); then
+TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+if [ "$TAG" = "undefined" ]; then
     echo "Could not find git tag"
     exit 1
 fi
@@ -83,8 +84,9 @@ cp "$GRPC_CPP_PLUGIN" "$TEMP"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-echo "Removing contents of Output folder"
+echo "Removing contents of Output and Build folders"
 find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
+find "$ROOT_DIR/Build" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
 
 echo -e "\nBuilding re2..."
 cd "$ROOT_DIR/Source/re2"
@@ -189,6 +191,6 @@ rm -rf "$TEMP"
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Linux-$TAG.tar.gz"
 rm -rf "$ARCHIVE"
-tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" "$(ls "$ROOT_DIR/Output")"
+tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" Abseil gRPC Protobuf RE2
 
 echo "Done! Archive: $ARCHIVE"

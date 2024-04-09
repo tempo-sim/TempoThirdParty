@@ -27,7 +27,8 @@ fi
 echo ""
 
 # Check for tag
-if ! TAG=$(git describe --tags); then
+TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+if [ "$TAG" = "undefined" ]; then
     echo "Could not find git tag"
     exit 1
 fi
@@ -50,8 +51,9 @@ echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-echo "Removing contents of Output folder"
+echo "Removing contents of Output and Build folders"
 find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
+find "$ROOT_DIR/Build" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
 
 echo -e "\nBuilding re2..."
 cd "$ROOT_DIR/Source/re2"
@@ -144,21 +146,15 @@ mv "$ROOT_DIR/Output/Protobuf/include" "$ROOT_DIR/Output/Protobuf/Includes"
 mv "$ROOT_DIR/Output/Protobuf/bin" "$ROOT_DIR/Output/Protobuf/Binaries"
 rm -rf "$ROOT_DIR/Output/Protobuf/Libraries/Mac/cmake"
 rm -rf "$ROOT_DIR/Output/Protobuf/Libraries/Mac/pkgconfig"
-mv "$ROOT_DIR/Output/Protobuf/Binaries/protoc.app/Contents/MacOS/protoc" "$ROOT_DIR/Output/Protobuf/Binaries"
-rm -rf "$ROOT_DIR/Output/Protobuf/Binaries/protoc.app"
 mv "$ROOT_DIR/Output/gRPC/include" "$ROOT_DIR/Output/gRPC/Includes"
 mv "$ROOT_DIR/Output/gRPC/bin" "$ROOT_DIR/Output/gRPC/Binaries"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Mac/cmake"
 rm -rf "$ROOT_DIR/Output/gRPC/share"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Mac/pkgconfig"
-mv "$ROOT_DIR/Output/gRPC/Binaries/grpc_cpp_plugin.app/Contents/MacOS/grpc_cpp_plugin" "$ROOT_DIR/Output/gRPC/Binaries"
-rm -rf "$ROOT_DIR/Output/gRPC/Binaries/grpc_cpp_plugin.app"
-mv "$ROOT_DIR/Output/gRPC/Binaries/grpc_python_plugin.app/Contents/MacOS/grpc_python_plugin" "$ROOT_DIR/Output/gRPC/Binaries"
-rm -rf "$ROOT_DIR/Output/gRPC/Binaries/grpc_python_plugin.app"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Mac-$TAG.tar.gz"
 rm -rf "$ARCHIVE"
-tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" "$(ls "$ROOT_DIR/Output")"
+tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" Abseil gRPC Protobuf RE2
 
 echo "Done! Archive: $ARCHIVE"
