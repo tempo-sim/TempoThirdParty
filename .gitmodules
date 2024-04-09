@@ -1,0 +1,12 @@
+[submodule "Source/abseil-cpp"]
+	path = Source/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git
+[submodule "Source/gRPC"]
+	path = Source/gRPC
+	url = https://github.com/grpc/grpc.git
+[submodule "Source/re2"]
+	path = Source/re2
+	url = https://github.com/google/re2.git
+[submodule "Source/protobuf"]
+	path = Source/protobuf
+	url = https://github.com/protocolbuffers/protobuf.git

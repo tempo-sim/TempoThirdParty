@@ -1,0 +1,118 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4137ce2e9..b0d33a074 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -276,6 +276,11 @@ else (MSVC)
+   set(LIB_PREFIX)
+ endif (MSVC)
+ 
++if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++  # Clang warning suppressions
++  add_definitions(-Wall -Werror -Wno-deprecated-register -Wno-unused-function -Wno-error=register)
++endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++
+ include_directories(
+   ${ZLIB_INCLUDE_DIRECTORIES}
+   ${protobuf_BINARY_DIR}
+diff --git a/cmake/install.cmake b/cmake/install.cmake
+index 998c2e31a..f7ab963f3 100644
+--- a/cmake/install.cmake
++++ b/cmake/install.cmake
+@@ -43,6 +43,11 @@ foreach(_library ${_protobuf_libraries})
+     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${_library}
+     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${_library}
+     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${_library})
++  if(WIN32)
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/${_library}.pdb
++       DESTINATION ${CMAKE_INSTALL_LIBDIR}
++       CONFIGURATIONS Debug)
++  endif()
+ endforeach()
+ 
+ if (protobuf_BUILD_PROTOC_BINARIES)
+diff --git a/src/google/protobuf/compiler/importer.cc b/src/google/protobuf/compiler/importer.cc
+index 9e68da679..57463f054 100644
+--- a/src/google/protobuf/compiler/importer.cc
++++ b/src/google/protobuf/compiler/importer.cc
+@@ -393,9 +393,11 @@ DiskSourceTree::DiskFileToVirtualFile(absl::string_view disk_file,
+   for (int i = 0; i < mapping_index; i++) {
+     if (ApplyMapping(*virtual_file, mappings_[i].virtual_path,
+                      mappings_[i].disk_path, shadowing_disk_file)) {
+-      if (access(shadowing_disk_file->c_str(), F_OK) >= 0) {
+-        // File exists.
+-        return SHADOWED;
++        FILE* fp = fopen(shadowing_disk_file->c_str(), "r");
++        if (fp != nullptr) {
++            // File exists.
++            fclose(fp);
++            return SHADOWED;
+       }
+     }
+   }
+diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
+index 25abc3039..8955de780 100644
+--- a/src/google/protobuf/port_def.inc
++++ b/src/google/protobuf/port_def.inc
+@@ -1039,6 +1039,8 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
+ // effectively but which people turn on anyways.
+ #ifdef __clang__
+ #pragma clang diagnostic push
++//disabling warnings with newer compilers without breaking builds with older compilers.
++#pragma clang diagnostic ignored "-Wunknown-warning-option"
+ // -Wshorten-64-to-32 is a typical pain where we diff pointers.
+ //   char* p = strchr(s, '\n');
+ //   return p ? p - s : -1;
+@@ -1114,7 +1116,7 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
+ #pragma warning(disable: 4125)
+ #endif
+ 
+-#if PROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII
++#if defined(PROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII) && PROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII
+ #define PROTOBUF_DEBUG true
+ #else
+ #define PROTOBUF_DEBUG false
+diff --git a/src/google/protobuf/stubs/port.h b/src/google/protobuf/stubs/port.h
+index 4a38c372f..66df4dd6e 100644
+--- a/src/google/protobuf/stubs/port.h
++++ b/src/google/protobuf/stubs/port.h
+@@ -63,8 +63,13 @@
+ #include <intrin.h>
+ #elif defined(__APPLE__)
+ #include <libkern/OSByteOrder.h>
+-#elif defined(__linux__) || defined(__ANDROID__) || defined(__CYGWIN__)
++#elif defined(__ANDROID__)
+ #include <byteswap.h>  // IWYU pragma: export
++#elif defined(__linux__) || defined(__CYGWIN__)
++#include <bits/byteswap.h>
++#define bswap_16(x) __bswap_16 (x)
++#define bswap_32(x) __bswap_32 (x)
++#define bswap_64(x) __bswap_64 (x)
+ #endif
+ 
+ // Legacy: some users reference these (internal-only) macros even though we
+diff --git a/third_party/utf8_range/CMakeLists.txt b/third_party/utf8_range/CMakeLists.txt
+index 344952d38..c22664af3 100644
+--- a/third_party/utf8_range/CMakeLists.txt
++++ b/third_party/utf8_range/CMakeLists.txt
+@@ -56,7 +56,7 @@ if (utf8_range_ENABLE_INSTALL)
+   include(GNUInstallDirs)
+ 
+   install(EXPORT ${PROJECT_NAME}-targets
+-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++    DESTINATION "${CMAKE_INSTALL_CMAKEDIR}"
+     NAMESPACE utf8_range::
+   )
+   install(TARGETS utf8_validity utf8_range EXPORT ${PROJECT_NAME}-targets
+@@ -68,10 +68,10 @@ if (utf8_range_ENABLE_INSTALL)
+   configure_package_config_file(
+     cmake/${PROJECT_NAME}-config.cmake.in
+     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++    INSTALL_DESTINATION "${CMAKE_INSTALL_CMAKEDIR}"
+   )
+   install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++    DESTINATION "${CMAKE_INSTALL_CMAKEDIR}"
+   )
+   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/utf8_range.pc.cmake
+                  ${CMAKE_CURRENT_BINARY_DIR}/utf8_range.pc @ONLY)
