@@ -90,6 +90,28 @@ index 4a38c372f..66df4dd6e 100644
  #endif
  
  // Legacy: some users reference these (internal-only) macros even though we
+diff --git a/src/google/protobuf/text_format.h b/src/google/protobuf/text_format.h
+index f851c910f..8c9387fbf 100644
+--- a/src/google/protobuf/text_format.h
++++ b/src/google/protobuf/text_format.h
+@@ -53,7 +53,7 @@ PROTOBUF_EXPORT bool ShouldRedactField(const FieldDescriptor* field);
+ // formats. A higher-level API must correspond to a greater number than any
+ // lower-level APIs it calls under the hood (e.g kDebugString >
+ // kMemberPrintToString > kPrintWithStream).
+-PROTOBUF_EXPORT enum class FieldReporterLevel {
++enum class PROTOBUF_EXPORT FieldReporterLevel {
+   kNoReport = 0,
+   kPrintMessage = 1,
+   kPrintWithGenerator = 2,
+@@ -76,7 +76,7 @@ class ErrorCollector;  // tokenizer.h
+ 
+ namespace internal {
+ // Enum used to set printing options for StringifyMessage.
+-PROTOBUF_EXPORT enum class Option;
++enum class PROTOBUF_EXPORT Option;
+ 
+ // Converts a protobuf message to a string with redaction enabled.
+ PROTOBUF_EXPORT std::string StringifyMessage(const Message& message,
 diff --git a/third_party/utf8_range/CMakeLists.txt b/third_party/utf8_range/CMakeLists.txt
 index 344952d38..c22664af3 100644
 --- a/third_party/utf8_range/CMakeLists.txt

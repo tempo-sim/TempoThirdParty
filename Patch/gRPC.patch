@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c5123edadf..436cc5fc45 100644
+index c5123edadf..bd63b9caec 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -50,6 +50,9 @@ set(gRPC_BUILD_MSVC_MP_COUNT 0 CACHE STRING "The maximum number of processes for
@@ -243,101 +243,82 @@ index c5123edadf..436cc5fc45 100644
      )
    endif()
  endif()
-@@ -5677,6 +5709,95 @@ endif()
+diff --git a/include/grpc/support/port_platform.h b/include/grpc/support/port_platform.h
+index d2ef98e41b..15875eda15 100644
+--- a/include/grpc/support/port_platform.h
++++ b/include/grpc/support/port_platform.h
+@@ -97,7 +97,7 @@
+ #endif
  
- endif()
+ #ifndef NOMINMAX
+-#define GRPC_NOMINMX_WAS_NOT_DEFINED
++#define GRPC_NOMINMAX_WAS_NOT_DEFINED
+ #define NOMINMAX
+ #endif /* NOMINMAX */
  
-+add_library(upb
-+  third_party/utf8_range/naive.c
-+  third_party/utf8_range/range2-neon.c
-+  third_party/utf8_range/range2-sse.c
-+  third_party/upb/upb/base/status.c
-+  third_party/upb/upb/hash/common.c
-+  third_party/upb/upb/json/decode.c
-+  third_party/upb/upb/json/encode.c
-+  third_party/upb/upb/lex/atoi.c
-+  third_party/upb/upb/lex/round_trip.c
-+  third_party/upb/upb/lex/strtod.c
-+  third_party/upb/upb/lex/unicode.c
-+  third_party/upb/upb/mem/alloc.c
-+  third_party/upb/upb/mem/arena.c
-+  third_party/upb/upb/message/accessors.c
-+  third_party/upb/upb/message/message.c
-+  third_party/upb/upb/mini_table/extension_registry.c
-+  third_party/upb/upb/reflection/def_pool.c
-+  third_party/upb/upb/reflection/def_type.c
-+  third_party/upb/upb/reflection/desc_state.c
-+  third_party/upb/upb/reflection/enum_def.c
-+  third_party/upb/upb/reflection/enum_reserved_range.c
-+  third_party/upb/upb/reflection/enum_value_def.c
-+  third_party/upb/upb/reflection/extension_range.c
-+  third_party/upb/upb/reflection/field_def.c
-+  third_party/upb/upb/reflection/file_def.c
-+  third_party/upb/upb/reflection/message_def.c
-+  third_party/upb/upb/reflection/message_reserved_range.c
-+  third_party/upb/upb/reflection/message.c
-+  third_party/upb/upb/reflection/method_def.c
-+  third_party/upb/upb/reflection/oneof_def.c
-+  third_party/upb/upb/reflection/service_def.c
-+  third_party/upb/upb/text/encode.c
-+  third_party/upb/upb/wire/decode_fast.c
-+  third_party/upb/upb/wire/decode.c
-+  third_party/upb/upb/wire/encode.c
-+  third_party/upb/upb/wire/eps_copy_input_stream.c
-+  third_party/upb/upb/wire/reader.c
-+)
-+
-+target_compile_features(upb PUBLIC cxx_std_14)
-+
-+set_target_properties(upb PROPERTIES
-+  VERSION ${gRPC_CORE_VERSION}
-+  SOVERSION ${gRPC_CORE_SOVERSION}
-+)
-+
-+if(WIN32 AND MSVC)
-+  set_target_properties(upb PROPERTIES COMPILE_PDB_NAME "upb"
-+    COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-+  )
-+  if(gRPC_INSTALL)
-+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/upb.pdb
-+      DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
-+      CONFIGURATIONS Debug
-+    )
-+  endif()
-+endif()
-+
-+target_include_directories(upb
-+  PUBLIC $<INSTALL_INTERFACE:${gRPC_INSTALL_INCLUDEDIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-+  PRIVATE
-+    ${CMAKE_CURRENT_SOURCE_DIR}
-+    ${_gRPC_ADDRESS_SORTING_INCLUDE_DIR}
-+    ${_gRPC_RE2_INCLUDE_DIR}
-+    ${_gRPC_SSL_INCLUDE_DIR}
-+    ${_gRPC_UPB_GENERATED_DIR}
-+    ${_gRPC_UPB_GRPC_GENERATED_DIR}
-+    ${_gRPC_UPB_INCLUDE_DIR}
-+    ${_gRPC_XXHASH_INCLUDE_DIR}
-+    ${_gRPC_ZLIB_INCLUDE_DIR}
-+)
-+target_link_libraries(upb
-+  ${_gRPC_BASELIB_LIBRARIES}
-+  ${_gRPC_ZLIB_LIBRARIES}
-+  ${_gRPC_ALLTARGETS_LIBRARIES}
-+)
-+
-+
-+
-+if(gRPC_INSTALL)
-+  install(TARGETS upb EXPORT gRPCTargets
-+    RUNTIME DESTINATION ${gRPC_INSTALL_BINDIR}
-+    BUNDLE DESTINATION  ${gRPC_INSTALL_BINDIR}
-+    LIBRARY DESTINATION ${gRPC_INSTALL_LIBDIR}
-+    ARCHIVE DESTINATION ${gRPC_INSTALL_LIBDIR}
-+  )
-+endif()
-+
- if(gRPC_BUILD_TESTS)
- if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+@@ -124,9 +124,21 @@
+ #endif /* defined(_WIN64) || defined(WIN64) || defined(_WIN32) || \
+           defined(WIN32) */
+ #else
++#if defined(GRPC_DLL_EXPORTS)
++#define GRPC_DLL __attribute__((visibility("default")))
++#else
+ #define GRPC_DLL
++#endif
++#if defined(GRPCXX_DLL_EXPORTS)
++#define GRPCXX_DLL __attribute__((visibility("default")))
++#else
+ #define GRPCXX_DLL
++#endif
++#if defined(GPR_DLL_EXPORTS)
++#define GPR_DLL __attribute__((visibility("default")))
++#else
+ #define GPR_DLL
++#endif
+ #endif /* defined(_WIN32_WINNT) */
+ 
+ /* Override this file with one for your platform if you need to redefine
+@@ -715,11 +727,11 @@ extern void gpr_unreachable_code(const char* reason, const char* file,
+ #endif /* GPR_FORBID_UNREACHABLE_CODE */
+ 
+ #ifndef GPRAPI
+-#define GPRAPI
++#define GPRAPI GPR_DLL
+ #endif
+ 
+ #ifndef GRPCAPI
+-#define GRPCAPI GPRAPI
++#define GRPCAPI GRPC_DLL
+ #endif
+ 
+ #ifndef CENSUSAPI
+diff --git a/include/grpcpp/server_context.h b/include/grpcpp/server_context.h
+index 243d149205..caf976664c 100644
+--- a/include/grpcpp/server_context.h
++++ b/include/grpcpp/server_context.h
+@@ -121,7 +121,8 @@ class ServerMetricRecorder;
+ }  // namespace experimental
+ 
+ /// Base class of ServerContext.
+-class ServerContextBase {
++// TEMPO_MOD Begin - [For allowing TempoScripting module to re-export symbols from gRPC] - Add GRPCXX_DLL
++class GRPCXX_DLL ServerContextBase {
+  public:
+   virtual ~ServerContextBase();
+ 
+diff --git a/include/grpcpp/server_interface.h b/include/grpcpp/server_interface.h
+index d990d8c7ac..c37689a58f 100644
+--- a/include/grpcpp/server_interface.h
++++ b/include/grpcpp/server_interface.h
+@@ -57,7 +57,8 @@ class ServerInterceptorFactoryInterface;
+ class ServerMetricRecorder;
+ }  // namespace experimental
+ 
+-class ServerInterface : public internal::CallHook {
++// TEMPO_MOD Begin - [For allowing TempoScripting module to re-export symbols from gRPC] - Add GRPCXX_DLL
++class GRPCXX_DLL ServerInterface : public internal::CallHook {
+  public:
+   ~ServerInterface() override {}
  
 diff --git a/src/core/lib/gprpp/time.h b/src/core/lib/gprpp/time.h
 index 65aa968bc8..b28fbe35e5 100644
@@ -354,6 +335,25 @@ index 65aa968bc8..b28fbe35e5 100644
  }
  
  inline Duration operator*(Duration lhs, double rhs) {
+diff --git a/src/core/lib/promise/detail/promise_like.h b/src/core/lib/promise/detail/promise_like.h
+index 395c325873..c5c41992f5 100644
+--- a/src/core/lib/promise/detail/promise_like.h
++++ b/src/core/lib/promise/detail/promise_like.h
+@@ -71,7 +71,13 @@ class PromiseLike<void>;
+ 
+ template <typename F>
+ class PromiseLike<F, absl::enable_if_t<!std::is_void<
+-                         typename std::result_of<F()>::type>::value>> {
++#if (defined(__cpp_lib_is_invocable) && __cpp_lib_is_invocable >= 201703L) || \
++(defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
++                         std::invoke_result_t<F>
++#else
++                         typename std::result_of<F()>::type
++#endif
++                         >::value>> {
+  private:
+   GPR_NO_UNIQUE_ADDRESS F f_;
+ 
 diff --git a/third_party/upb/upb/message/internal/array.h b/third_party/upb/upb/message/internal/array.h
 index e8e8429cfd..b2082c9594 100644
 --- a/third_party/upb/upb/message/internal/array.h

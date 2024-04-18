@@ -53,7 +53,7 @@ set(CMAKE_OBJDUMP 		${CLANG_TOOLCHAIN_BIN}/x86_64-unknown-linux-gnu-objdump.exe	
 # =============================================================================
 # Define flags 
 # =============================================================================
-set(COMPILER_FLAGS 		 " -nostdinc++ --target=${LINUX_ARCH_NAME} --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fno-rtti -fno-exceptions -fdiagnostics-format=msvc -funwind-tables -gdwarf-3 -pthread -stdlib=libc++ -Wno-error=unused-command-line-argument -Wno-error=deprecated-declarations")
+set(COMPILER_FLAGS 		 " -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 -fpascal-strings -fasm-blocks -ffp-contract=off -fvisibility-ms-compat -fvisibility-inlines-hidden -nostdinc++ --target=${LINUX_ARCH_NAME} --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc -funwind-tables -gdwarf-3 -pthread -stdlib=libc++ -Wno-error=unused-command-line-argument -Wno-error=deprecated-declarations")
 set(FLAGS_DEBUG 		 " -O0 -g -D_DEBUG")
 set(FLAGS_MINSIZEREL 	 " -Os -DNDEBUG")
 set(FLAGS_RELEASE 		 " -O3 -DNDEBUG")
