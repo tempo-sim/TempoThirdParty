@@ -97,7 +97,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
 mkdir -p "$ROOT_DIR/Build/Linux/re2" && cd "$ROOT_DIR/Build/Linux/re2"
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
+ -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/RE2" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
  -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
  -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 -DRE2_BUILD_TESTING=OFF \
@@ -111,7 +111,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/abseil-cpp.patch"
 mkdir -p "$ROOT_DIR/Build/Linux/abseil-cpp" && cd "$ROOT_DIR/Build/Linux/abseil-cpp"
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
+ -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/Abseil" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
  -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
  -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 " \
  -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
@@ -126,7 +126,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
 mkdir -p "$ROOT_DIR/Build/Linux/protobuf" && cd "$ROOT_DIR/Build/Linux/protobuf"
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
+ -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/Protobuf" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
  -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
  -DCMAKE_CXX_FLAGS=" -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 " \
  -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" -Dprotobuf_DEBUG_POSTFIX="" \
@@ -145,7 +145,7 @@ git reset --hard && git apply "$ROOT_DIR/Patch/gRPC.patch"
 mkdir -p "$ROOT_DIR/Build/Linux/gRPC" && cd "$ROOT_DIR/Build/Linux/gRPC"
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/share" \
+ -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux/gRPC" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/share" \
  -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
  -DCMAKE_CXX_FLAGS=" -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 " \
  -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
@@ -185,9 +185,8 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/pkgconfig"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc++.a" # We use libgrpc++_unsecure.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc.a" # We use libgrpc_unsecure.a
-rm -r "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc_authorization_provider.a" # Don't need
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc++_unsecure.a" # We use libgrpc++.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc_unsecure.a" # We use libgrpc.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/libprotobuf-lite.a" # We use libprotobuf.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/libprotoc.a" # Only needed during build of grpc code gen plugins
 

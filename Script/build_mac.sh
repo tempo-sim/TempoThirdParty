@@ -150,9 +150,8 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Mac/Protobuf/pkgconfig"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/libgrpc++.a" # We use libgrpc++_unsecure.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/libgrpc.a" # We use libgrpc_unsecure.a
-rm -r "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/libgrpc_authorization_provider.a" # Don't need
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/libgrpc++_unsecure.a" # We use libgrpc++.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/gRPC/libgrpc_unsecure.a" # We use libgrpc.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/Protobuf/libprotobuf-lite.a" # We use libprotobuf.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Mac/Protobuf/libprotoc.a" # Only needed during build of grpc code gen plugins
 
