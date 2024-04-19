@@ -1,0 +1,836 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c5123edadf..bd63b9caec 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -50,6 +50,9 @@ set(gRPC_BUILD_MSVC_MP_COUNT 0 CACHE STRING "The maximum number of processes for
+ option(gRPC_BUILD_TESTS "Build tests" OFF)
+ option(gRPC_BUILD_CODEGEN "Build codegen" ON)
+ option(gRPC_DOWNLOAD_ARCHIVES "Download archives for empty 3rd party directories" ON)
++option(gRPC_BUILD_CSHARP_EXT "Build C# extensions" ON)
++option(gRPC_BACKWARDS_COMPATIBILITY_MODE "Build libraries that are binary compatible across a larger number of OS and libc versions" OFF)
++option(gRPC_USE_CARES "Use c-ares as DNS requests library" ON)
+ 
+ set(gRPC_INSTALL_default ON)
+ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+@@ -328,13 +331,17 @@ if(UNIX OR APPLE)
+   endif()
+ endif()
+ 
++if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++  # Clang warning suppressions
++  add_definitions(-Wno-error=register)
++endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++
+ # configure ccache if requested
+ include(cmake/ccache.cmake)
+ 
+ include(cmake/abseil-cpp.cmake)
+ include(cmake/address_sorting.cmake)
+ include(cmake/benchmark.cmake)
+-include(cmake/cares.cmake)
+ include(cmake/protobuf.cmake)
+ include(cmake/re2.cmake)
+ include(cmake/ssl.cmake)
+@@ -343,6 +350,13 @@ include(cmake/xxhash.cmake)
+ include(cmake/zlib.cmake)
+ include(cmake/download_archive.cmake)
+ 
++if (gRPC_USE_CARES)
++ add_definitions("-DGRPC_ARES=1")
++ include(cmake/cares.cmake)
++else()
++ add_definitions("-DGRPC_ARES=0")
++endif()
++
+ if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_POSIX)
+   include(cmake/systemd.cmake)
+   set(_gRPC_ALLTARGETS_LIBRARIES ${_gRPC_ALLTARGETS_LIBRARIES} ${_gRPC_SYSTEMD_LIBRARIES})
+@@ -1573,8 +1587,9 @@ if(WIN32 AND MSVC)
+     COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+   )
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/address_sorting.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/address_sorting.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -1676,8 +1691,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gpr.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/gpr.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -2597,8 +2613,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -2773,8 +2790,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc_test_util.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc_test_util.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -2839,8 +2857,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc_test_util_unsecure.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc_test_util_unsecure.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -3303,8 +3322,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc_unsecure.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc_unsecure.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -3966,8 +3986,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/benchmark_helpers.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/benchmark_helpers.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4088,8 +4109,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4366,8 +4388,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_alts.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_alts.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4438,8 +4461,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_error_details.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_error_details.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4520,8 +4544,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_reflection.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_reflection.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4596,8 +4621,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_test.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_test.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4668,8 +4694,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_test_config.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_test_config.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4743,8 +4770,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_test_util.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_test_util.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -4834,8 +4862,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc++_unsecure.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc++_unsecure.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -5385,8 +5414,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc_authorization_provider.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc_authorization_provider.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -5545,8 +5575,9 @@ if(WIN32 AND MSVC)
+     COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+   )
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpc_plugin_support.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpc_plugin_support.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+@@ -5626,8 +5657,9 @@ if(WIN32 AND MSVC)
+     )
+   endif()
+   if(gRPC_INSTALL)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grpcpp_channelz.pdb
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/grpcpp_channelz.pdb
+       DESTINATION ${gRPC_INSTALL_LIBDIR} OPTIONAL
++      CONFIGURATIONS Debug
+     )
+   endif()
+ endif()
+diff --git a/include/grpc/support/port_platform.h b/include/grpc/support/port_platform.h
+index d2ef98e41b..15875eda15 100644
+--- a/include/grpc/support/port_platform.h
++++ b/include/grpc/support/port_platform.h
+@@ -97,7 +97,7 @@
+ #endif
+ 
+ #ifndef NOMINMAX
+-#define GRPC_NOMINMX_WAS_NOT_DEFINED
++#define GRPC_NOMINMAX_WAS_NOT_DEFINED
+ #define NOMINMAX
+ #endif /* NOMINMAX */
+ 
+@@ -124,9 +124,21 @@
+ #endif /* defined(_WIN64) || defined(WIN64) || defined(_WIN32) || \
+           defined(WIN32) */
+ #else
++#if defined(GRPC_DLL_EXPORTS)
++#define GRPC_DLL __attribute__((visibility("default")))
++#else
+ #define GRPC_DLL
++#endif
++#if defined(GRPCXX_DLL_EXPORTS)
++#define GRPCXX_DLL __attribute__((visibility("default")))
++#else
+ #define GRPCXX_DLL
++#endif
++#if defined(GPR_DLL_EXPORTS)
++#define GPR_DLL __attribute__((visibility("default")))
++#else
+ #define GPR_DLL
++#endif
+ #endif /* defined(_WIN32_WINNT) */
+ 
+ /* Override this file with one for your platform if you need to redefine
+@@ -715,11 +727,11 @@ extern void gpr_unreachable_code(const char* reason, const char* file,
+ #endif /* GPR_FORBID_UNREACHABLE_CODE */
+ 
+ #ifndef GPRAPI
+-#define GPRAPI
++#define GPRAPI GPR_DLL
+ #endif
+ 
+ #ifndef GRPCAPI
+-#define GRPCAPI GPRAPI
++#define GRPCAPI GRPC_DLL
+ #endif
+ 
+ #ifndef CENSUSAPI
+diff --git a/include/grpcpp/impl/proto_utils.h b/include/grpcpp/impl/proto_utils.h
+index c6240ffa84..13ab1ea4fe 100644
+--- a/include/grpcpp/impl/proto_utils.h
++++ b/include/grpcpp/impl/proto_utils.h
+@@ -56,11 +56,11 @@ Status GenericSerialize(const grpc::protobuf::MessageLite& msg, ByteBuffer* bb,
+     ByteBuffer tmp(&slice, 1);
+     bb->Swap(&tmp);
+ 
+-    return grpc::Status::OK;
++    return grpc::Status();
+   }
+   ProtoBufferWriter writer(bb, kProtoBufferWriterMaxBufferLength, byte_size);
+   return msg.SerializeToZeroCopyStream(&writer)
+-             ? grpc::Status::OK
++             ? grpc::Status()
+              : Status(StatusCode::INTERNAL, "Failed to serialize message");
+ }
+ 
+@@ -75,7 +75,7 @@ Status GenericDeserialize(ByteBuffer* buffer,
+   if (buffer == nullptr) {
+     return Status(StatusCode::INTERNAL, "No payload");
+   }
+-  Status result = grpc::Status::OK;
++  Status result = grpc::Status();
+   {
+     ProtoBufferReader reader(buffer);
+     if (!reader.status().ok()) {
+diff --git a/include/grpcpp/impl/rpc_service_method.h b/include/grpcpp/impl/rpc_service_method.h
+index 73694263cd..ba0e1009a9 100644
+--- a/include/grpcpp/impl/rpc_service_method.h
++++ b/include/grpcpp/impl/rpc_service_method.h
+@@ -144,6 +144,7 @@ class RpcServiceMethod : public RpcMethod {
+       default:
+         GPR_UNREACHABLE_CODE(return "unknown");
+     }
++    return "";
+   }
+ };
+ }  // namespace internal
+diff --git a/include/grpcpp/impl/status.h b/include/grpcpp/impl/status.h
+index a068f9b0af..de5f52bb72 100644
+--- a/include/grpcpp/impl/status.h
++++ b/include/grpcpp/impl/status.h
+@@ -108,12 +108,6 @@ class GRPC_MUST_USE_RESULT_WHEN_USE_STRICT_WARNING GRPCXX_DLL Status {
+         error_message_(error_message),
+         binary_error_details_(error_details) {}
+ 
+-  // Pre-defined special status objects.
+-  /// An OK pre-defined instance.
+-  static const Status& OK;
+-  /// A CANCELLED pre-defined instance.
+-  static const Status& CANCELLED;
+-
+   /// Return the instance's error code.
+   StatusCode error_code() const { return code_; }
+   /// Return the instance's error message.
+diff --git a/include/grpcpp/security/auth_metadata_processor.h b/include/grpcpp/security/auth_metadata_processor.h
+index c491a13b19..732b3992b5 100644
+--- a/include/grpcpp/security/auth_metadata_processor.h
++++ b/include/grpcpp/security/auth_metadata_processor.h
+@@ -60,7 +60,7 @@ class AuthMetadataProcessor {
+   ///   for all subsequent calls.
+   /// response_metadata(CURRENTLY NOT SUPPORTED): the metadata that will be sent
+   ///   as part of the response.
+-  /// return: if the return value is not Status::OK, the rpc call will be
++  /// return: if the return value is not Status(), the rpc call will be
+   ///   aborted with the error code and error message sent back to the client.
+   virtual grpc::Status Process(const InputMetadata& auth_metadata,
+                                grpc::AuthContext* context,
+diff --git a/include/grpcpp/server_context.h b/include/grpcpp/server_context.h
+index 243d149205..9988891f20 100644
+--- a/include/grpcpp/server_context.h
++++ b/include/grpcpp/server_context.h
+@@ -121,7 +121,8 @@ class ServerMetricRecorder;
+ }  // namespace experimental
+ 
+ /// Base class of ServerContext.
+-class ServerContextBase {
++// TEMPO_MOD Begin - [For allowing TempoScripting module to re-export symbols from gRPC] - Add GRPCXX_DLL
++class GRPCXX_DLL ServerContextBase {
+  public:
+   virtual ~ServerContextBase();
+ 
+@@ -189,7 +190,7 @@ class ServerContextBase {
+   /// connection reset, HTTP/2 parameter configuration (e.g., max message size,
+   /// max connection age), etc. It does NOT include failure due to a non-OK
+   /// status return from the server application's request handler, including
+-  /// Status::CANCELLED.
++  /// Status(StatusCode::CANCELLED, "").
+   ///
+   /// IsCancelled is always safe to call when using sync or callback API.
+   /// When using async API, it is only safe to call IsCancelled after
+@@ -203,15 +204,15 @@ class ServerContextBase {
+   /// client before TryCancel() was even started by the thread.
+   ///
+   /// It is the caller's responsibility to prevent such races and ensure that if
+-  /// TryCancel() is called, the serverhandler must return Status::CANCELLED.
++  /// TryCancel() is called, the serverhandler must return Status(StatusCode::CANCELLED, "").
+   /// The only exception is that if the serverhandler is already returning an
+-  /// error status code, it is ok to not return Status::CANCELLED even if
++  /// error status code, it is ok to not return Status(StatusCode::CANCELLED, "") even if
+   /// TryCancel() was called. Additionally, it is illegal to invoke TryCancel()
+   /// before the call has actually begun, i.e., before metadata has been
+   /// received from the client.
+   ///
+   /// For reasons such as the above, it is generally preferred to explicitly
+-  /// finish an RPC by returning Status::CANCELLED rather than using TryCancel.
++  /// finish an RPC by returning Status(StatusCode::CANCELLED, "") rather than using TryCancel.
+   ///
+   /// Note that TryCancel() does not change any of the tags that are pending
+   /// on the completion queue. All pending tags will still be delivered
+diff --git a/include/grpcpp/server_interface.h b/include/grpcpp/server_interface.h
+index d990d8c7ac..c37689a58f 100644
+--- a/include/grpcpp/server_interface.h
++++ b/include/grpcpp/server_interface.h
+@@ -57,7 +57,8 @@ class ServerInterceptorFactoryInterface;
+ class ServerMetricRecorder;
+ }  // namespace experimental
+ 
+-class ServerInterface : public internal::CallHook {
++// TEMPO_MOD Begin - [For allowing TempoScripting module to re-export symbols from gRPC] - Add GRPCXX_DLL
++class GRPCXX_DLL ServerInterface : public internal::CallHook {
+  public:
+   ~ServerInterface() override {}
+ 
+diff --git a/include/grpcpp/support/byte_buffer.h b/include/grpcpp/support/byte_buffer.h
+index 5bbfb66496..c0073cabbc 100644
+--- a/include/grpcpp/support/byte_buffer.h
++++ b/include/grpcpp/support/byte_buffer.h
+@@ -219,13 +219,13 @@ class SerializationTraits<ByteBuffer, void> {
+  public:
+   static Status Deserialize(ByteBuffer* byte_buffer, ByteBuffer* dest) {
+     dest->set_buffer(byte_buffer->buffer_);
+-    return Status::OK;
++    return Status();
+   }
+   static Status Serialize(const ByteBuffer& source, ByteBuffer* buffer,
+                           bool* own_buffer) {
+     *buffer = source;
+     *own_buffer = true;
+-    return grpc::Status::OK;
++    return grpc::Status();
+   }
+ };
+ 
+diff --git a/include/grpcpp/support/error_details.h b/include/grpcpp/support/error_details.h
+index ffcbd19318..2f24d34fe1 100644
+--- a/include/grpcpp/support/error_details.h
++++ b/include/grpcpp/support/error_details.h
+@@ -42,7 +42,7 @@ grpc::Status ExtractErrorDetails(const grpc::Status& from, T* to) {
+   if (!to->ParseFromString(from.error_details())) {
+     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, "");
+   }
+-  return grpc::Status::OK;
++  return grpc::Status();
+ }
+ inline grpc::Status ExtractErrorDetails(const grpc::Status&, std::nullptr_t) {
+   return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "");
+@@ -68,7 +68,7 @@ grpc::Status SetErrorDetails(const T& from, grpc::Status* to) {
+     code = static_cast<grpc::StatusCode>(from.code());
+   }
+   *to = grpc::Status(code, from.message(), from.SerializeAsString());
+-  return grpc::Status::OK;
++  return grpc::Status();
+ }
+ 
+ }  // namespace grpc
+diff --git a/include/grpcpp/xds_server_builder.h b/include/grpcpp/xds_server_builder.h
+index f51c526078..35f11dc181 100644
+--- a/include/grpcpp/xds_server_builder.h
++++ b/include/grpcpp/xds_server_builder.h
+@@ -38,7 +38,7 @@ class XdsServerServingStatusNotifierInterface {
+   // multiple listening addresses.
+   // The callback is invoked each time there is an update to the serving status.
+   // The API does not provide any guarantees around duplicate updates.
+-  // Status::OK signifies that the server is serving, while a non-OK status
++  // Status() signifies that the server is serving, while a non-OK status
+   // signifies that the server is not serving.
+   virtual void OnServingStatusUpdate(std::string uri,
+                                      ServingStatusUpdate update) = 0;
+diff --git a/src/core/lib/gprpp/time.h b/src/core/lib/gprpp/time.h
+index 65aa968bc8..b28fbe35e5 100644
+--- a/src/core/lib/gprpp/time.h
++++ b/src/core/lib/gprpp/time.h
+@@ -323,8 +323,8 @@ inline Timestamp operator+(Duration lhs, Timestamp rhs) { return rhs + lhs; }
+ 
+ inline Duration operator-(Timestamp lhs, Timestamp rhs) {
+   return Duration::Milliseconds(
+-      time_detail::MillisAdd(lhs.milliseconds_after_process_epoch(),
+-                             -rhs.milliseconds_after_process_epoch()));
++      time_detail::MillisAdd((int64_t)lhs.milliseconds_after_process_epoch(),
++                             -((int64_t)rhs.milliseconds_after_process_epoch())));
+ }
+ 
+ inline Duration operator*(Duration lhs, double rhs) {
+diff --git a/src/core/lib/promise/detail/promise_like.h b/src/core/lib/promise/detail/promise_like.h
+index 395c325873..c5c41992f5 100644
+--- a/src/core/lib/promise/detail/promise_like.h
++++ b/src/core/lib/promise/detail/promise_like.h
+@@ -71,7 +71,13 @@ class PromiseLike<void>;
+ 
+ template <typename F>
+ class PromiseLike<F, absl::enable_if_t<!std::is_void<
+-                         typename std::result_of<F()>::type>::value>> {
++#if (defined(__cpp_lib_is_invocable) && __cpp_lib_is_invocable >= 201703L) || \
++(defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
++                         std::invoke_result_t<F>
++#else
++                         typename std::result_of<F()>::type
++#endif
++                         >::value>> {
+  private:
+   GPR_NO_UNIQUE_ADDRESS F f_;
+ 
+diff --git a/src/cpp/common/alts_util.cc b/src/cpp/common/alts_util.cc
+index 784b0157c4..b02a8fcc48 100644
+--- a/src/cpp/common/alts_util.cc
++++ b/src/cpp/common/alts_util.cc
+@@ -77,7 +77,7 @@ grpc::Status AltsClientAuthzCheck(
+                 expected_service_accounts.end(),
+                 alts_ctx->peer_service_account()) !=
+       expected_service_accounts.end()) {
+-    return grpc::Status::OK;
++    return grpc::Status();
+   }
+   return grpc::Status(
+       grpc::StatusCode::PERMISSION_DENIED,
+diff --git a/src/cpp/ext/proto_server_reflection.cc b/src/cpp/ext/proto_server_reflection.cc
+index 7d008794c4..ee11bee042 100644
+--- a/src/cpp/ext/proto_server_reflection.cc
++++ b/src/cpp/ext/proto_server_reflection.cc
+@@ -70,7 +70,7 @@ Status ProtoServerReflectionBackend::ServerReflectionInfo(
+     response.set_allocated_original_request(new Request(request));
+     stream->Write(response);
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Response>
+@@ -89,14 +89,14 @@ Status ProtoServerReflectionBackend::ListService(Response* response) const {
+     auto* service_response = response->add_service();
+     service_response->set_name(value);
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Response>
+ Status ProtoServerReflectionBackend::GetFileByName(const std::string& file_name,
+                                                    Response* response) const {
+   if (descriptor_pool_ == nullptr) {
+-    return Status::CANCELLED;
++    return Status(StatusCode::CANCELLED, "");
+   }
+ 
+   const protobuf::FileDescriptor* file_desc =
+@@ -106,14 +106,14 @@ Status ProtoServerReflectionBackend::GetFileByName(const std::string& file_name,
+   }
+   std::unordered_set<std::string> seen_files;
+   FillFileDescriptorResponse(file_desc, response, &seen_files);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Response>
+ Status ProtoServerReflectionBackend::GetFileContainingSymbol(
+     const std::string& symbol, Response* response) const {
+   if (descriptor_pool_ == nullptr) {
+-    return Status::CANCELLED;
++    return Status(StatusCode::CANCELLED, "");
+   }
+ 
+   const protobuf::FileDescriptor* file_desc =
+@@ -123,14 +123,14 @@ Status ProtoServerReflectionBackend::GetFileContainingSymbol(
+   }
+   std::unordered_set<std::string> seen_files;
+   FillFileDescriptorResponse(file_desc, response, &seen_files);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Request, typename Response>
+ Status ProtoServerReflectionBackend::GetFileContainingExtension(
+     const Request* request, Response* response) const {
+   if (descriptor_pool_ == nullptr) {
+-    return Status::CANCELLED;
++    return Status(StatusCode::CANCELLED, "");
+   }
+ 
+   const protobuf::Descriptor* desc =
+@@ -147,14 +147,14 @@ Status ProtoServerReflectionBackend::GetFileContainingExtension(
+   }
+   std::unordered_set<std::string> seen_files;
+   FillFileDescriptorResponse(field_desc->file(), response, &seen_files);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Response>
+ Status ProtoServerReflectionBackend::GetAllExtensionNumbers(
+     const std::string& type, Response* response) const {
+   if (descriptor_pool_ == nullptr) {
+-    return Status::CANCELLED;
++    return Status(StatusCode::CANCELLED, "");
+   }
+ 
+   const protobuf::Descriptor* desc =
+@@ -169,7 +169,7 @@ Status ProtoServerReflectionBackend::GetAllExtensionNumbers(
+     response->add_extension_number(value->number());
+   }
+   response->set_base_type_name(type);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ template <typename Response>
+diff --git a/src/cpp/server/channelz/channelz_service.cc b/src/cpp/server/channelz/channelz_service.cc
+index 570a656948..80ad700c99 100644
+--- a/src/cpp/server/channelz/channelz_service.cc
++++ b/src/cpp/server/channelz/channelz_service.cc
+@@ -57,7 +57,7 @@ Status ChannelzService::GetTopChannels(
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetServers(
+@@ -73,7 +73,7 @@ Status ChannelzService::GetServers(
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetServer(ServerContext* /*unused*/,
+@@ -89,7 +89,7 @@ Status ChannelzService::GetServer(ServerContext* /*unused*/,
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetServerSockets(
+@@ -107,7 +107,7 @@ Status ChannelzService::GetServerSockets(
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetChannel(
+@@ -122,7 +122,7 @@ Status ChannelzService::GetChannel(
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetSubchannel(
+@@ -139,7 +139,7 @@ Status ChannelzService::GetSubchannel(
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ChannelzService::GetSocket(ServerContext* /*unused*/,
+@@ -154,7 +154,7 @@ Status ChannelzService::GetSocket(ServerContext* /*unused*/,
+   if (!s.ok()) {
+     return Status(StatusCode::INTERNAL, s.ToString());
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ }  // namespace grpc
+diff --git a/src/cpp/server/csds/csds.cc b/src/cpp/server/csds/csds.cc
+index 7e905b0364..711b7953b7 100644
+--- a/src/cpp/server/csds/csds.cc
++++ b/src/cpp/server/csds/csds.cc
+@@ -69,7 +69,7 @@ Status ClientStatusDiscoveryService::StreamClientStatus(
+     }
+     stream->Write(*response);
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ClientStatusDiscoveryService::FetchClientStatus(
+@@ -79,13 +79,13 @@ Status ClientStatusDiscoveryService::FetchClientStatus(
+   if (!s.ok()) {
+     if (s.status().code() == absl::StatusCode::kUnavailable) {
+       // If the xDS client is not initialized, return empty response
+-      return Status::OK;
++      return Status();
+     }
+     return Status(static_cast<StatusCode>(s.status().raw_code()),
+                   s.status().ToString());
+   }
+   *response = std::move(*s);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ }  // namespace experimental
+diff --git a/src/cpp/server/health/default_health_check_service.cc b/src/cpp/server/health/default_health_check_service.cc
+index 685317d633..45def3af53 100644
+--- a/src/cpp/server/health/default_health_check_service.cc
++++ b/src/cpp/server/health/default_health_check_service.cc
+@@ -195,7 +195,7 @@ DefaultHealthCheckService::HealthCheckServiceImpl::HandleCheckRequest(
+     reactor->Finish(Status(StatusCode::INTERNAL, "could not encode response"));
+     return reactor;
+   }
+-  reactor->Finish(Status::OK);
++  reactor->Finish(Status());
+   return reactor;
+ }
+ 
+diff --git a/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc b/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc
+index 2c19660514..fe46ddd49c 100644
+--- a/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc
++++ b/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc
+@@ -363,7 +363,7 @@ void LoadReporterAsyncServiceImpl::ReportLoadHandler::Shutdown(
+       // TODO(juanlishen): Maybe add a message proto for the client to
+       // explicitly cancel the stream so that we can return OK status in such
+       // cases.
+-      stream_.Finish(Status::CANCELLED, &on_finish_done_);
++      stream_.Finish(Status(StatusCode::CANCELLED, ""), &on_finish_done_);
+       call_status_ = FINISH_CALLED;
+     }
+   }
+diff --git a/src/cpp/util/byte_buffer_cc.cc b/src/cpp/util/byte_buffer_cc.cc
+index 687df55350..495606036d 100644
+--- a/src/cpp/util/byte_buffer_cc.cc
++++ b/src/cpp/util/byte_buffer_cc.cc
+@@ -39,7 +39,7 @@ Status ByteBuffer::TrySingleSlice(Slice* slice) const {
+       (buffer_->data.raw.slice_buffer.count == 1)) {
+     grpc_slice internal_slice = buffer_->data.raw.slice_buffer.slices[0];
+     *slice = Slice(internal_slice, Slice::ADD_REF);
+-    return Status::OK;
++    return Status();
+   } else {
+     return Status(StatusCode::FAILED_PRECONDITION,
+                   "Buffer isn't made up of a single uncompressed slice.");
+@@ -58,7 +58,7 @@ Status ByteBuffer::DumpToSingleSlice(Slice* slice) const {
+   grpc_slice s = grpc_byte_buffer_reader_readall(&reader);
+   *slice = Slice(s, Slice::STEAL_REF);
+   grpc_byte_buffer_reader_destroy(&reader);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status ByteBuffer::Dump(std::vector<Slice>* slices) const {
+@@ -76,7 +76,7 @@ Status ByteBuffer::Dump(std::vector<Slice>* slices) const {
+     slices->push_back(Slice(s, Slice::STEAL_REF));
+   }
+   grpc_byte_buffer_reader_destroy(&reader);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ }  // namespace grpc
+diff --git a/src/cpp/util/status.cc b/src/cpp/util/status.cc
+index 3fcaebf8ad..e0b8326ac4 100644
+--- a/src/cpp/util/status.cc
++++ b/src/cpp/util/status.cc
+@@ -22,7 +22,4 @@
+ 
+ namespace grpc {
+ 
+-const Status& Status::OK = Status();
+-const Status& Status::CANCELLED = Status(StatusCode::CANCELLED, "");
+-
+ }  // namespace grpc
+diff --git a/src/objective-c/tests/CppCronetTests/TestHelper.mm b/src/objective-c/tests/CppCronetTests/TestHelper.mm
+index de056ae28a..60e61fb6ba 100644
+--- a/src/objective-c/tests/CppCronetTests/TestHelper.mm
++++ b/src/objective-c/tests/CppCronetTests/TestHelper.mm
+@@ -112,13 +112,13 @@ Status TestServiceImpl::Echo(ServerContext* context, const EchoRequest* request,
+         !request->param().debug_info().detail().empty()) {
+       std::string serialized_debug_info = request->param().debug_info().SerializeAsString();
+       context->AddTrailingMetadata(kDebugInfoTrailerKey, serialized_debug_info);
+-      return Status::CANCELLED;
++      return Status(StatusCode::CANCELLED, "");
+     }
+   }
+ 
+   response->set_message(request->message());
+   MaybeEchoDeadline(context, request, response);
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status TestServiceImpl::RequestStream(ServerContext* context,
+@@ -131,7 +131,7 @@ Status TestServiceImpl::RequestStream(ServerContext* context,
+     response->mutable_message()->append(request.message());
+     ++num_msgs_read;
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status TestServiceImpl::ResponseStream(ServerContext* context, const EchoRequest* request,
+@@ -148,7 +148,7 @@ Status TestServiceImpl::ResponseStream(ServerContext* context, const EchoRequest
+       writer->Write(response);
+     }
+   }
+-  return Status::OK;
++  return Status();
+ }
+ 
+ Status TestServiceImpl::BidiStream(ServerContext* context,
+@@ -172,7 +172,7 @@ Status TestServiceImpl::BidiStream(ServerContext* context,
+     }
+   }
+ 
+-  return Status::OK;
++  return Status();
+ }
+ 
+ void PhonyInterceptor::Intercept(grpc::experimental::InterceptorBatchMethods* methods) {
+diff --git a/third_party/upb/upb/message/internal/array.h b/third_party/upb/upb/message/internal/array.h
+index e8e8429cfd..b2082c9594 100644
+--- a/third_party/upb/upb/message/internal/array.h
++++ b/third_party/upb/upb/message/internal/array.h
+@@ -120,7 +120,7 @@ UPB_INLINE bool _upb_Array_ResizeUninitialized(upb_Array* arr, size_t size,
+ UPB_INLINE void _upb_Array_Set(upb_Array* arr, size_t i, const void* data,
+                                size_t elem_size) {
+   UPB_ASSERT(i < arr->size);
+-  UPB_ASSERT(elem_size == 1U << _upb_Array_ElementSizeLg2(arr));
++  UPB_ASSERT(elem_size == (size_t)(1ULL << _upb_Array_ElementSizeLg2(arr)));
+   char* arr_data = (char*)_upb_array_ptr(arr);
+   memcpy(arr_data + (i * elem_size), data, elem_size);
+ }

@@ -2,3 +2,7 @@
 *
 # Except this file
 !.gitignore
+# And these
+!Linux
+!Mac
+!Windows

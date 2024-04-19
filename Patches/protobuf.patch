@@ -30,6 +30,34 @@ index 998c2e31a..f7ab963f3 100644
  endforeach()
  
  if (protobuf_BUILD_PROTOC_BINARIES)
+diff --git a/cmake/libprotobuf-lite.cmake b/cmake/libprotobuf-lite.cmake
+index f343458cf..990639535 100644
+--- a/cmake/libprotobuf-lite.cmake
++++ b/cmake/libprotobuf-lite.cmake
+@@ -5,8 +5,7 @@ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
+ 
+ add_library(libprotobuf-lite ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_lite_srcs}
+-  ${libprotobuf_lite_hdrs}
+-  ${protobuf_version_rc_file})
++  ${libprotobuf_lite_hdrs})
+ if(protobuf_HAVE_LD_VERSION_SCRIPT)
+   if(${CMAKE_VERSION} VERSION_GREATER 3.13 OR ${CMAKE_VERSION} VERSION_EQUAL 3.13)
+     target_link_options(libprotobuf-lite PRIVATE -Wl,--version-script=${protobuf_SOURCE_DIR}/src/libprotobuf-lite.map)
+diff --git a/cmake/libprotobuf.cmake b/cmake/libprotobuf.cmake
+index 422754a1a..3657cf3cf 100644
+--- a/cmake/libprotobuf.cmake
++++ b/cmake/libprotobuf.cmake
+@@ -5,8 +5,7 @@ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
+ 
+ add_library(libprotobuf ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_srcs}
+-  ${libprotobuf_hdrs}
+-  ${protobuf_version_rc_file})
++  ${libprotobuf_hdrs})
+ if(protobuf_HAVE_LD_VERSION_SCRIPT)
+   if(${CMAKE_VERSION} VERSION_GREATER 3.13 OR ${CMAKE_VERSION} VERSION_EQUAL 3.13)
+     target_link_options(libprotobuf PRIVATE -Wl,--version-script=${protobuf_SOURCE_DIR}/src/libprotobuf.map)
 diff --git a/src/google/protobuf/compiler/importer.cc b/src/google/protobuf/compiler/importer.cc
 index 9e68da679..57463f054 100644
 --- a/src/google/protobuf/compiler/importer.cc
@@ -49,11 +77,33 @@ index 9e68da679..57463f054 100644
        }
      }
    }
+diff --git a/src/google/protobuf/generated_message_reflection.h b/src/google/protobuf/generated_message_reflection.h
+index 1df00c3c1..b72192b51 100644
+--- a/src/google/protobuf/generated_message_reflection.h
++++ b/src/google/protobuf/generated_message_reflection.h
+@@ -110,7 +110,7 @@ struct ReflectionSchema {
+   uint32_t GetObjectSize() const { return static_cast<uint32_t>(object_size_); }
+ 
+   bool InRealOneof(const FieldDescriptor* field) const {
+-    return field->real_containing_oneof();
++    return field->real_containing_oneof() != nullptr;
+   }
+ 
+   // Offset of a non-oneof field.  Getting a field offset is slightly more
 diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
-index 25abc3039..8955de780 100644
+index 25abc3039..b8fb09b5a 100644
 --- a/src/google/protobuf/port_def.inc
 +++ b/src/google/protobuf/port_def.inc
-@@ -1039,6 +1039,8 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
+@@ -111,6 +111,8 @@
+ // Portable check for gcc-style atomic built-ins
+ #if ABSL_HAVE_BUILTIN(__atomic_load_n)
+ #define PROTOBUF_BUILTIN_ATOMIC 1
++#else
++#define PROTOBUF_BUILTIN_ATOMIC 0
+ #endif
+ 
+ // Portable check for GCC minimum version:
+@@ -1039,6 +1041,8 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
  // effectively but which people turn on anyways.
  #ifdef __clang__
  #pragma clang diagnostic push
@@ -62,7 +112,7 @@ index 25abc3039..8955de780 100644
  // -Wshorten-64-to-32 is a typical pain where we diff pointers.
  //   char* p = strchr(s, '\n');
  //   return p ? p - s : -1;
-@@ -1114,7 +1116,7 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
+@@ -1114,7 +1118,7 @@ static_assert(PROTOBUF_ABSL_MIN(20230125, 3),
  #pragma warning(disable: 4125)
  #endif
  
@@ -90,6 +140,28 @@ index 4a38c372f..66df4dd6e 100644
  #endif
  
  // Legacy: some users reference these (internal-only) macros even though we
+diff --git a/src/google/protobuf/text_format.h b/src/google/protobuf/text_format.h
+index f851c910f..8c9387fbf 100644
+--- a/src/google/protobuf/text_format.h
++++ b/src/google/protobuf/text_format.h
+@@ -53,7 +53,7 @@ PROTOBUF_EXPORT bool ShouldRedactField(const FieldDescriptor* field);
+ // formats. A higher-level API must correspond to a greater number than any
+ // lower-level APIs it calls under the hood (e.g kDebugString >
+ // kMemberPrintToString > kPrintWithStream).
+-PROTOBUF_EXPORT enum class FieldReporterLevel {
++enum class PROTOBUF_EXPORT FieldReporterLevel {
+   kNoReport = 0,
+   kPrintMessage = 1,
+   kPrintWithGenerator = 2,
+@@ -76,7 +76,7 @@ class ErrorCollector;  // tokenizer.h
+ 
+ namespace internal {
+ // Enum used to set printing options for StringifyMessage.
+-PROTOBUF_EXPORT enum class Option;
++enum class PROTOBUF_EXPORT Option;
+ 
+ // Converts a protobuf message to a string with redaction enabled.
+ PROTOBUF_EXPORT std::string StringifyMessage(const Message& message,
 diff --git a/third_party/utf8_range/CMakeLists.txt b/third_party/utf8_range/CMakeLists.txt
 index 344952d38..c22664af3 100644
 --- a/third_party/utf8_range/CMakeLists.txt
