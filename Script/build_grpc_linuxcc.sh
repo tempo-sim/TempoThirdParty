@@ -91,71 +91,34 @@ echo "Removing contents of Output and Build folders"
 find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
 find "$ROOT_DIR/Build" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
 
-echo -e "\nBuilding re2..."
-cd "$ROOT_DIR/Source/re2"
-git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
-mkdir -p "$ROOT_DIR/Build/Linux/re2" && cd "$ROOT_DIR/Build/Linux/re2"
-cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
- -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/RE2" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
- -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 -DRE2_BUILD_TESTING=OFF \
- "$ROOT_DIR/Source/re2"
-cmake --build . --target install --config Release -j "$NUM_JOBS"
-echo -e "Successfully built re2.\n"
-
-echo -e "Building abseil-cpp..."
-cd "$ROOT_DIR/Source/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patch/abseil-cpp.patch"
-mkdir -p "$ROOT_DIR/Build/Linux/abseil-cpp" && cd "$ROOT_DIR/Build/Linux/abseil-cpp"
-cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
- -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/Abseil" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
- -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 " \
- -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 -DBUILD_TESTING=OFF -DABSL_PROPAGATE_CXX_STD=ON \
-  "$ROOT_DIR/Source/abseil-cpp"
-cmake --build . --target install --config Release -j "$NUM_JOBS"
-echo -e "Successfully built abseil-cpp.\n"
-
-echo -e "Building protobuf..."
-cd "$ROOT_DIR/Source/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
-mkdir -p "$ROOT_DIR/Build/Linux/protobuf" && cd "$ROOT_DIR/Build/Linux/protobuf"
-cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
- -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux/Protobuf" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
- -DCMAKE_CXX_FLAGS=" -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 " \
- -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" -Dprotobuf_DEBUG_POSTFIX="" \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
- -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF \
- -Dprotobuf_BUILD_EXAMPLES=OFF \
- -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON \
- -Dprotobuf_ABSL_PROVIDER=package -Dabsl_DIR="$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake" \
- "$ROOT_DIR/Source/protobuf"
-cmake --build . --target install --config Release -j "$NUM_JOBS"
-echo -e "Successfully built protobuf.\n"
-
-echo -e "Building gRPC..."
+echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
 git reset --hard && git apply "$ROOT_DIR/Patch/gRPC.patch"
+cd "$ROOT_DIR/Source/gRPC/third_party/re2"
+git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
+cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
+git reset --hard && git apply "$ROOT_DIR/Patch/abseil-cpp.patch"
+cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
+git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
+echo -e "Successfully applied patches\n"
+
+echo -e "Building gRPC..."
 mkdir -p "$ROOT_DIR/Build/Linux/gRPC" && cd "$ROOT_DIR/Build/Linux/gRPC"
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
- -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux/gRPC" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Linux/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/share" \
+ -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
+ -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Linux/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Linux/share" \
  -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
- -DCMAKE_CXX_FLAGS=" -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 " \
+ -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 " \
  -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
- -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake" \
- -DgRPC_RE2_PROVIDER=package -Dre2_DIR="$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake" \
- -DgRPC_PROTOBUF_PROVIDER=package \
- -DProtobuf_DIR="$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake" \
- -Dutf8_range_DIR="$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake" \
- -DgRPC_USE_CARES=OFF -DgRPC_ZLIB_PROVIDER=package \
+ -DRE2_BUILD_TESTING=OFF \
+ -DBUILD_TESTING=OFF -DABSL_PROPAGATE_CXX_STD=ON \
+ -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF \
+ -Dprotobuf_BUILD_EXAMPLES=OFF \
+ -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON \
+ -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=ON \
+ -DgRPC_ZLIB_PROVIDER=package \
  -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
  -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Unix/Release/libz.a" \
  -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Unix/Release/libz.a" \
@@ -179,16 +142,19 @@ echo -e "Successfully built gRPC.\n"
 echo -e "Cleaning up Output directory...\n"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/share"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/RE2/pkgconfig"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/Abseil/pkgconfig"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/pkgconfig"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/pkgconfig"
+rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc++_unsecure.a" # We use libgrpc++.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/gRPC/libgrpc_unsecure.a" # We use libgrpc.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/libprotobuf-lite.a" # We use libprotobuf.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/Protobuf/libprotoc.a" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++.a" # We use libgrpc++_unsecure.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc.a" # We use libgrpc_unsecure.a
+rm -r "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_reflection.a" # Not needed
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_authorization_provider.a" # Not needed
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotobuf.a" # We use libprotobuf-lite.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_plugin_support.a" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotoc.a" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libupb_json_lib.a" # All symbols in libgrpc_unsecure.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libupb_textformat_lib.a" # All symbols in libgrpc_unsecure.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant with libutf8_range.a
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Linux-$TAG.tar.gz"
