@@ -65,8 +65,8 @@ mkdir -p "$ROOT_DIR/Build/Windows/re2" && cd "$ROOT_DIR/Build/Windows/re2"
 cmake -G "Visual Studio 17 2022" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Windows" -DCMAKE_INSTALL_LIBDIR="Libraries/Windows/RE2" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
- -DCMAKE_CXX_FLAGS=" /EHsc /MP$NUM_JOBS /std:c++17 /permissive " \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=17 \
+ -DCMAKE_CXX_FLAGS=" /EHsc /MP$NUM_JOBS /std:c++20 /permissive " \
+ -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  "$ROOT_DIR/Source/re2"
 cmake --build . --target install --config Release -j "$NUM_JOBS" -- -m:"$NUM_JOBS"
 echo -e "Successfully built re2.\n"
@@ -78,8 +78,8 @@ mkdir -p "$ROOT_DIR/Build/Windows/abseil-cpp" && cd "$ROOT_DIR/Build/Windows/abs
 cmake -G "Visual Studio 17 2022" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Windows" -DCMAKE_INSTALL_LIBDIR="Libraries/Windows/Abseil" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
- -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 /EHsc /MP$NUM_JOBS /std:c++17 /permissive " \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=17 \
+ -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive " \
+ -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  -DBUILD_TESTING=False -DABSL_PROPAGATE_CXX_STD=True \
  "$ROOT_DIR/Source/abseil-cpp"
 cmake --build . --target INSTALL --config Release -j "$NUM_JOBS"
@@ -92,8 +92,8 @@ mkdir -p "$ROOT_DIR/Build/Windows/protobuf" && cd "$ROOT_DIR/Build/Windows/proto
 cmake -G "Visual Studio 17 2022" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Windows" -DCMAKE_INSTALL_LIBDIR="Libraries/Windows/Protobuf" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/cmake" \
- -DCMAKE_CXX_FLAGS=" -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++17 /permissive " \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=17 \
+ -DCMAKE_CXX_FLAGS=" -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive " \
+ -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" \
  -Dprotobuf_BUILD_TESTS=false -Dprotobuf_WITH_ZLIB=false \
  -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON \
@@ -111,8 +111,8 @@ mkdir -p "$ROOT_DIR/Build/Windows/gRPC" && cd "$ROOT_DIR/Build/Windows/gRPC"
 cmake -G "Visual Studio 17 2022" \
  -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
  -DgRPC_INSTALL_BINDIR="Binaries/Windows" -DgRPC_INSTALL_LIBDIR="Libraries/Windows/gRPC" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/share" \
- -DCMAKE_CXX_FLAGS=" -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++17 /permissive" \
- -DgRPC_USE_CARES=OFF -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=17 \
+ -DCMAKE_CXX_FLAGS=" -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive" \
+ -DgRPC_USE_CARES=OFF -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  -DgRPC_ABSL_PROVIDER=package -Dabsl_DIR="$ROOT_DIR/Output/gRPC/Libraries/cmake" \
  -DgRPC_RE2_PROVIDER=package -Dre2_DIR="$ROOT_DIR/Output/gRPC/Libraries/cmake" \
  -DgRPC_PROTOBUF_PROVIDER=package -DProtobuf_DIR="$ROOT_DIR/Output/gRPC/Libraries/cmake" \
@@ -150,10 +150,11 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/Protobuf/pkgconfig"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/grpc++_unsecure.lib" # We use libgrpc++.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/grpc_unsecure.lib" # We use libgrpc.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/Protobuf/protobuf-lite.lib" # We use libprotobuf.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/Protobuf/protoc.lib" # Only needed during build of grpc code gen plugins
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/grpc++_unsecure.lib" # We use libgrpc++.lib
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/grpc_unsecure.lib" # We use libgrpc.lib
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/gRPC/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/Protobuf/libprotoc.lib" # Only needed during build of grpc code gen plugins
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/Protobuf/libprotobuf-lite.lib" # We use libprotobuf.lib
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Windows-$TAG.tar.gz"
