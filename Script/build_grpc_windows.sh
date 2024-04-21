@@ -127,10 +127,13 @@ rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_authorization_provider.lib" 
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotoc.lib" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotobuf.lib" # We use libprotobuf-lite.lib
-#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_json_lib.lib" # All symbols in grpc_unsecure.lib (Only on Mac?)
-#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_textformat_lib.lib" # All symbols in grpc.lib (Only on Mac?)
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols in grpc.lib
 
+# We want to re-export all symbols from these libraries through one Unreal dll.
+# On Mac and Linux the linkers have options to force loading and re-exporting of all symbols.
+# MSVC LINK has /WHOLEARCHIVE which supposedly "can" do exactly that but in practice does not seem to.
+# However LINK does support the /DEF option which allows you to supply a .def file specifying all the dll's exports.
+# So, on Windows only, we generate a full list of symbols to give to the linker in a .def file.
 echo -e "Extracting symbols from all libraries...\n"
 eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --libdir $ROOT_DIR/Output/gRPC/Libraries/Windows -o $ROOT_DIR/Output/gRPC/Libraries/Windows/exports.def"
 

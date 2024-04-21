@@ -143,16 +143,18 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/share"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++.a" # We use libgrpc++_unsecure.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc.a" # We use libgrpc_unsecure.a
-rm -r "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_reflection.a" # Not needed
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_unsecure.a" # We use libgrpc++.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_unsecure.a" # We use libgrpc.a
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_reflection.a" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_authorization_provider.a" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotobuf.a" # We use libprotobuf-lite.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_plugin_support.a" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotoc.a" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libupb_json_lib.a" # All symbols in libgrpc_unsecure.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libupb_textformat_lib.a" # All symbols in libgrpc_unsecure.a
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant with libutf8_range.a
+
+# We want to re-export all symbols from these libraries through one Unreal dll.
+# libupb_json_lib.a and libupb_textformat_lib.a for some reason have symbols in common with libgrpc.a. So we don't want to force them to load.
+find "$ROOT_DIR/Output/gRPC/Libraries/Mac" -type f -name "*.a" ! -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Output/gRPC/Libraries/Mac/exports.def"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Linux-$TAG.tar.gz"
