@@ -24,6 +24,12 @@ if ! which cmake; then
     exit 1
 fi
 
+# Check for Python3
+if ! which python3; then
+    echo "Couldn't find python3"
+    exit 1
+fi
+
 echo ""
 
 # Check for tag
@@ -51,7 +57,8 @@ echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-NUM_JOBS="$(nproc --all)"
+#NUM_JOBS=$(nproc --all)
+NUM_JOBS=24
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo "Removing contents of Output and Build folders"
@@ -76,12 +83,12 @@ cmake -G "Visual Studio 17 2022" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Windows" -DCMAKE_INSTALL_LIBDIR="Libraries/Windows" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Windows/cmake" \
  -DgRPC_INSTALL_BINDIR="Binaries/Windows" -DgRPC_INSTALL_LIBDIR="Libraries/Windows" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Windows/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Windows/share" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
- -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive" \
+ -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive" \
  -DRE2_BUILD_TESTING=OFF \
  -DBUILD_TESTING=OFF -DABSL_PROPAGATE_CXX_STD=ON \
  -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" -Dprotobuf_MSVC_STATIC_RUNTIME=OFF \
- -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF \
- -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON \
+ -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
+ -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON -Dprotobuf_DISABLE_RTTI=ON \
  -Dprotobuf_DEBUG_POSTFIX="" \
  -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=ON \
  -DgRPC_ZLIB_PROVIDER=package \
@@ -103,7 +110,6 @@ cmake -G "Visual Studio 17 2022" \
  -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=ON \
  -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
- -DPACKAGE_PREFIX_DIR="$ROOT_DIR/Output/gRPC" \
  "$ROOT_DIR/Source/gRPC"
 cmake --build . --target INSTALL --config Release -j "$NUM_JOBS"
 echo -e "Successfully built gRPC.\n"
@@ -114,16 +120,19 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/share"
 rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++.lib" # We use libgrpc++_unsecure.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc.lib" # We use libgrpc_unsecure.lib
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++_unsecure.lib" # We use libgrpc++.lib
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_unsecure.lib" # We use libgrpc.lib
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++_reflection.lib" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_authorization_provider.lib" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotoc.lib" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotobuf.lib" # We use libprotobuf-lite.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_json_lib.lib" # All symbols in grpc_unsecure.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_textformat_lib.lib" # All symbols in grpc_unsecure.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols in grpc_unsecure.lib
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_json_lib.lib" # All symbols in grpc_unsecure.lib (Only on Mac?)
+#rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/upb_textformat_lib.lib" # All symbols in grpc.lib (Only on Mac?)
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols in grpc.lib
+
+echo -e "Extracting symbols from all libraries...\n"
+eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --libdir $ROOT_DIR/Output/gRPC/Libraries/Windows -o $ROOT_DIR/Output/gRPC/Libraries/Windows/exports.def"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Windows-$TAG.tar.gz"
