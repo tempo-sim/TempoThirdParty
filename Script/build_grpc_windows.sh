@@ -57,8 +57,7 @@ echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-#NUM_JOBS=$(nproc --all)
-NUM_JOBS=24
+NUM_JOBS=$(nproc --all)
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo "Removing contents of Output and Build folders"
@@ -122,11 +121,10 @@ rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/pkgconfig"
 echo -e "Removing unused libraries...\n"
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++_unsecure.lib" # We use libgrpc++.lib
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_unsecure.lib" # We use libgrpc.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++_reflection.lib" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_authorization_provider.lib" # Not needed
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotoc.lib" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotobuf.lib" # We use libprotobuf-lite.lib
+rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotobuf-lite.lib" # We use libprotobuf.lib
 rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols in grpc.lib
 
 # We want to re-export all symbols from these libraries through one Unreal dll.
@@ -135,7 +133,7 @@ rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols
 # However LINK does support the /DEF option which allows you to supply a .def file specifying all the dll's exports.
 # So, on Windows only, we generate a full list of symbols to give to the linker in a .def file.
 echo -e "Extracting symbols from all libraries...\n"
-eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --libdir $ROOT_DIR/Output/gRPC/Libraries/Windows -o $ROOT_DIR/Output/gRPC/Libraries/Windows/exports.def"
+eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --libdir --namespaces grpc protobuf upb absl re2 google envoy census telemetry cares xds bloaty benchmark utf8_range $ROOT_DIR/Output/gRPC/Libraries/Windows -o $ROOT_DIR/Output/gRPC/Libraries/Windows/exports.def"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Windows-$TAG.tar.gz"

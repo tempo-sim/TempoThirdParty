@@ -30,6 +30,34 @@ index 998c2e31a..f7ab963f3 100644
  endforeach()
  
  if (protobuf_BUILD_PROTOC_BINARIES)
+diff --git a/cmake/libprotobuf-lite.cmake b/cmake/libprotobuf-lite.cmake
+index f343458cf..990639535 100644
+--- a/cmake/libprotobuf-lite.cmake
++++ b/cmake/libprotobuf-lite.cmake
+@@ -5,8 +5,7 @@ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
+ 
+ add_library(libprotobuf-lite ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_lite_srcs}
+-  ${libprotobuf_lite_hdrs}
+-  ${protobuf_version_rc_file})
++  ${libprotobuf_lite_hdrs})
+ if(protobuf_HAVE_LD_VERSION_SCRIPT)
+   if(${CMAKE_VERSION} VERSION_GREATER 3.13 OR ${CMAKE_VERSION} VERSION_EQUAL 3.13)
+     target_link_options(libprotobuf-lite PRIVATE -Wl,--version-script=${protobuf_SOURCE_DIR}/src/libprotobuf-lite.map)
+diff --git a/cmake/libprotobuf.cmake b/cmake/libprotobuf.cmake
+index 422754a1a..3657cf3cf 100644
+--- a/cmake/libprotobuf.cmake
++++ b/cmake/libprotobuf.cmake
+@@ -5,8 +5,7 @@ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
+ 
+ add_library(libprotobuf ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_srcs}
+-  ${libprotobuf_hdrs}
+-  ${protobuf_version_rc_file})
++  ${libprotobuf_hdrs})
+ if(protobuf_HAVE_LD_VERSION_SCRIPT)
+   if(${CMAKE_VERSION} VERSION_GREATER 3.13 OR ${CMAKE_VERSION} VERSION_EQUAL 3.13)
+     target_link_options(libprotobuf PRIVATE -Wl,--version-script=${protobuf_SOURCE_DIR}/src/libprotobuf.map)
 diff --git a/src/google/protobuf/compiler/importer.cc b/src/google/protobuf/compiler/importer.cc
 index 9e68da679..57463f054 100644
 --- a/src/google/protobuf/compiler/importer.cc
