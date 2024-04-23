@@ -76,7 +76,7 @@ git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
 echo -e "Successfully applied patches\n"
 
 echo -e "Building gRPC..."
-mkdir -p "$ROOT_DIR/Builds/Windows/gRPC" && cd "$ROOT_DIR/Builds/Windows/gRPC"
+mkdir -p "$ROOT_DIR/Builds/gRPC/Windows" && cd "$ROOT_DIR/Builds/gRPC/Windows"
 
 # Bash doesn't support inline comments in a multi-line command, but the following command is broken
 # into these sections for clarity:
