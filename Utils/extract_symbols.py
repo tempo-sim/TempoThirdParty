@@ -2,6 +2,8 @@
 
 """A tool for extracting a list of symbols to export
 
+Slight modifications to https://github.com/microsoft/llvm/blob/master/utils/extract_symbols.py
+
 When exporting symbols from a dll or exe we either need to mark the symbols in
 the source code as __declspec(dllexport) or supply a list of symbols to the
 linker. This program automates the latter by inspecting the symbol tables of a

@@ -41,6 +41,8 @@ if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
   exit 1
 fi
 
+#UNREAL_ENGINE_PATH="${UNREAL_ENGINE_PATH//\\//}"
+
 UE_THIRD_PARTY_PATH="$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty"
 if [ ! -d "${UE_THIRD_PARTY_PATH}" ]; then
   echo "ThirdParty directory does not exist: $UE_THIRD_PARTY_PATH";
@@ -55,8 +57,18 @@ if [ -z ${LINUX_MULTIARCH_ROOT+x} ]; then
   exit 1
 fi
 
-TOOLCHAIN="x86_64-unknown-linux-gnu"
-CLANG_TOOLCHAIN_ROOT="$LINUX_MULTIARCH_ROOT/$TOOLCHAIN"
+LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
+#LINUX_MULTIARCH_ROOT_FS="${LINUX_MULTIARCH_ROOT//\\//}"
+# Remove the drive letter
+#LINUX_MULTIARCH_ROOT_FS=${LINUX_MULTIARCH_ROOT:2}
+#
+## Replace all backslashes with forward slashes
+#LINUX_MULTIARCH_ROOT_FS=${LINUX_MULTIARCH_ROOT_FS//\\//}
+#
+## Remove any leading spaces
+#LINUX_MULTIARCH_ROOT_FS=${LINUX_MULTIARCH_ROOT_FS#" "}
+CLANG_TOOLCHAIN_ROOT="$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME"
+
 if [ ! -d "${CLANG_TOOLCHAIN_ROOT}" ]; then
   echo "Clang toolchain directory does not exist: CLANG_TOOLCHAIN_ROOT";
   exit 1
@@ -126,21 +138,26 @@ cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
  -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Linux/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Linux/share" \
  \
- -DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSTEM_PROCESSOR="x86_64" -DUNIX="1" \
+ -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+ -DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSTEM_PROCESSOR="x86_64" -DUNIX="1" -DCMAKE_USE_PTHREADS=ON -DTHREADS_PREFER_PTHREAD_FLAG=ON \
+ -DCMAKE_THREAD_LIBS_INIT="-lpthread" -DCMAKE_USE_PTHREADS_INIT=ON \
+ -DCMAKE_STATIC_LIBRARY_SUFFIX=".a" -DCMAKE_STATIC_LIBRARY_SUFFIX_CXX=".a" \
+ -DCLANG_TOOLCHAIN_ROOT="$CLANG_TOOLCHAIN_ROOT" -DCLANG_TOOLCHAIN_BIN="$CLANG_TOOLCHAIN_BIN" \
  -DCMAKE_FIND_ROOT_PATH="$CLANG_TOOLCHAIN_ROOT" -DCMAKE_C_COMPILER="$CLANG_TOOLCHAIN_BIN/clang.exe" -DCMAKE_CXX_COMPILER="$CLANG_TOOLCHAIN_BIN/clang++.exe" \
- -DCMAKE_ASM_COMPILER="$CLANG_TOOLCHAIN_BIN/clang.exe" -DCMAKE_AR="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ar.exe" -DCMAKE_RANLIB="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ranlib.exe" \
- -DCMAKE_LINKER="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ld.exe" -DCMAKE_NM="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-nm.exe" -DCMAKE_OBJCOPY="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-objcopy.exe" \
- -DCMAKE_OBJDUMP="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-objdump.exe" \
+ -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+ -DCMAKE_ASM_COMPILER="$CLANG_TOOLCHAIN_BIN/clang.exe" -DCMAKE_AR="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-ar.exe" -DCMAKE_RANLIB="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-ranlib.exe" \
+ -DCMAKE_LINKER="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-ld.exe" -DCMAKE_NM="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-nm.exe" -DCMAKE_OBJCOPY="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-objcopy.exe" \
+ -DCMAKE_OBJDUMP="$CLANG_TOOLCHAIN_BIN/$LINUX_ARCH_NAME-objdump.exe" \
  -DCMAKE_SYSTEM_INCLUDE_PATH="" -DCMAKE_INCLUDE_PATH="" \
  -DCMAKE_CXX_FLAGS=" -O3 -DNDEBUG -fPIC -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
  -fpascal-strings -fasm-blocks -ffp-contract=off -fvisibility-ms-compat -fvisibility-inlines-hidden -nostdinc++ \
- -target=${LINUX_ARCH_NAME} --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc -funwind-tables \
- -gdwarf-3 -pthread -stdlib=libc++ -Wno-error=unused-command-line-argument -Wno-error=deprecated-declarations \
+ --target=\"$LINUX_ARCH_NAME\" --sysroot=\"$CLANG_TOOLCHAIN_ROOT\" -fno-math-errno -fdiagnostics-format=msvc -funwind-tables \
+ -gdwarf-3 -pthread -std=libc++ -Wno-error=unused-command-line-argument -Wno-error=deprecated-declarations \
  -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 \
  -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 \
- -I $UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1 \
- -I $CLANG_TOOLCHAIN_ROOT/usr/include \
- -L $UE_THIRD_PARTY_PATH/Unix/LibCxx/lib/Unix/$LINUX_ARCH_NAME" \
+ -I \"$UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1\" \
+ -I \"$CLANG_TOOLCHAIN_ROOT/usr/include\" \
+ -L \"${UE_THIRD_PARTY_PATH}/Unix/LibCxx/lib/Unix/$LINUX_ARCH_NAME\"" \
  -DCMAKE_CXX_CREATE_STATIC_LIBRARY="<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  \
@@ -167,7 +184,7 @@ cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF -D_gRPC_CPP_PLUGIN="$TEMP/grpc_cpp_plugin.exe" \
  -D_gRPC_PROTOBUF_PROTOC_EXECUTABLE="$TEMP/protoc.exe" \
  "$ROOT_DIR/Source/gRPC"
-cmake --build . --target grpc_cpp_plugin --config Release -j "$NUM_JOBS"
+cmake --build . --target grpc_cpp_plugin --config Release -j "$NUM_JOBS" -v
 cmake --build . --target grpc_python_plugin --config Release -j "$NUM_JOBS"
 cmake --build . --target install --config Release -j "$NUM_JOBS"
 echo -e "Successfully built gRPC.\n"
