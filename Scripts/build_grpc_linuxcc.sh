@@ -55,6 +55,14 @@ if [ -z ${LINUX_MULTIARCH_ROOT+x} ]; then
   exit 1
 fi
 
+TOOLCHAIN="x86_64-unknown-linux-gnu"
+CLANG_TOOLCHAIN_ROOT="$LINUX_MULTIARCH_ROOT/$TOOLCHAIN"
+if [ ! -d "${CLANG_TOOLCHAIN_ROOT}" ]; then
+  echo "Clang toolchain directory does not exist: CLANG_TOOLCHAIN_ROOT";
+  exit 1
+fi
+CLANG_TOOLCHAIN_BIN="$CLANG_TOOLCHAIN_ROOT/bin"
+
 # Check for NINJA_EXE_PATH
 if [ -z ${NINJA_EXE_PATH+x} ]; then
   echo "NINJA_EXE_PATH is not set. https://ninja-build.org/";
@@ -63,8 +71,8 @@ fi
 
 echo -e "Using Linux MultiArch Root: $LINUX_MULTIARCH_ROOT\n";
 
-PROTOC="$ROOT_DIR/Output/gRPC/Binaries/Windows/protoc.exe"
-GRPC_CPP_PLUGIN="$ROOT_DIR/Output/gRPC/Binaries/Windows/grpc_cpp_plugin.exe"
+PROTOC="$ROOT_DIR/Outputs/gRPC/Binaries/Windows/protoc.exe"
+GRPC_CPP_PLUGIN="$ROOT_DIR/Outputs/gRPC/Binaries/Windows/grpc_cpp_plugin.exe"
 
 # Check for Windows outputs. We need protoc.exe and gen_cpp_protobuf.exe for the gRPC build later.
 if [ ! -f "${PROTOC}" ]; then
@@ -87,36 +95,63 @@ echo -e "All prerequisites satisfied. Starting build.\n"
 NUM_JOBS="$(nproc --all)"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Removing contents of Output and Build folders"
-find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
-find "$ROOT_DIR/Build" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
+echo -e "Removing stale Outputs and Builds\n"
+rm -rf "$ROOT_DIR/Outputs/gRPC"
+rm -rf "$ROOT_DIR/Builds/gRPC"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
-git reset --hard && git apply "$ROOT_DIR/Patch/gRPC.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/re2"
-git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patch/abseil-cpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
 echo -e "Successfully applied patches\n"
 
 echo -e "Building gRPC..."
-mkdir -p "$ROOT_DIR/Build/Linux/gRPC" && cd "$ROOT_DIR/Build/Linux/gRPC"
+mkdir -p "$ROOT_DIR/Builds/Linux/gRPC" && cd "$ROOT_DIR/Builds/Linux/gRPC"
+
+# Bash doesn't support inline comments in a multi-line command, but the following command is broken
+# into these sections for clarity:
+# - Install directory stuff
+# - Compiler & linker stuff
+# - RE2 stuff
+# - Abseil stuff
+# - Protobuf stuff
+# - gRPC Stuff
 cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
- -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Linux" -DCMAKE_INSTALL_LIBDIR="Libraries/Linux" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Linux/cmake" \
  -DgRPC_INSTALL_BINDIR="Binaries/Linux" -DgRPC_INSTALL_LIBDIR="Libraries/Linux" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Linux/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Linux/share" \
- -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchain/linuxcc.toolchain.cmake" \
- -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 " \
- -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
+ \
+ -DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSTEM_PROCESSOR="x86_64" -DUNIX="1" \
+ -DCMAKE_FIND_ROOT_PATH="$CLANG_TOOLCHAIN_ROOT" -DCMAKE_C_COMPILER="$CLANG_TOOLCHAIN_BIN/clang.exe" -DCMAKE_CXX_COMPILER="$CLANG_TOOLCHAIN_BIN/clang++.exe" \
+ -DCMAKE_ASM_COMPILER="$CLANG_TOOLCHAIN_BIN/clang.exe" -DCMAKE_AR="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ar.exe" -DCMAKE_RANLIB="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ranlib.exe" \
+ -DCMAKE_LINKER="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-ld.exe" -DCMAKE_NM="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-nm.exe" -DCMAKE_OBJCOPY="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-objcopy.exe" \
+ -DCMAKE_OBJDUMP="$CLANG_TOOLCHAIN_BIN/$TOOLCHAIN-objdump.exe" \
+ -DCMAKE_SYSTEM_INCLUDE_PATH="" -DCMAKE_INCLUDE_PATH="" \
+ -DCMAKE_CXX_FLAGS=" -O3 -DNDEBUG -fPIC -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
+ -fpascal-strings -fasm-blocks -ffp-contract=off -fvisibility-ms-compat -fvisibility-inlines-hidden -nostdinc++ \
+ -target=${LINUX_ARCH_NAME} --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc -funwind-tables \
+ -gdwarf-3 -pthread -stdlib=libc++ -Wno-error=unused-command-line-argument -Wno-error=deprecated-declarations \
+ -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 \
+ -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 \
+ -I $UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1 \
+ -I $CLANG_TOOLCHAIN_ROOT/usr/include \
+ -L $UE_THIRD_PARTY_PATH/Unix/LibCxx/lib/Unix/$LINUX_ARCH_NAME" \
+ -DCMAKE_CXX_CREATE_STATIC_LIBRARY="<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
+ \
  -DRE2_BUILD_TESTING=OFF \
+ \
  -DBUILD_TESTING=OFF -DABSL_PROPAGATE_CXX_STD=ON \
+ \
  -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
  -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON -Dprotobuf_DISABLE_RTTI=ON \
- -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=ON \
+ \
+ -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
  -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
  -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Unix/Release/libz.a" \
@@ -137,29 +172,28 @@ cmake --build . --target grpc_python_plugin --config Release -j "$NUM_JOBS"
 cmake --build . --target install --config Release -j "$NUM_JOBS"
 echo -e "Successfully built gRPC.\n"
 
-echo -e "Cleaning up Output directory...\n"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/cmake"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/share"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Linux/pkgconfig"
+echo -e "Cleaning up output directory...\n"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/cmake"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/share"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_unsecure.a" # We use libgrpc++.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_unsecure.a" # We use libgrpc.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc++_reflection.a" # Not needed
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_authorization_provider.a" # Not needed
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotobuf.a" # We use libprotobuf-lite.a
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libgrpc_plugin_support.a" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libprotoc.a" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant with libutf8_range.a
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libgrpc++_unsecure.a" # We use libgrpc++.a
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libgrpc_unsecure.a" # We use libgrpc.a
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libprotobuf-lite.a" # We use libprotobuf.a
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libgrpc_plugin_support.a" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libprotoc.a" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant with libutf8_range.a
 
 # We want to re-export all symbols from these libraries through one Unreal dll.
-# libupb_json_lib.a and libupb_textformat_lib.a for some reason have symbols in common with libgrpc.a. So we don't want to force them to load.
-find "$ROOT_DIR/Output/gRPC/Libraries/Mac" -type f -name "*.a" ! -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Output/gRPC/Libraries/Mac/exports.def"
+# libgrpc_authorization_provider.a, libupb_json_lib.a, and libupb_textformat_lib.a for some reason have symbols in common with libgrpc.a. So we don't want to force them to load.
+find "$ROOT_DIR/Outputs/gRPC/Libraries/Linux" -type f -name "*.a" ! -name "libgrpc_authorization_provider.a" ! \
+  -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/exports.def"
 
 echo -e "Archiving outputs...\n"
-ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Linux-$TAG.tar.gz"
+ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Linux-$TAG.tar.gz"
 rm -rf "$ARCHIVE"
-tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" gRPC
+tar -C "$ROOT_DIR/Outputs" -czf "$ARCHIVE" gRPC
 
 rm -rf "$TEMP"
 

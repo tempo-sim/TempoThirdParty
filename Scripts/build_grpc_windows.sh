@@ -60,36 +60,51 @@ echo -e "All prerequisites satisfied. Starting build.\n"
 NUM_JOBS=$(nproc --all)
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Removing contents of Output and Build folders"
-find "$ROOT_DIR/Output" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
-find "$ROOT_DIR/Build" -maxdepth 1 -mindepth 1 -type d -exec rm -rf {} \;
+echo -e "Removing stale Outputs and Builds\n"
+rm -rf "$ROOT_DIR/Outputs/gRPC"
+rm -rf "$ROOT_DIR/Builds/gRPC"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
-git reset --hard && git apply "$ROOT_DIR/Patch/gRPC.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/re2"
-git reset --hard && git apply "$ROOT_DIR/Patch/re2.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patch/abseil-cpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch"
 cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patch/protobuf.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
 echo -e "Successfully applied patches\n"
 
 echo -e "Building gRPC..."
-mkdir -p "$ROOT_DIR/Build/Windows/gRPC" && cd "$ROOT_DIR/Build/Windows/gRPC"
+mkdir -p "$ROOT_DIR/Builds/Windows/gRPC" && cd "$ROOT_DIR/Builds/Windows/gRPC"
+
+# Bash doesn't support inline comments in a multi-line command, but the following command is broken
+# into these sections for clarity:
+# - Install directory stuff
+# - Compiler & linker stuff
+# - RE2 stuff
+# - Abseil stuff
+# - Protobuf stuff
+# - gRPC Stuff
 cmake -G "Visual Studio 17 2022" \
- -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Output/gRPC" \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Windows" -DCMAKE_INSTALL_LIBDIR="Libraries/Windows" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Windows/cmake" \
  -DgRPC_INSTALL_BINDIR="Binaries/Windows" -DgRPC_INSTALL_LIBDIR="Libraries/Windows" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Windows/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Windows/share" \
- -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
- -DCMAKE_CXX_FLAGS=" -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1 /EHsc /MP$NUM_JOBS /std:c++20 /permissive" \
+ \
+ -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" \
+ -DCMAKE_CXX_FLAGS=" /EHsc /MP$NUM_JOBS /std:c++20 /permissive \
+ -D ABSL_BUILD_DLL=1 -D PROTOBUF_USE_DLLS=1 -D LIBPROTOBUF_EXPORTS=1 -D LIBPROTOC_EXPORTS=1 \
+ -D GRPC_DLL_EXPORTS=1 -D GRPCXX_DLL_EXPORTS=1 -D GPR_DLL_EXPORTS=1" \
+ \
  -DRE2_BUILD_TESTING=OFF \
+ \
  -DBUILD_TESTING=OFF -DABSL_PROPAGATE_CXX_STD=ON \
- -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" -Dprotobuf_MSVC_STATIC_RUNTIME=OFF \
+ \
+ -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -Dprotobuf_DEBUG_POSTFIX="" \
  -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
  -Dprotobuf_BUILD_PROTOC_BINARIES=ON -Dprotobuf_BUILD_LIBPROTOC=ON -Dprotobuf_DISABLE_RTTI=ON \
- -Dprotobuf_DEBUG_POSTFIX="" \
- -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=ON \
+ \
+ -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
  -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
  -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Win64/Release/zlibstatic.lib" \
@@ -113,19 +128,18 @@ cmake -G "Visual Studio 17 2022" \
 cmake --build . --target INSTALL --config Release -j "$NUM_JOBS"
 echo -e "Successfully built gRPC.\n"
 
-echo -e "Cleaning up Output directory...\n"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/cmake"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/share"
-rm -rf "$ROOT_DIR/Output/gRPC/Libraries/Windows/pkgconfig"
+echo -e "Cleaning up output directory...\n"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/cmake"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/share"
+rm -rf "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/pkgconfig"
 
 echo -e "Removing unused libraries...\n"
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc++_unsecure.lib" # We use libgrpc++.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_unsecure.lib" # We use libgrpc.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_authorization_provider.lib" # Not needed
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotoc.lib" # Only needed during build of grpc code gen plugins
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/libprotobuf-lite.lib" # We use libprotobuf.lib
-rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols in grpc.lib
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/grpc++_unsecure.lib" # We use grpc++.lib
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/grpc_unsecure.lib" # We use grpc.lib
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/libprotobuf-lite.lib" # We use libprotobuf.lib
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/grpc_plugin_support.lib" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/libprotoc.lib" # Only needed during build of grpc code gen plugins
+rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/utf8_range_lib.lib" # Redundant with utf8_range.lib
 
 # We want to re-export all symbols from these libraries through one Unreal dll.
 # On Mac and Linux the linkers have options to force loading and re-exporting of all symbols.
@@ -133,11 +147,13 @@ rm -f "$ROOT_DIR/Output/gRPC/Libraries/Windows/utf8_range_lib.lib" # All symbols
 # However LINK does support the /DEF option which allows you to supply a .def file specifying all the dll's exports.
 # So, on Windows only, we generate a full list of symbols to give to the linker in a .def file.
 echo -e "Extracting symbols from all libraries...\n"
-eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --libdir --namespaces grpc protobuf upb absl re2 google envoy census telemetry cares xds bloaty benchmark utf8_range $ROOT_DIR/Output/gRPC/Libraries/Windows -o $ROOT_DIR/Output/gRPC/Libraries/Windows/exports.def"
+eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium \
+ --namespaces grpc protobuf upb absl re2 google envoy census telemetry cares xds bloaty benchmark utf8_range \
+ --libdir $ROOT_DIR/Outputs/gRPC/Libraries/Windows -o $ROOT_DIR/Outputs/gRPC/Libraries/Windows/exports.def"
 
 echo -e "Archiving outputs...\n"
-ARCHIVE="$ROOT_DIR/Release/TempoThirdParty-Windows-$TAG.tar.gz"
+ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Windows-$TAG.tar.gz"
 rm -rf "$ARCHIVE"
-tar -C "$ROOT_DIR/Output" -czf "$ARCHIVE" gRPC
+tar -C "$ROOT_DIR/Outputs" -czf "$ARCHIVE" gRPC
 
 echo "Done! Archive: $ARCHIVE"
