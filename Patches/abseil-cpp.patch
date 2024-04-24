@@ -215,6 +215,50 @@ index 8744540e..53b36a4e 100644
      // See cordz_info_t for forced alignment and size of `cordz_info` details.
      struct AsTree {
        explicit constexpr AsTree(absl::cord_internal::CordRep* tree)
+diff --git a/absl/strings/internal/cordz_functions.h b/absl/strings/internal/cordz_functions.h
+index ed108bf1..1dab77c7 100644
+--- a/absl/strings/internal/cordz_functions.h
++++ b/absl/strings/internal/cordz_functions.h
+@@ -27,10 +27,10 @@ namespace cord_internal {
+ 
+ // Returns the current sample rate. This represents the average interval
+ // between samples.
+-int32_t get_cordz_mean_interval();
++ABSL_DLL int32_t get_cordz_mean_interval();
+ 
+ // Sets the sample rate with the average interval between samples.
+-void set_cordz_mean_interval(int32_t mean_interval);
++ABSL_DLL void set_cordz_mean_interval(int32_t mean_interval);
+ 
+ // Cordz is only enabled on Linux with thread_local support.
+ #if defined(ABSL_INTERNAL_CORDZ_ENABLED)
+@@ -45,11 +45,11 @@ void set_cordz_mean_interval(int32_t mean_interval);
+ // the value is 1 or less, the code will check on the next event if cordz is
+ // enabled, and if so, will sample the Cord. cordz is only enabled when we can
+ // use thread locals.
+-ABSL_CONST_INIT extern thread_local int64_t cordz_next_sample;
++ABSL_CONST_INIT ABSL_DLL extern thread_local int64_t cordz_next_sample;
+ 
+ // Determines if the next sample should be profiled. If it is, the value pointed
+ // at by next_sample will be set with the interval until the next sample.
+-bool cordz_should_profile_slow();
++ABSL_DLL bool cordz_should_profile_slow();
+ 
+ // Returns true if the next cord should be sampled.
+ inline bool cordz_should_profile() {
+diff --git a/absl/strings/internal/cordz_info.h b/absl/strings/internal/cordz_info.h
+index 17eaa91c..ae6a75a1 100644
+--- a/absl/strings/internal/cordz_info.h
++++ b/absl/strings/internal/cordz_info.h
+@@ -44,7 +44,7 @@ namespace cord_internal {
+ // and will either be deleted or appended to the global_delete_queue. If it is
+ // placed on the global_delete_queue, the CordzInfo object will be cleaned in
+ // the destructor of a CordzSampleToken object.
+-class ABSL_LOCKABLE CordzInfo : public CordzHandle {
++class ABSL_LOCKABLE ABSL_DLL CordzInfo : public CordzHandle {
+  public:
+   using MethodIdentifier = CordzUpdateTracker::MethodIdentifier;
+ 
 diff --git a/absl/time/internal/cctz/include/cctz/civil_time_detail.h b/absl/time/internal/cctz/include/cctz/civil_time_detail.h
 index 2b0aed56..ac77114c 100644
 --- a/absl/time/internal/cctz/include/cctz/civil_time_detail.h
