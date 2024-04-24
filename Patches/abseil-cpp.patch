@@ -162,6 +162,36 @@ index 3518bc34..d0b99bd4 100644
        std::is_nothrow_move_assignable<hasher>::value &&
        std::is_nothrow_move_assignable<key_equal>::value) {
      // TODO(sbenza): We should only use the operations from the noexcept clause
+diff --git a/absl/flags/flag.h b/absl/flags/flag.h
+index 06ea6932..503a145f 100644
+--- a/absl/flags/flag.h
++++ b/absl/flags/flag.h
+@@ -260,14 +260,14 @@ ABSL_NAMESPACE_END
+ // global name for FLAGS_no<flag_name> symbol, thus preventing the possibility
+ // of defining two flags with names foo and nofoo.
+ #define ABSL_FLAG_IMPL(Type, name, default_value, help)                       \
+-  extern ::absl::Flag<Type> FLAGS_##name;                                     \
++  ABSL_DLL extern ::absl::Flag<Type> FLAGS_##name;                                     \
+   namespace absl /* block flags in namespaces */ {}                           \
+   ABSL_FLAG_IMPL_DECLARE_DEF_VAL_WRAPPER(name, Type, default_value)           \
+   ABSL_FLAG_IMPL_DECLARE_HELP_WRAPPER(name, help)                             \
+   ABSL_CONST_INIT absl::Flag<Type> FLAGS_##name{                              \
+       ABSL_FLAG_IMPL_FLAGNAME(#name), ABSL_FLAG_IMPL_FILENAME(),              \
+       ABSL_FLAG_IMPL_HELP_ARG(name), ABSL_FLAG_IMPL_DEFAULT_ARG(Type, name)}; \
+-  extern absl::flags_internal::FlagRegistrarEmpty FLAGS_no##name;             \
++  ABSL_DLL extern absl::flags_internal::FlagRegistrarEmpty FLAGS_no##name;             \
+   absl::flags_internal::FlagRegistrarEmpty FLAGS_no##name =                   \
+       ABSL_FLAG_IMPL_REGISTRAR(Type, FLAGS_##name)
+ 
+@@ -293,7 +293,7 @@ ABSL_NAMESPACE_END
+ // TODO(rogeeff): replace RETIRED_FLAGS with FLAGS once forward declarations of
+ // retired flags are cleaned up.
+ #define ABSL_RETIRED_FLAG(type, name, default_value, explanation)      \
+-  static absl::flags_internal::RetiredFlag<type> RETIRED_FLAGS_##name; \
++  ABSL_DLL static absl::flags_internal::RetiredFlag<type> RETIRED_FLAGS_##name; \
+   ABSL_ATTRIBUTE_UNUSED static const auto RETIRED_FLAGS_REG_##name =   \
+       (RETIRED_FLAGS_##name.Retire(#name),                             \
+        ::absl::flags_internal::FlagRegistrarEmpty{})
 diff --git a/absl/strings/cord.h b/absl/strings/cord.h
 index b3e556b6..19e7dacf 100644
 --- a/absl/strings/cord.h
