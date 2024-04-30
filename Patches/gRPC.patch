@@ -243,6 +243,19 @@ index c5123edadf..bd63b9caec 100644
      )
    endif()
  endif()
+diff --git a/include/grpc/impl/call.h b/include/grpc/impl/call.h
+index d1f7c2642b..51593b0f07 100644
+--- a/include/grpc/impl/call.h
++++ b/include/grpc/impl/call.h
+@@ -23,7 +23,7 @@
+ 
+ // Run a callback in the call's EventEngine.
+ // Internal-only
+-void grpc_call_run_in_event_engine(const grpc_call* call,
++GRPCAPI void grpc_call_run_in_event_engine(const grpc_call* call,
+                                    absl::AnyInvocable<void()> cb);
+ 
+ #endif /* GRPC_IMPL_CALL_H */
 diff --git a/include/grpc/support/port_platform.h b/include/grpc/support/port_platform.h
 index d2ef98e41b..15875eda15 100644
 --- a/include/grpc/support/port_platform.h
@@ -981,7 +994,7 @@ diff --git a/src/objective-c/tests/CppCronetTests/TestHelper.mm b/src/objective-
 index de056ae28a..60e61fb6ba 100644
 --- a/src/objective-c/tests/CppCronetTests/TestHelper.mm
 +++ b/src/objective-c/tests/CppCronetTests/TestHelper.mm
-@@ -112,13 +112,13 @@ Status TestServiceImpl::Echo(ServerContext* context, const EchoRequest* request,
+@@ -112,13 +112,13 @@ void MaybeEchoDeadline(ServerContext* context, const EchoRequest* request, EchoR
          !request->param().debug_info().detail().empty()) {
        std::string serialized_debug_info = request->param().debug_info().SerializeAsString();
        context->AddTrailingMetadata(kDebugInfoTrailerKey, serialized_debug_info);
@@ -997,7 +1010,7 @@ index de056ae28a..60e61fb6ba 100644
  }
  
  Status TestServiceImpl::RequestStream(ServerContext* context,
-@@ -131,7 +131,7 @@ Status TestServiceImpl::RequestStream(ServerContext* context,
+@@ -131,7 +131,7 @@ void MaybeEchoDeadline(ServerContext* context, const EchoRequest* request, EchoR
      response->mutable_message()->append(request.message());
      ++num_msgs_read;
    }
@@ -1006,7 +1019,7 @@ index de056ae28a..60e61fb6ba 100644
  }
  
  Status TestServiceImpl::ResponseStream(ServerContext* context, const EchoRequest* request,
-@@ -148,7 +148,7 @@ Status TestServiceImpl::ResponseStream(ServerContext* context, const EchoRequest
+@@ -148,7 +148,7 @@ void MaybeEchoDeadline(ServerContext* context, const EchoRequest* request, EchoR
        writer->Write(response);
      }
    }
@@ -1015,7 +1028,7 @@ index de056ae28a..60e61fb6ba 100644
  }
  
  Status TestServiceImpl::BidiStream(ServerContext* context,
-@@ -172,7 +172,7 @@ Status TestServiceImpl::BidiStream(ServerContext* context,
+@@ -172,7 +172,7 @@ void MaybeEchoDeadline(ServerContext* context, const EchoRequest* request, EchoR
      }
    }
  
