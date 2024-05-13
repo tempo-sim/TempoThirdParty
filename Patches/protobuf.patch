@@ -149,6 +149,53 @@ index 1df00c3c1..b72192b51 100644
    }
  
    // Offset of a non-oneof field.  Getting a field offset is slightly more
+diff --git a/src/google/protobuf/message.cc b/src/google/protobuf/message.cc
+index b4b1a40c5..a55c48d6b 100644
+--- a/src/google/protobuf/message.cc
++++ b/src/google/protobuf/message.cc
+@@ -211,6 +211,8 @@ class GeneratedMessageFactory final : public MessageFactory {
+   // implements MessageFactory ---------------------------------------
+   const Message* GetPrototype(const Descriptor* type) override;
+ 
++  void Reset();
++
+  private:
+   const Message* FindInTypeMap(const Descriptor* type)
+       ABSL_SHARED_LOCKS_REQUIRED(mutex_)
+@@ -336,12 +338,20 @@ const Message* GeneratedMessageFactory::GetPrototype(const Descriptor* type) {
+   return result;
+ }
+ 
++void GeneratedMessageFactory::Reset() {
++  files_.clear();
++}
++
+ }  // namespace
+ 
+ MessageFactory* MessageFactory::generated_factory() {
+   return GeneratedMessageFactory::singleton();
+ }
+ 
++void MessageFactory::ResetGeneratedFactory() {
++  GeneratedMessageFactory::singleton()->Reset();
++}
++
+ void MessageFactory::InternalRegisterGeneratedFile(
+     const google::protobuf::internal::DescriptorTable* table) {
+   GeneratedMessageFactory::singleton()->RegisterFile(table);
+diff --git a/src/google/protobuf/message.h b/src/google/protobuf/message.h
+index 1fb5368a2..6e2fbfb66 100644
+--- a/src/google/protobuf/message.h
++++ b/src/google/protobuf/message.h
+@@ -1325,6 +1325,8 @@ class PROTOBUF_EXPORT MessageFactory {
+   // This factory is a singleton.  The caller must not delete the object.
+   static MessageFactory* generated_factory();
+ 
++  static void ResetGeneratedFactory();
++
+   // For internal use only:  Registers a .proto file at static initialization
+   // time, to be placed in generated_factory.  The first time GetPrototype()
+   // is called with a descriptor from this file, |register_messages| will be
 diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
 index 25abc3039..b8fb09b5a 100644
 --- a/src/google/protobuf/port_def.inc
