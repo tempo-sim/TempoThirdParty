@@ -77,6 +77,65 @@ index 9e68da679..57463f054 100644
        }
      }
    }
+diff --git a/src/google/protobuf/descriptor.cc b/src/google/protobuf/descriptor.cc
+index 5be4ddf37..f9c4f5b0c 100644
+--- a/src/google/protobuf/descriptor.cc
++++ b/src/google/protobuf/descriptor.cc
+@@ -2121,6 +2121,12 @@ void DescriptorPool::InternalAddGeneratedFile(
+ }
+ 
+ 
++void DescriptorPool::ResetGeneratedDatabase() {
++  absl::MutexLockMaybe lock(internal_generated_pool()->mutex_);
++  ABSL_CHECK(GeneratedDatabase()->Reset());
++}
++
++
+ // Find*By* methods ==================================================
+ 
+ // TODO:  There's a lot of repeated code here, but I'm not sure if
+diff --git a/src/google/protobuf/descriptor.h b/src/google/protobuf/descriptor.h
+index ff178c31c..dd50f5f84 100644
+--- a/src/google/protobuf/descriptor.h
++++ b/src/google/protobuf/descriptor.h
+@@ -2327,6 +2327,8 @@ class PROTOBUF_EXPORT DescriptorPool {
+   static void InternalAddGeneratedFile(const void* encoded_file_descriptor,
+                                        int size);
+ 
++  static void ResetGeneratedDatabase();
++
+   // Disallow [enforce_utf8 = false] in .proto files.
+   void DisallowEnforceUtf8() { disallow_enforce_utf8_ = true; }
+ 
+diff --git a/src/google/protobuf/descriptor_database.cc b/src/google/protobuf/descriptor_database.cc
+index 9d6464f81..f30ed3e3e 100644
+--- a/src/google/protobuf/descriptor_database.cc
++++ b/src/google/protobuf/descriptor_database.cc
+@@ -879,6 +879,11 @@ EncodedDescriptorDatabase::~EncodedDescriptorDatabase() {
+   }
+ }
+ 
++bool EncodedDescriptorDatabase::Reset() {
++  index_.reset(new DescriptorIndex());
++  return true;
++}
++
+ // ===================================================================
+ 
+ DescriptorPoolDatabase::DescriptorPoolDatabase(const DescriptorPool& pool)
+diff --git a/src/google/protobuf/descriptor_database.h b/src/google/protobuf/descriptor_database.h
+index dfb1bdb50..7f069c877 100644
+--- a/src/google/protobuf/descriptor_database.h
++++ b/src/google/protobuf/descriptor_database.h
+@@ -270,6 +270,8 @@ class PROTOBUF_EXPORT EncodedDescriptorDatabase : public DescriptorDatabase {
+       delete;
+   ~EncodedDescriptorDatabase() override;
+ 
++  bool Reset();
++
+   // Adds the FileDescriptorProto to the database.  The descriptor is provided
+   // in encoded form.  The database does not make a copy of the bytes, nor
+   // does it take ownership; it's up to the caller to make sure the bytes
 diff --git a/src/google/protobuf/generated_message_reflection.h b/src/google/protobuf/generated_message_reflection.h
 index 1df00c3c1..b72192b51 100644
 --- a/src/google/protobuf/generated_message_reflection.h
@@ -90,6 +149,53 @@ index 1df00c3c1..b72192b51 100644
    }
  
    // Offset of a non-oneof field.  Getting a field offset is slightly more
+diff --git a/src/google/protobuf/message.cc b/src/google/protobuf/message.cc
+index b4b1a40c5..a55c48d6b 100644
+--- a/src/google/protobuf/message.cc
++++ b/src/google/protobuf/message.cc
+@@ -211,6 +211,8 @@ class GeneratedMessageFactory final : public MessageFactory {
+   // implements MessageFactory ---------------------------------------
+   const Message* GetPrototype(const Descriptor* type) override;
+ 
++  void Reset();
++
+  private:
+   const Message* FindInTypeMap(const Descriptor* type)
+       ABSL_SHARED_LOCKS_REQUIRED(mutex_)
+@@ -336,12 +338,20 @@ const Message* GeneratedMessageFactory::GetPrototype(const Descriptor* type) {
+   return result;
+ }
+ 
++void GeneratedMessageFactory::Reset() {
++  files_.clear();
++}
++
+ }  // namespace
+ 
+ MessageFactory* MessageFactory::generated_factory() {
+   return GeneratedMessageFactory::singleton();
+ }
+ 
++void MessageFactory::ResetGeneratedFactory() {
++  GeneratedMessageFactory::singleton()->Reset();
++}
++
+ void MessageFactory::InternalRegisterGeneratedFile(
+     const google::protobuf::internal::DescriptorTable* table) {
+   GeneratedMessageFactory::singleton()->RegisterFile(table);
+diff --git a/src/google/protobuf/message.h b/src/google/protobuf/message.h
+index 1fb5368a2..6e2fbfb66 100644
+--- a/src/google/protobuf/message.h
++++ b/src/google/protobuf/message.h
+@@ -1325,6 +1325,8 @@ class PROTOBUF_EXPORT MessageFactory {
+   // This factory is a singleton.  The caller must not delete the object.
+   static MessageFactory* generated_factory();
+ 
++  static void ResetGeneratedFactory();
++
+   // For internal use only:  Registers a .proto file at static initialization
+   // time, to be placed in generated_factory.  The first time GetPrototype()
+   // is called with a descriptor from this file, |register_messages| will be
 diff --git a/src/google/protobuf/port_def.inc b/src/google/protobuf/port_def.inc
 index 25abc3039..b8fb09b5a 100644
 --- a/src/google/protobuf/port_def.inc
