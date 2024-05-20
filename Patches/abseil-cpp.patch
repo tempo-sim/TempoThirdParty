@@ -259,6 +259,19 @@ index 17eaa91c..ae6a75a1 100644
   public:
    using MethodIdentifier = CordzUpdateTracker::MethodIdentifier;
  
+diff --git a/absl/synchronization/mutex.h b/absl/synchronization/mutex.h
+index d53a22bb..c7302795 100644
+--- a/absl/synchronization/mutex.h
++++ b/absl/synchronization/mutex.h
+@@ -148,7 +148,7 @@ struct SynchWaitParams;
+ //
+ // See also `MutexLock`, below, for scoped `Mutex` acquisition.
+ 
+-class ABSL_LOCKABLE Mutex {
++class ABSL_LOCKABLE ABSL_DLL Mutex {
+  public:
+   // Creates a `Mutex` that is not held by anyone. This constructor is
+   // typically used for Mutexes allocated on the heap or the stack.
 diff --git a/absl/time/internal/cctz/include/cctz/civil_time_detail.h b/absl/time/internal/cctz/include/cctz/civil_time_detail.h
 index 2b0aed56..ac77114c 100644
 --- a/absl/time/internal/cctz/include/cctz/civil_time_detail.h
