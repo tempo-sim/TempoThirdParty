@@ -178,6 +178,148 @@ index 3518bc34..d0b99bd4 100644
        std::is_nothrow_move_assignable<hasher>::value &&
        std::is_nothrow_move_assignable<key_equal>::value) {
      // TODO(sbenza): We should only use the operations from the noexcept clause
+diff --git a/absl/flags/parse.cc b/absl/flags/parse.cc
+index 526b61d1..93b484fb 100644
+--- a/absl/flags/parse.cc
++++ b/absl/flags/parse.cc
+@@ -99,64 +99,6 @@ struct SpecifiedFlagsCompare {
+ ABSL_NAMESPACE_END
+ }  // namespace absl
+ 
+-// These flags influence how command line flags are parsed and are only intended
+-// to be set on the command line.  Avoid reading or setting them from C++ code.
+-ABSL_FLAG(std::vector<std::string>, flagfile, {},
+-          "comma-separated list of files to load flags from")
+-    .OnUpdate([]() {
+-      if (absl::GetFlag(FLAGS_flagfile).empty()) return;
+-
+-      absl::MutexLock l(&absl::flags_internal::processing_checks_guard);
+-
+-      // Setting this flag twice before it is handled most likely an internal
+-      // error and should be reviewed by developers.
+-      if (absl::flags_internal::flagfile_needs_processing) {
+-        ABSL_INTERNAL_LOG(WARNING, "flagfile set twice before it is handled");
+-      }
+-
+-      absl::flags_internal::flagfile_needs_processing = true;
+-    });
+-ABSL_FLAG(std::vector<std::string>, fromenv, {},
+-          "comma-separated list of flags to set from the environment"
+-          " [use 'export FLAGS_flag1=value']")
+-    .OnUpdate([]() {
+-      if (absl::GetFlag(FLAGS_fromenv).empty()) return;
+-
+-      absl::MutexLock l(&absl::flags_internal::processing_checks_guard);
+-
+-      // Setting this flag twice before it is handled most likely an internal
+-      // error and should be reviewed by developers.
+-      if (absl::flags_internal::fromenv_needs_processing) {
+-        ABSL_INTERNAL_LOG(WARNING, "fromenv set twice before it is handled.");
+-      }
+-
+-      absl::flags_internal::fromenv_needs_processing = true;
+-    });
+-ABSL_FLAG(std::vector<std::string>, tryfromenv, {},
+-          "comma-separated list of flags to try to set from the environment if "
+-          "present")
+-    .OnUpdate([]() {
+-      if (absl::GetFlag(FLAGS_tryfromenv).empty()) return;
+-
+-      absl::MutexLock l(&absl::flags_internal::processing_checks_guard);
+-
+-      // Setting this flag twice before it is handled most likely an internal
+-      // error and should be reviewed by developers.
+-      if (absl::flags_internal::tryfromenv_needs_processing) {
+-        ABSL_INTERNAL_LOG(WARNING,
+-                          "tryfromenv set twice before it is handled.");
+-      }
+-
+-      absl::flags_internal::tryfromenv_needs_processing = true;
+-    });
+-
+-// Rather than reading or setting --undefok from C++ code, please consider using
+-// ABSL_RETIRED_FLAG instead.
+-ABSL_FLAG(std::vector<std::string>, undefok, {},
+-          "comma-separated list of flag names that it is okay to specify "
+-          "on the command line even if the program does not define a flag "
+-          "with that name");
+-
+ namespace absl {
+ ABSL_NAMESPACE_BEGIN
+ namespace flags_internal {
+@@ -435,7 +377,7 @@ bool HandleGeneratorFlags(std::vector<ArgsList>& input_args,
+   // multiple times. We are collecting them all into a single list and set
+   // the value of FLAGS_flagfile to that value at the end of the parsing.
+   if (flags_internal::flagfile_needs_processing) {
+-    auto flagfiles = absl::GetFlag(FLAGS_flagfile);
++    auto flagfiles = std::vector<std::string>();
+ 
+     if (input_args.size() == 1) {
+       flagfile_value.insert(flagfile_value.end(), flagfiles.begin(),
+@@ -451,7 +393,7 @@ bool HandleGeneratorFlags(std::vector<ArgsList>& input_args,
+   // programmatically and at runtime on a command line. Unlike flagfile these
+   // can't be recursive.
+   if (flags_internal::fromenv_needs_processing) {
+-    auto flags_list = absl::GetFlag(FLAGS_fromenv);
++    auto flags_list = std::vector<std::string>();
+ 
+     success &= ReadFlagsFromEnv(flags_list, input_args, true);
+ 
+@@ -459,7 +401,7 @@ bool HandleGeneratorFlags(std::vector<ArgsList>& input_args,
+   }
+ 
+   if (flags_internal::tryfromenv_needs_processing) {
+-    auto flags_list = absl::GetFlag(FLAGS_tryfromenv);
++    auto flags_list = std::vector<std::string>();
+ 
+     success &= ReadFlagsFromEnv(flags_list, input_args, false);
+ 
+@@ -472,27 +414,7 @@ bool HandleGeneratorFlags(std::vector<ArgsList>& input_args,
+ // --------------------------------------------------------------------
+ 
+ void ResetGeneratorFlags(const std::vector<std::string>& flagfile_value) {
+-  // Setting flagfile to the value which collates all the values set on a
+-  // command line and programmatically. So if command line looked like
+-  // --flagfile=f1 --flagfile=f2 the final value of the FLAGS_flagfile flag is
+-  // going to be {"f1", "f2"}
+-  if (!flagfile_value.empty()) {
+-    absl::SetFlag(&FLAGS_flagfile, flagfile_value);
+-    absl::MutexLock l(&flags_internal::processing_checks_guard);
+-    flags_internal::flagfile_needs_processing = false;
+-  }
+ 
+-  // fromenv/tryfromenv are set to <undefined> value.
+-  if (!absl::GetFlag(FLAGS_fromenv).empty()) {
+-    absl::SetFlag(&FLAGS_fromenv, {});
+-  }
+-  if (!absl::GetFlag(FLAGS_tryfromenv).empty()) {
+-    absl::SetFlag(&FLAGS_tryfromenv, {});
+-  }
+-
+-  absl::MutexLock l(&flags_internal::processing_checks_guard);
+-  flags_internal::fromenv_needs_processing = false;
+-  flags_internal::tryfromenv_needs_processing = false;
+ }
+ 
+ // --------------------------------------------------------------------
+@@ -591,7 +513,7 @@ std::tuple<bool, absl::string_view> DeduceFlagValue(const CommandLineFlag& flag,
+ // --------------------------------------------------------------------
+ 
+ bool CanIgnoreUndefinedFlag(absl::string_view flag_name) {
+-  auto undefok = absl::GetFlag(FLAGS_undefok);
++  auto undefok = std::vector<std::string>();
+   if (std::find(undefok.begin(), undefok.end(), flag_name) != undefok.end()) {
+     return true;
+   }
+@@ -669,7 +591,7 @@ struct BestHints {
+ // the given flag.
+ std::vector<std::string> GetMisspellingHints(const absl::string_view flag) {
+   const size_t maxCutoff = std::min(flag.size() / 2 + 1, kMaxDistance);
+-  auto undefok = absl::GetFlag(FLAGS_undefok);
++  auto undefok = std::vector<std::string>();
+   BestHints best_hints(static_cast<uint8_t>(maxCutoff));
+   flags_internal::ForEachFlag([&](const CommandLineFlag& f) {
+     if (best_hints.hints.size() >= kMaxHints) return;
 diff --git a/absl/strings/cord.h b/absl/strings/cord.h
 index b3e556b6..19e7dacf 100644
 --- a/absl/strings/cord.h
