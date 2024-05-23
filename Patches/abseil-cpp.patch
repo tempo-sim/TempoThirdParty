@@ -101,6 +101,22 @@ index 762bb7f7..ddeff8a8 100644
  #else
  #define ABSL_TEST_DLL
  #endif  // defined(_MSC_VER)
+diff --git a/absl/base/internal/spinlock_wait.h b/absl/base/internal/spinlock_wait.h
+index 9a1adcda..082f1449 100644
+--- a/absl/base/internal/spinlock_wait.h
++++ b/absl/base/internal/spinlock_wait.h
+@@ -73,9 +73,9 @@ ABSL_NAMESPACE_END
+ // By changing our extension points to be extern "C", we dodge this
+ // check.
+ extern "C" {
+-void ABSL_INTERNAL_C_SYMBOL(AbslInternalSpinLockWake)(std::atomic<uint32_t> *w,
++ABSL_DLL void ABSL_INTERNAL_C_SYMBOL(AbslInternalSpinLockWake)(std::atomic<uint32_t> *w,
+                                                       bool all);
+-void ABSL_INTERNAL_C_SYMBOL(AbslInternalSpinLockDelay)(
++ABSL_DLL void ABSL_INTERNAL_C_SYMBOL(AbslInternalSpinLockDelay)(
+     std::atomic<uint32_t> *w, uint32_t value, int loop,
+     absl::base_internal::SchedulingMode scheduling_mode);
+ }
 diff --git a/absl/container/internal/btree.h b/absl/container/internal/btree.h
 index 91df57a3..7e2d59e7 100644
 --- a/absl/container/internal/btree.h
