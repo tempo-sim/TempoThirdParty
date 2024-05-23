@@ -25,8 +25,8 @@ if ! which cmake; then
 fi
 
 # Check for Python3
-if ! which python3; then
-    echo "Couldn't find python3"
+if ! which python; then
+    echo "Couldn't find python"
     exit 1
 fi
 
