@@ -1,3 +1,6 @@
 [submodule "Source/gRPC"]
 	path = Source/gRPC
 	url = https://github.com/grpc/grpc.git
+[submodule "Source/rclcpp"]
+	path = Source/rclcpp
+	url = https://github.com/ros2/rclcpp
