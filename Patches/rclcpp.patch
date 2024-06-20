@@ -26,6 +26,32 @@ index 1251e58b..0c1dfde3 100644
    // This mutex is recursive so that the constructor of a sub context may
    // attempt to acquire another sub context.
    std::recursive_mutex sub_contexts_mutex_;
+diff --git a/rclcpp/include/rclcpp/create_client.hpp b/rclcpp/include/rclcpp/create_client.hpp
+index 1a960b8d..72d6b803 100644
+--- a/rclcpp/include/rclcpp/create_client.hpp
++++ b/rclcpp/include/rclcpp/create_client.hpp
+@@ -46,7 +46,7 @@ create_client(
+     service_name,
+     options);
+ 
+-  auto cli_base_ptr = std::dynamic_pointer_cast<rclcpp::ClientBase>(cli);
++  auto cli_base_ptr = std::static_pointer_cast<rclcpp::ClientBase>(cli);
+   node_services->add_client(cli_base_ptr, group);
+   return cli;
+ }
+diff --git a/rclcpp/include/rclcpp/create_service.hpp b/rclcpp/include/rclcpp/create_service.hpp
+index 9aaa02a1..c8ab90a5 100644
+--- a/rclcpp/include/rclcpp/create_service.hpp
++++ b/rclcpp/include/rclcpp/create_service.hpp
+@@ -48,7 +48,7 @@ create_service(
+   auto serv = Service<ServiceT>::make_shared(
+     node_base->get_shared_rcl_node_handle(),
+     service_name, any_service_callback, service_options);
+-  auto serv_base_ptr = std::dynamic_pointer_cast<ServiceBase>(serv);
++  auto serv_base_ptr = std::static_pointer_cast<ServiceBase>(serv);
+   node_services->add_service(serv_base_ptr, group);
+   return serv;
+ }
 diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
 index c2e747e7..1c74ef19 100644
 --- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
@@ -92,6 +118,19 @@ index 79357b95..b5fb32d3 100644
    RCLCPP_PUBLIC
    explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
  
+diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
+index a1727eab..0d13aff6 100644
+--- a/rclcpp/include/rclcpp/subscription_factory.hpp
++++ b/rclcpp/include/rclcpp/subscription_factory.hpp
+@@ -117,7 +117,7 @@ create_subscription_factory(
+       // require this->shared_from_this() which cannot be called from
+       // the constructor.
+       sub->post_init_setup(node_base, qos, options);
+-      auto sub_base_ptr = std::dynamic_pointer_cast<SubscriptionBase>(sub);
++      auto sub_base_ptr = std::static_pointer_cast<SubscriptionBase>(sub);
+       return sub_base_ptr;
+     }
+   };
 diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
 index e0b516b5..637b2d54 100644
 --- a/rclcpp/src/rclcpp/graph_listener.cpp
@@ -120,3 +159,65 @@ index efce4afe..b558419b 100644
  
  static std::atomic<uint64_t> _next_unique_id {1};
  
+diff --git a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
+index 22fd7f9c..667d4ec7 100644
+--- a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
++++ b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
+@@ -115,7 +115,7 @@ LifecycleNode::create_client(
+     service_name,
+     options);
+ 
+-  auto cli_base_ptr = std::dynamic_pointer_cast<ClientBase>(cli);
++  auto cli_base_ptr = std::static_pointer_cast<ClientBase>(cli);
+   node_services_->add_client(cli_base_ptr, group);
+   return cli;
+ }
+diff --git a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp b/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
+index 13110d29..0f521b55 100644
+--- a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
++++ b/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
+@@ -129,7 +129,7 @@ public:
+           &state_machine_.com_interface.srv_change_state,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_change_state_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_change_state_),
+           nullptr);
+       }
+ 
+@@ -145,7 +145,7 @@ public:
+           &state_machine_.com_interface.srv_get_state,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_state_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_state_),
+           nullptr);
+       }
+ 
+@@ -161,7 +161,7 @@ public:
+           &state_machine_.com_interface.srv_get_available_states,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_available_states_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_available_states_),
+           nullptr);
+       }
+ 
+@@ -178,7 +178,7 @@ public:
+           &state_machine_.com_interface.srv_get_available_transitions,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_available_transitions_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_available_transitions_),
+           nullptr);
+       }
+ 
+@@ -195,7 +195,7 @@ public:
+           &state_machine_.com_interface.srv_get_transition_graph,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_transition_graph_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_transition_graph_),
+           nullptr);
+       }
+     }
