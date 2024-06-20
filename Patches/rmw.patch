@@ -1,0 +1,22 @@
+diff --git a/rmw/include/rmw/impl/cpp/demangle.hpp b/rmw/include/rmw/impl/cpp/demangle.hpp
+index 0d0da39..2876667 100644
+--- a/rmw/include/rmw/impl/cpp/demangle.hpp
++++ b/rmw/include/rmw/impl/cpp/demangle.hpp
+@@ -39,6 +39,9 @@ std::string
+ demangle(const T & instance)
+ {
+   (void)instance;
++#ifdef _LIBCPP_HAS_NO_RTTI
++  return "Cannot demangle - RRTI Disabled";
++#else
+ // Cannot do demangling if on Windows or if we want to avoid memory allocation.
+ #if !defined(_WIN32) || RMW_AVOID_MEMORY_ALLOCATION
+   int status = 0;
+@@ -53,6 +56,7 @@ demangle(const T & instance)
+ #else
+   return typeid(T).name();
+ #endif
++#endif // _LIBCPP_HAS_NO_RTTI
+ }
+ 
+ }  // namespace cpp

@@ -1,0 +1,122 @@
+diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
+index 1251e58b..0c1dfde3 100644
+--- a/rclcpp/include/rclcpp/context.hpp
++++ b/rclcpp/include/rclcpp/context.hpp
+@@ -330,7 +330,11 @@ public:
+   {
+     std::lock_guard<std::recursive_mutex> lock(sub_contexts_mutex_);
+ 
++#ifdef _LIBCPP_HAS_NO_RTTI
++    std::string type_i(SubContext::class_name);
++#else
+     std::type_index type_i(typeid(SubContext));
++#endif // _LIBCPP_HAS_NO_RTTI
+     std::shared_ptr<SubContext> sub_context;
+     auto it = sub_contexts_.find(type_i);
+     if (it == sub_contexts_.end()) {
+@@ -369,7 +373,11 @@ private:
+   // Keep shared ownership of the global logging mutex.
+   std::shared_ptr<std::recursive_mutex> logging_mutex_;
+ 
++#ifdef _LIBCPP_HAS_NO_RTTI
++  std::unordered_map<std::string, std::shared_ptr<void>> sub_contexts_;
++#else
+   std::unordered_map<std::type_index, std::shared_ptr<void>> sub_contexts_;
++#endif// _LIBCPP_HAS_NO_RTTI
+   // This mutex is recursive so that the constructor of a sub context may
+   // attempt to acquire another sub context.
+   std::recursive_mutex sub_contexts_mutex_;
+diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+index c2e747e7..1c74ef19 100644
+--- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+@@ -153,6 +153,7 @@ private:
+     buffer_->enqueue(std::move(shared_msg));
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename DestinationT>
+   typename std::enable_if<
+@@ -175,6 +176,7 @@ private:
+ 
+     buffer_->enqueue(std::move(unique_msg));
+   }
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageSharedPtr to MessageSharedPtr
+   template<typename OriginT>
+@@ -199,6 +201,7 @@ private:
+     return buffer_->dequeue();
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename OriginT>
+   typename std::enable_if<
+@@ -221,6 +224,7 @@ private:
+ 
+     return unique_msg;
+   }
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageUniquePtr to MessageUniquePtr
+   template<typename OriginT>
+diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+index cfd82eeb..511903c1 100644
+--- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
++++ b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+@@ -94,6 +94,10 @@ private:
+   RCLCPP_DISABLE_COPY(IntraProcessManager)
+ 
+ public:
++#ifdef _LIBCPP_HAS_NO_RTTI
++  static const std::string class_name;
++#endif // _LIBCPP_HAS_NO_RTTI
++
+   RCLCPP_SMART_PTR_DEFINITIONS(IntraProcessManager)
+ 
+   RCLCPP_PUBLIC
+diff --git a/rclcpp/include/rclcpp/graph_listener.hpp b/rclcpp/include/rclcpp/graph_listener.hpp
+index 79357b95..b5fb32d3 100644
+--- a/rclcpp/include/rclcpp/graph_listener.hpp
++++ b/rclcpp/include/rclcpp/graph_listener.hpp
+@@ -63,6 +63,10 @@ public:
+ class GraphListener : public std::enable_shared_from_this<GraphListener>
+ {
+ public:
++#ifdef _LIBCPP_HAS_NO_RTTI
++  static const std::string class_name;
++#endif // _LIBCPP_HAS_NO_RTTI
++
+   RCLCPP_PUBLIC
+   explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
+ 
+diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
+index e0b516b5..637b2d54 100644
+--- a/rclcpp/src/rclcpp/graph_listener.cpp
++++ b/rclcpp/src/rclcpp/graph_listener.cpp
+@@ -36,6 +36,9 @@ namespace rclcpp
+ {
+ namespace graph_listener
+ {
++#ifdef _LIBCPP_HAS_NO_RTTI
++const std::string GraphListener::class_name = "rclcpp::graph_listener::GraphListener";
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+ GraphListener::GraphListener(const std::shared_ptr<Context> & parent_context)
+ : weak_parent_context_(parent_context),
+diff --git a/rclcpp/src/rclcpp/intra_process_manager.cpp b/rclcpp/src/rclcpp/intra_process_manager.cpp
+index efce4afe..b558419b 100644
+--- a/rclcpp/src/rclcpp/intra_process_manager.cpp
++++ b/rclcpp/src/rclcpp/intra_process_manager.cpp
+@@ -22,6 +22,9 @@ namespace rclcpp
+ {
+ namespace experimental
+ {
++#ifdef _LIBCPP_HAS_NO_RTTI
++const std::string IntraProcessManager::class_name = "rclcpp::experimental::IntraProcessManager";
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+ static std::atomic<uint64_t> _next_unique_id {1};
+ 
