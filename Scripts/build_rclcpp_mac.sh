@@ -102,6 +102,7 @@ echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
 cd "$ROOT_DIR/Source/rclcpp"
 
+mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
@@ -120,8 +121,12 @@ colcon build --packages-skip-by-dep python_qt_binding \
  -DCMAKE_SHARED_LINKER_FLAGS=" -ld_classic" \
  --no-warn-unused-cli
 
-# Copy the libraries
 DEST="$ROOT_DIR/Outputs/rclcpp"
+
+# Copt the binaries
+cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Mac"
+
+# Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Libraries/Mac" \;
 
 # Copy the "share" folder
