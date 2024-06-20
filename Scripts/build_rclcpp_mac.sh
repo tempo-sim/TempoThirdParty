@@ -90,7 +90,7 @@ pip install netifaces
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/rclcpp"
-find . -maxdepth 1 -type d -exec sh -c 'cd $0 && git reset --hard' {} \;
+find . -maxdepth 1 -mindepth 1 -type d -exec sh -c 'cd $0 && git reset --hard' {} \;
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
 git apply "$ROOT_DIR/Patches/rcpputils.patch"
 cd "$ROOT_DIR/Source/rclcpp/rclcpp"
@@ -129,6 +129,12 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Mac"
 # Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Libraries/Mac" \;
 
+# Copy the Python framework we linked against
+cd "$ROOT_DIR/Source/rclcpp"
+PYPATH=$(./python3-config --prefix)
+PY3FRAMEWORK="${PYPATH%%Versions*}"
+cp -r -P "$PY3FRAMEWORK" "$DEST/Libraries/Mac"
+
 # Copy the "share" folder
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
 
@@ -142,7 +148,7 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
 done
-  
+
 #echo -e "Cleaning up output directory...\n"
 #rm -rf "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/cmake"
 #rm -rf "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/share"
