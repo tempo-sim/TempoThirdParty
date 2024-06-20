@@ -115,7 +115,8 @@ colcon build --packages-skip-by-dep python_qt_binding \
                     -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
                     -fpascal-strings -fasm-blocks -ffp-contract=off -isystem /opt/homebrew/include" \
  -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
- -DBoost_NO_BOOST_CMAKE=TRUE \
+ -DBoost_NO_BOOST_CMAKE=ON \
+ -DTRACETOOLS_DISABLED=ON \
  -DCMAKE_SHARED_LINKER_FLAGS=" -ld_classic" \
  --no-warn-unused-cli
 
