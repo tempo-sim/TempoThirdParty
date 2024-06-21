@@ -153,6 +153,26 @@ index a1727eab..0d13aff6 100644
        return sub_base_ptr;
      }
    };
+diff --git a/rclcpp/include/rclcpp/visibility_control.hpp b/rclcpp/include/rclcpp/visibility_control.hpp
+index 044fedbb..763a79f2 100644
+--- a/rclcpp/include/rclcpp/visibility_control.hpp
++++ b/rclcpp/include/rclcpp/visibility_control.hpp
+@@ -43,13 +43,8 @@
+ #else
+   #define RCLCPP_EXPORT __attribute__ ((visibility("default")))
+   #define RCLCPP_IMPORT
+-  #if __GNUC__ >= 4
+-    #define RCLCPP_PUBLIC __attribute__ ((visibility("default")))
+-    #define RCLCPP_LOCAL  __attribute__ ((visibility("hidden")))
+-  #else
+-    #define RCLCPP_PUBLIC
+-    #define RCLCPP_LOCAL
+-  #endif
++  #define RCLCPP_PUBLIC __attribute__ ((visibility("default")))
++  #define RCLCPP_LOCAL  __attribute__ ((visibility("hidden")))
+   #define RCLCPP_PUBLIC_TYPE
+ #endif
+ 
 diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
 index e0b516b5..b4556fbd 100644
 --- a/rclcpp/src/rclcpp/graph_listener.cpp
