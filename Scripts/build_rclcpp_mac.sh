@@ -106,7 +106,6 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --install-base "$ROOT_DIR/Builds/rclcpp/Mac" \
- --log-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-args \
