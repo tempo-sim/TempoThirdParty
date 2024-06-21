@@ -115,7 +115,7 @@ index c2e747e7..1c74ef19 100644
    // MessageUniquePtr to MessageUniquePtr
    template<typename OriginT>
 diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
-index cfd82eeb..dfedb47f 100644
+index cfd82eeb..f37416ee 100644
 --- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
 +++ b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
 @@ -94,6 +94,8 @@ private:
@@ -127,6 +127,119 @@ index cfd82eeb..dfedb47f 100644
    RCLCPP_SMART_PTR_DEFINITIONS(IntraProcessManager)
  
    RCLCPP_PUBLIC
+@@ -367,26 +369,21 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+-        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++      const std::string subscription_type = subscription_base->get_type();
++      
++      auto subscription = (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
++        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>>(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         subscription->provide_intra_process_data(message);
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+-        ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++      auto ros_message_subscription = (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
++        ROSMessageTypeAllocator, ROSMessageTypeDeleter>>(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+-        throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
+-                "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+-                "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++        throw std::runtime_error("Subscription was of unexpected type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT>::is_specialized::value) {
+@@ -446,10 +443,11 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+-        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++      const std::string subscription_type = subscription_base->get_type();
++      
++      auto subscription = (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
++        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>>(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         if (std::next(it) == subscription_ids.end()) {
+           // If this is the last subscription, give up ownership
+@@ -468,17 +466,11 @@ private:
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+-        ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++      auto ros_message_subscription = (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
++        ROSMessageTypeAllocator, ROSMessageTypeDeleter>>(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+-        throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
+-                "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+-                "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++        throw std::runtime_error("Subscription was of unexpected type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT, ROSMessageType>::is_specialized::value) {
+diff --git a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+index 7b8b3b83..17430ebf 100644
+--- a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+@@ -45,6 +45,8 @@ public:
+   using ConstMessageSharedPtr = std::shared_ptr<const RosMessageT>;
+   using MessageUniquePtr = std::unique_ptr<RosMessageT, ROSMessageTypeDeleter>;
+ 
++  virtual std::string get_type() const override { return "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer"; }
++
+   SubscriptionROSMsgIntraProcessBuffer(
+     rclcpp::Context::SharedPtr context,
+     const std::string & topic_name,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+index 037d1aaa..76d80ba7 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+@@ -38,6 +38,8 @@ class SubscriptionIntraProcessBase : public rclcpp::Waitable
+ public:
+   RCLCPP_SMART_PTR_ALIASES_ONLY(SubscriptionIntraProcessBase)
+ 
++  virtual std::string get_type() const { return "rclcpp::experimental::SubscriptionIntraProcessBase"; }
++
+   enum class EntityType : std::size_t
+   {
+     Subscription,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+index 3c715126..cb195000 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+@@ -72,6 +72,8 @@ public:
+     SubscribedTypeDeleter
+     >::UniquePtr;
+ 
++  virtual std::string get_type() const override { return "rclcpp::experimental::SubscriptionIntraProcessBuffer"; }
++
+   SubscriptionIntraProcessBuffer(
+     std::shared_ptr<Alloc> allocator,
+     rclcpp::Context::SharedPtr context,
 diff --git a/rclcpp/include/rclcpp/graph_listener.hpp b/rclcpp/include/rclcpp/graph_listener.hpp
 index 79357b95..f9b8164a 100644
 --- a/rclcpp/include/rclcpp/graph_listener.hpp
