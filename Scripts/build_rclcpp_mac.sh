@@ -89,14 +89,12 @@ pip install numpy
 pip install netifaces
 
 echo "Applying Tempo patches..."
-cd "$ROOT_DIR/Source/rclcpp"
-find . -maxdepth 1 -mindepth 1 -type d -exec sh -c 'cd $0 && git reset --hard' {} \;
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
-git apply "$ROOT_DIR/Patches/rcpputils.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
 cd "$ROOT_DIR/Source/rclcpp/rclcpp"
-git apply "$ROOT_DIR/Patches/rclcpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
 cd "$ROOT_DIR/Source/rclcpp/rmw"
-git apply "$ROOT_DIR/Patches/rmw.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -123,7 +121,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
 
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
-# Copt the binaries
+# Copy the binaries
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Mac"
 
 # Copy the libraries
@@ -133,13 +131,14 @@ find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Lib
 cd "$ROOT_DIR/Source/rclcpp"
 PYPATH=$(./python3-config --prefix)
 PY3FRAMEWORK="${PYPATH%%Versions*}"
+PY3FRAMEWORK=$(echo "$PY3FRAMEWORK" | sed 's:/*$::')
 cp -r -P "$PY3FRAMEWORK" "$DEST/Libraries/Mac"
 
 # Copy the "share" folder
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
 
 # Copy the includes
-INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -type d -maxdepth 1)
+INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -type d -maxdepth 1 -mindepth 1)
 for INCLUDE_DIR in $INCLUDE_DIRS; do
   LIBRARY_NAME=$(basename "$INCLUDE_DIR")  
   if [ -e "$INCLUDE_DIR/$LIBRARY_NAME" ]; then
@@ -148,19 +147,6 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
 done
-
-#echo -e "Cleaning up output directory...\n"
-#rm -rf "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/cmake"
-#rm -rf "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/share"
-#rm -rf "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/pkgconfig"
-
-#echo -e "Removing unused libraries...\n"
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/librclcpp++_unsecure.a" # We use librclcpp++.a
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/librclcpp_unsecure.a" # We use librclcpp.a
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/libprotobuf-lite.a" # We use libprotobuf.a
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/librclcpp_plugin_support.a" # Only needed during build of rclcpp code gen plugins
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/libprotoc.a" # Only needed during build of rclcpp code gen plugins
-#rm -f "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/libutf8_range_lib.a" # Redundant with libutf8_range.a
 
 echo -e "Archiving outputs...\n"
 RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Mac-$TAG.tar.gz"
