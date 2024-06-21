@@ -76,8 +76,7 @@ echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo -e "Removing stale Outputs and Builds\n"
 rm -rf "$ROOT_DIR/Outputs/rclcpp"
-#rm -rf "$ROOT_DIR/Builds/rclcpp"
-#rm -rf "$ROOT_DIR/Source/rclcpp/install"
+rm -rf "$ROOT_DIR/Builds/rclcpp"
 
 echo -e "Creating Python virtual environment for build.\n"
 python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
@@ -106,6 +105,8 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
+ --install-base "$ROOT_DIR/Builds/rclcpp/Mac" \
+ --log-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-args \
