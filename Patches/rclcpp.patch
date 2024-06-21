@@ -39,6 +39,19 @@ index 1a960b8d..72d6b803 100644
    node_services->add_client(cli_base_ptr, group);
    return cli;
  }
+diff --git a/rclcpp/include/rclcpp/create_publisher.hpp b/rclcpp/include/rclcpp/create_publisher.hpp
+index f6088a33..c8567ab7 100644
+--- a/rclcpp/include/rclcpp/create_publisher.hpp
++++ b/rclcpp/include/rclcpp/create_publisher.hpp
+@@ -71,7 +71,7 @@ create_publisher(
+   // Add the publisher to the node topics interface.
+   node_topics_interface->add_publisher(pub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<PublisherT>(pub);
++  return std::static_pointer_cast<PublisherT>(pub);
+ }
+ }  // namespace detail
+ 
 diff --git a/rclcpp/include/rclcpp/create_service.hpp b/rclcpp/include/rclcpp/create_service.hpp
 index 9aaa02a1..c8ab90a5 100644
 --- a/rclcpp/include/rclcpp/create_service.hpp
@@ -52,6 +65,19 @@ index 9aaa02a1..c8ab90a5 100644
    node_services->add_service(serv_base_ptr, group);
    return serv;
  }
+diff --git a/rclcpp/include/rclcpp/create_subscription.hpp b/rclcpp/include/rclcpp/create_subscription.hpp
+index 5b84930f..d1996b4f 100644
+--- a/rclcpp/include/rclcpp/create_subscription.hpp
++++ b/rclcpp/include/rclcpp/create_subscription.hpp
+@@ -136,7 +136,7 @@ create_subscription(
+   auto sub = node_topics_interface->create_subscription(topic_name, factory, actual_qos);
+   node_topics_interface->add_subscription(sub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<SubscriptionT>(sub);
++  return std::static_pointer_cast<SubscriptionT>(sub);
+ }
+ }  // namespace detail
+ 
 diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
 index c2e747e7..1c74ef19 100644
 --- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
@@ -89,31 +115,27 @@ index c2e747e7..1c74ef19 100644
    // MessageUniquePtr to MessageUniquePtr
    template<typename OriginT>
 diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
-index cfd82eeb..511903c1 100644
+index cfd82eeb..dfedb47f 100644
 --- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
 +++ b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
-@@ -94,6 +94,10 @@ private:
+@@ -94,6 +94,8 @@ private:
    RCLCPP_DISABLE_COPY(IntraProcessManager)
  
  public:
-+#ifdef _LIBCPP_HAS_NO_RTTI
 +  static const std::string class_name;
-+#endif // _LIBCPP_HAS_NO_RTTI
 +
    RCLCPP_SMART_PTR_DEFINITIONS(IntraProcessManager)
  
    RCLCPP_PUBLIC
 diff --git a/rclcpp/include/rclcpp/graph_listener.hpp b/rclcpp/include/rclcpp/graph_listener.hpp
-index 79357b95..b5fb32d3 100644
+index 79357b95..f9b8164a 100644
 --- a/rclcpp/include/rclcpp/graph_listener.hpp
 +++ b/rclcpp/include/rclcpp/graph_listener.hpp
-@@ -63,6 +63,10 @@ public:
+@@ -63,6 +63,8 @@ public:
  class GraphListener : public std::enable_shared_from_this<GraphListener>
  {
  public:
-+#ifdef _LIBCPP_HAS_NO_RTTI
 +  static const std::string class_name;
-+#endif // _LIBCPP_HAS_NO_RTTI
 +
    RCLCPP_PUBLIC
    explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
@@ -132,30 +154,26 @@ index a1727eab..0d13aff6 100644
      }
    };
 diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
-index e0b516b5..637b2d54 100644
+index e0b516b5..b4556fbd 100644
 --- a/rclcpp/src/rclcpp/graph_listener.cpp
 +++ b/rclcpp/src/rclcpp/graph_listener.cpp
-@@ -36,6 +36,9 @@ namespace rclcpp
+@@ -36,6 +36,7 @@ namespace rclcpp
  {
  namespace graph_listener
  {
-+#ifdef _LIBCPP_HAS_NO_RTTI
 +const std::string GraphListener::class_name = "rclcpp::graph_listener::GraphListener";
-+#endif // _LIBCPP_HAS_NO_RTTI
  
  GraphListener::GraphListener(const std::shared_ptr<Context> & parent_context)
  : weak_parent_context_(parent_context),
 diff --git a/rclcpp/src/rclcpp/intra_process_manager.cpp b/rclcpp/src/rclcpp/intra_process_manager.cpp
-index efce4afe..b558419b 100644
+index efce4afe..bca76d65 100644
 --- a/rclcpp/src/rclcpp/intra_process_manager.cpp
 +++ b/rclcpp/src/rclcpp/intra_process_manager.cpp
-@@ -22,6 +22,9 @@ namespace rclcpp
+@@ -22,6 +22,7 @@ namespace rclcpp
  {
  namespace experimental
  {
-+#ifdef _LIBCPP_HAS_NO_RTTI
 +const std::string IntraProcessManager::class_name = "rclcpp::experimental::IntraProcessManager";
-+#endif // _LIBCPP_HAS_NO_RTTI
  
  static std::atomic<uint64_t> _next_unique_id {1};
  
