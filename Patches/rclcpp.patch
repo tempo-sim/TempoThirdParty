@@ -290,6 +290,19 @@ index efce4afe..bca76d65 100644
  
  static std::atomic<uint64_t> _next_unique_id {1};
  
+diff --git a/rclcpp/test/rclcpp/test_intra_process_manager.cpp b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
+index 45d916b0..c0548033 100644
+--- a/rclcpp/test/rclcpp/test_intra_process_manager.cpp
++++ b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
+@@ -195,6 +195,8 @@ class SubscriptionIntraProcessBase
+ public:
+   RCLCPP_SMART_PTR_ALIASES_ONLY(SubscriptionIntraProcessBase)
+ 
++  virtual std::string get_type() const { return "rclcpp::experimental::mock::SubscriptionIntraProcessBase"; }
++
+   explicit SubscriptionIntraProcessBase(
+     rclcpp::Context::SharedPtr context,
+     const std::string & topic = "topic",
 diff --git a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
 index 22fd7f9c..667d4ec7 100644
 --- a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
