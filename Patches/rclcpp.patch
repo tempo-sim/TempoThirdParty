@@ -253,6 +253,42 @@ index 79357b95..f9b8164a 100644
    RCLCPP_PUBLIC
    explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
  
+diff --git a/rclcpp/include/rclcpp/node_options.hpp b/rclcpp/include/rclcpp/node_options.hpp
+index 53bdedea..c9075c85 100644
+--- a/rclcpp/include/rclcpp/node_options.hpp
++++ b/rclcpp/include/rclcpp/node_options.hpp
+@@ -191,9 +191,11 @@ public:
+    * Defaults to false for now, as there are still some cases where it is not
+    * desirable.
+    */
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+   RCLCPP_PUBLIC
+   NodeOptions &
+   use_intra_process_comms(bool use_intra_process_comms);
++#endif
+ 
+   /// Return the enable_topic_statistics flag.
+   RCLCPP_PUBLIC
+diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
+index 11bf9c6e..e58d0b72 100644
+--- a/rclcpp/include/rclcpp/subscription.hpp
++++ b/rclcpp/include/rclcpp/subscription.hpp
+@@ -178,6 +178,7 @@ public:
+         RCL_SUBSCRIPTION_MESSAGE_LOST);
+     }
+ 
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+     // Setup intra process publishing if requested.
+     if (rclcpp::detail::resolve_use_intra_process(options_, *node_base)) {
+       using rclcpp::detail::resolve_intra_process_buffer_type;
+@@ -225,6 +226,7 @@ public:
+       uint64_t intra_process_subscription_id = ipm->add_subscription(subscription_intra_process_);
+       this->setup_intra_process(intra_process_subscription_id, ipm);
+     }
++#endif // RCLCPP_INTRA_PROCESS_DISABLED
+ 
+     if (subscription_topic_statistics != nullptr) {
+       this->subscription_topic_statistics_ = std::move(subscription_topic_statistics);
 diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
 index a1727eab..0d13aff6 100644
 --- a/rclcpp/include/rclcpp/subscription_factory.hpp
