@@ -326,6 +326,64 @@ index efce4afe..bca76d65 100644
  
  static std::atomic<uint64_t> _next_unique_id {1};
  
+diff --git a/rclcpp/src/rclcpp/parameter_client.cpp b/rclcpp/src/rclcpp/parameter_client.cpp
+index 38ced0e1..fca20645 100644
+--- a/rclcpp/src/rclcpp/parameter_client.cpp
++++ b/rclcpp/src/rclcpp/parameter_client.cpp
+@@ -56,7 +56,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::get_parameters,
+     options);
+-  auto get_parameters_base = std::dynamic_pointer_cast<ClientBase>(get_parameters_client_);
++  auto get_parameters_base = std::static_pointer_cast<ClientBase>(get_parameters_client_);
+   node_services_interface->add_client(get_parameters_base, group);
+ 
+   get_parameter_types_client_ = Client<rcl_interfaces::srv::GetParameterTypes>::make_shared(
+@@ -65,7 +65,7 @@ AsyncParametersClient::AsyncParametersClient(
+     remote_node_name_ + "/" + parameter_service_names::get_parameter_types,
+     options);
+   auto get_parameter_types_base =
+-    std::dynamic_pointer_cast<ClientBase>(get_parameter_types_client_);
++    std::static_pointer_cast<ClientBase>(get_parameter_types_client_);
+   node_services_interface->add_client(get_parameter_types_base, group);
+ 
+   set_parameters_client_ = Client<rcl_interfaces::srv::SetParameters>::make_shared(
+@@ -73,7 +73,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::set_parameters,
+     options);
+-  auto set_parameters_base = std::dynamic_pointer_cast<ClientBase>(set_parameters_client_);
++  auto set_parameters_base = std::static_pointer_cast<ClientBase>(set_parameters_client_);
+   node_services_interface->add_client(set_parameters_base, group);
+ 
+   set_parameters_atomically_client_ =
+@@ -82,7 +82,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::set_parameters_atomically,
+     options);
+-  auto set_parameters_atomically_base = std::dynamic_pointer_cast<ClientBase>(
++  auto set_parameters_atomically_base = std::static_pointer_cast<ClientBase>(
+     set_parameters_atomically_client_);
+   node_services_interface->add_client(set_parameters_atomically_base, group);
+ 
+@@ -91,7 +91,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::list_parameters,
+     options);
+-  auto list_parameters_base = std::dynamic_pointer_cast<ClientBase>(list_parameters_client_);
++  auto list_parameters_base = std::static_pointer_cast<ClientBase>(list_parameters_client_);
+   node_services_interface->add_client(list_parameters_base, group);
+ 
+   describe_parameters_client_ = Client<rcl_interfaces::srv::DescribeParameters>::make_shared(
+@@ -100,7 +100,7 @@ AsyncParametersClient::AsyncParametersClient(
+     remote_node_name_ + "/" + parameter_service_names::describe_parameters,
+     options);
+   auto describe_parameters_base =
+-    std::dynamic_pointer_cast<ClientBase>(describe_parameters_client_);
++    std::static_pointer_cast<ClientBase>(describe_parameters_client_);
+   node_services_interface->add_client(describe_parameters_base, group);
+ }
+ 
 diff --git a/rclcpp/test/rclcpp/test_intra_process_manager.cpp b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
 index 45d916b0..c0548033 100644
 --- a/rclcpp/test/rclcpp/test_intra_process_manager.cpp
