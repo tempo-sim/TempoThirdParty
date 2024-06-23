@@ -71,9 +71,6 @@ echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-NUM_JOBS="$(sysctl -n hw.ncpu)"
-echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
-
 echo -e "Removing stale Outputs and Builds\n"
 rm -rf "$ROOT_DIR/Outputs/rclcpp"
 rm -rf "$ROOT_DIR/Builds/rclcpp"
@@ -96,6 +93,8 @@ cd "$ROOT_DIR/Source/rclcpp/rclcpp"
 git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
 cd "$ROOT_DIR/Source/rclcpp/rmw"
 git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl"
+git reset --hard && git apply "$ROOT_DIR/Patches/rosidl.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -115,9 +114,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
                     -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
                     -fpascal-strings -fasm-blocks -ffp-contract=off -isystem /opt/homebrew/include" \
  -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
- -DBoost_NO_BOOST_CMAKE=ON \
  -DTRACETOOLS_DISABLED=ON \
- -DCMAKE_SHARED_LINKER_FLAGS=" -ld_classic" \
  --no-warn-unused-cli
 
 DEST="$ROOT_DIR/Outputs/rclcpp"
