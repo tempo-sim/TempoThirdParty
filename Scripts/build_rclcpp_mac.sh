@@ -67,6 +67,12 @@ if [ "$TAG" = "undefined" ]; then
     exit 1
 fi
 
+# Check for UNREAL_ENGINE_PATH
+if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
+  echo "UNREAL_ENGINE_PATH is not set";
+  exit 1
+fi
+
 echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
@@ -95,6 +101,8 @@ cd "$ROOT_DIR/Source/rclcpp/rmw"
 git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
 cd "$ROOT_DIR/Source/rclcpp/rosidl"
 git reset --hard && git apply "$ROOT_DIR/Patches/rosidl.patch"
+cd "$ROOT_DIR/Source/rclcpp/rcutils"
+git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -104,18 +112,25 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
+# "-DCMAKE_CXX_FLAGS=\"-Wno-error=strict-prototypes -Wno-error=deprecated-copy \
+#                    -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
+#                    -fpascal-strings -fasm-blocks -ffp-contract=off -isystem /opt/homebrew/include\"" \
+# "-DCMAKE_SHARED_LINKER_FLAGS=\" -ld_classic\"" \
+#                     -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
+# '-DCMAKE_CXX_FLAGS="-Wno-error=strict-prototypes -Wno-error-strict-prototypes -Wno-error=deprecated-copy -Wno-deprecated-copy"' \
+
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-args \
- -DCMAKE_POLICY_DEFAULT_CMP0148=OLD \
- -DCMAKE_CXX_FLAGS="-Wno-error=strict-prototypes -Wno-error=deprecated-copy \
-                    -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
-                    -fpascal-strings -fasm-blocks -ffp-contract=off -isystem /opt/homebrew/include" \
- -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
- -DTRACETOOLS_DISABLED=ON \
- --no-warn-unused-cli
+ ' -DCMAKE_POLICY_DEFAULT_CMP0148=OLD' \
+ ' -DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../../Generated/Mac' \
+ ' -DCMAKE_OSX_ARCHITECTURES=arm64' \
+ ' -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15' \
+ ' -DTRACETOOLS_DISABLED=ON' \
+ ' -DBoost_NO_BOOST_CMAKE=ON' \
+ ' --no-warn-unused-cli'
 
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
@@ -147,6 +162,23 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
   else
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
+done
+
+
+# Resolve all symlinks in the directory
+find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
+    # Get the target of the symlink
+    TARGET=$(readlink -f "$SYMLINK")
+    
+    # Check if the target exists
+    if [ -e "$TARGET" ]; then
+        # Remove the symlink
+        rm "$SYMLINK"
+        # Copy the target file to the original symlink location
+        cp -a "$TARGET" "$SYMLINK"
+    else
+        echo "Target does not exist for $SYMLINK"
+    fi
 done
 
 echo -e "Archiving outputs...\n"
