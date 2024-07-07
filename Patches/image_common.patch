@@ -1,0 +1,61 @@
+diff --git a/image_transport/src/image_transport.cpp b/image_transport/src/image_transport.cpp
+index 0afadaf..605e7f9 100644
+--- a/image_transport/src/image_transport.cpp
++++ b/image_transport/src/image_transport.cpp
+@@ -54,14 +54,20 @@ struct Impl
+   }
+ };
+ 
+-static Impl * kImpl = new Impl();
++static Impl * get_impl() {
++  static Impl * kImpl = nullptr;
++  if (!kImpl) {
++    kImpl = new Impl();
++  }
++  return kImpl;
++}
+ 
+ Publisher create_publisher(
+   rclcpp::Node * node,
+   const std::string & base_topic,
+   rmw_qos_profile_t custom_qos)
+ {
+-  return Publisher(node, base_topic, kImpl->pub_loader_, custom_qos);
++  return Publisher(node, base_topic, get_impl()->pub_loader_, custom_qos);
+ }
+ 
+ Subscriber create_subscription(
+@@ -72,7 +78,7 @@ Subscriber create_subscription(
+   rmw_qos_profile_t custom_qos,
+   rclcpp::SubscriptionOptions options)
+ {
+-  return Subscriber(node, base_topic, callback, kImpl->sub_loader_, transport, custom_qos, options);
++  return Subscriber(node, base_topic, callback, get_impl()->sub_loader_, transport, custom_qos, options);
+ }
+ 
+ CameraPublisher create_camera_publisher(
+@@ -95,7 +101,7 @@ CameraSubscriber create_camera_subscription(
+ 
+ std::vector<std::string> getDeclaredTransports()
+ {
+-  std::vector<std::string> transports = kImpl->sub_loader_->getDeclaredClasses();
++  std::vector<std::string> transports = get_impl()->sub_loader_->getDeclaredClasses();
+   // Remove the "_sub" at the end of each class name.
+   for (std::string & transport : transports) {
+     transport = erase_last_copy(transport, "_sub");
+@@ -107,13 +113,13 @@ std::vector<std::string> getLoadableTransports()
+ {
+   std::vector<std::string> loadableTransports;
+ 
+-  for (const std::string & transportPlugin : kImpl->sub_loader_->getDeclaredClasses() ) {
++  for (const std::string & transportPlugin : get_impl()->sub_loader_->getDeclaredClasses() ) {
+     // If the plugin loads without throwing an exception, add its
+     // transport name to the list of valid plugins, otherwise ignore
+     // it.
+     try {
+       std::shared_ptr<image_transport::SubscriberPlugin> sub =
+-        kImpl->sub_loader_->createUniqueInstance(transportPlugin);
++        get_impl()->sub_loader_->createUniqueInstance(transportPlugin);
+       // Remove the "_sub" at the end of each class name.
+       loadableTransports.push_back(erase_last_copy(transportPlugin, "_sub"));
+     } catch (const pluginlib::LibraryLoadException & e) {

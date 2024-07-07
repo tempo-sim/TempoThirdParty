@@ -48,12 +48,6 @@ if ! brew ls asio; then
     exit 1
 fi
 
-# Check for boost-python3
-if ! brew ls boost-python3; then
-    echo "Couldn't find boost-python3. Please install (brew install boost-python3)."
-    exit 1
-fi
-
 # Check for theora
 if ! brew ls theora; then
     echo "Couldn't find theora. Please install (brew install theora)."
@@ -73,24 +67,32 @@ if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
   exit 1
 fi
 
+if [ ! -d "$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/python3.11" ]; then
+  echo "Unreal's python3 is missing or unexpected version (expected 3.11)";
+  exit 1
+fi
+
 echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
 echo -e "Removing stale Outputs and Builds\n"
 rm -rf "$ROOT_DIR/Outputs/rclcpp"
-rm -rf "$ROOT_DIR/Builds/rclcpp"
-rm -rf "$ROOT_DIR/Source/rclcpp/install"
-rm -rf "$ROOT_DIR/Source/rclcpp/log"
+#rm -rf "$ROOT_DIR/Builds/rclcpp"
+#rm -rf "$ROOT_DIR/Source/rclcpp/install"
+#rm -rf "$ROOT_DIR/Source/rclcpp/log"
 
 echo -e "Creating Python virtual environment for build.\n"
-python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
-cp "$ROOT_DIR/Source/rclcpp/python3-config" "$ROOT_DIR/Builds/rclcpp/venv/bin"
+cd "$UNREAL_ENGINE_PATH"
+./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
 pip install lark==1.1.1
 pip install numpy
-pip install netifaces
+# 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
+# paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
+# Python3.11 instead.
+pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
@@ -103,6 +105,12 @@ cd "$ROOT_DIR/Source/rclcpp/rosidl"
 git reset --hard && git apply "$ROOT_DIR/Patches/rosidl.patch"
 cd "$ROOT_DIR/Source/rclcpp/rcutils"
 git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
+cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
+git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
+cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
+cd "$ROOT_DIR/Source/rclcpp/image_common"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -112,26 +120,29 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
-# "-DCMAKE_CXX_FLAGS=\"-Wno-error=strict-prototypes -Wno-error=deprecated-copy \
-#                    -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
-#                    -fpascal-strings -fasm-blocks -ffp-contract=off -isystem /opt/homebrew/include\"" \
-# "-DCMAKE_SHARED_LINKER_FLAGS=\" -ld_classic\"" \
-#                     -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
-# '-DCMAKE_CXX_FLAGS="-Wno-error=strict-prototypes -Wno-error-strict-prototypes -Wno-error=deprecated-copy -Wno-deprecated-copy"' \
+# To inspect compiler/linker commands
+#export VERBOSE=1
+#--event-handlers console_direct+ \
 
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
+ --cmake-clean-cache \
  --cmake-args \
  ' -DCMAKE_POLICY_DEFAULT_CMP0148=OLD' \
- ' -DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../../Generated/Mac' \
+ ' -DCMAKE_INSTALL_RPATH=@loader_path' \
  ' -DCMAKE_OSX_ARCHITECTURES=arm64' \
- ' -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15' \
  ' -DTRACETOOLS_DISABLED=ON' \
  ' -DBoost_NO_BOOST_CMAKE=ON' \
+ ' -DFORCE_BUILD_VENDOR_PKG=ON' \
+ " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/libpython3.11.dylib'" \
+ " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
+ " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
  ' --no-warn-unused-cli'
-
+  
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
 # Copy the binaries
@@ -142,13 +153,6 @@ find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Lib
 
 # Copy the Python deps
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Mac"
-
-# Copy the Python framework we linked against
-cd "$ROOT_DIR/Source/rclcpp"
-PYPATH=$(./python3-config --prefix)
-PY3FRAMEWORK="${PYPATH%%Versions*}"
-PY3FRAMEWORK=$(echo "$PY3FRAMEWORK" | sed 's:/*$::')
-cp -r -P "$PY3FRAMEWORK" "$DEST/Libraries/Mac"
 
 # Copy the "share" folder
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
@@ -163,7 +167,6 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
 done
-
 
 # Resolve all symlinks in the directory
 find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
@@ -180,6 +183,8 @@ find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
         echo "Target does not exist for $SYMLINK"
     fi
 done
+
+install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
 
 echo -e "Archiving outputs...\n"
 RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Mac-$TAG.tar.gz"
