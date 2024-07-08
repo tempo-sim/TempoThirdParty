@@ -2,8 +2,8 @@
 
 set -e
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
-      echo "This script can only be run on Mac"
+if [[ "$OSTYPE" = "linux-gnu"* ]]; then
+      echo "This script can only be run on Linux"
       exit 1
 fi
 
@@ -30,29 +30,23 @@ if ! which pip; then
     exit 1
 fi
 
-# Check for brew
-if ! which brew; then
-    echo "Couldn't find brew. Please install (https://brew.sh/)"
-    exit 1
-fi
-
-# Check for tinyxml2
-if ! brew ls tinyxml2; then
-    echo "Couldn't find tinyxml2. Please install (brew install tinyxml2)."
-    exit 1
-fi
-
-# Check for asio
-if ! brew ls asio; then
-    echo "Couldn't find asio. Please install (brew install asio)."
-    exit 1
-fi
-
-# Check for theora
-if ! brew ls theora; then
-    echo "Couldn't find theora. Please install (brew install theora)."
-    exit 1
-fi
+## Check for tinyxml2
+#if ! brew ls tinyxml2; then
+#    echo "Couldn't find tinyxml2. Please install (brew install tinyxml2)."
+#    exit 1
+#fi
+#
+## Check for asio
+#if ! brew ls asio; then
+#    echo "Couldn't find asio. Please install (brew install asio)."
+#    exit 1
+#fi
+#
+## Check for theora
+#if ! brew ls theora; then
+#    echo "Couldn't find theora. Please install (brew install theora)."
+#    exit 1
+#fi
 
 # Check for tag
 TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
@@ -67,7 +61,7 @@ if [ -z ${UNREAL_ENGINE_PATH+x} ]; then
   exit 1
 fi
 
-if [ ! -d "$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/python3.11" ]; then
+if [ ! -d "$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/python3.11" ]; then
   echo "Unreal's python3 is missing or unexpected version (expected 3.11)";
   exit 1
 fi
@@ -84,7 +78,7 @@ rm -rf "$ROOT_DIR/Source/rclcpp/log"
 
 echo -e "Creating Python virtual environment for build.\n"
 cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
 pip install lark==1.1.1
@@ -92,7 +86,7 @@ pip install numpy
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 # Python3.11 instead.
-pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
+pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
@@ -113,11 +107,11 @@ cd "$ROOT_DIR/Source/rclcpp/image_common"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
 
 echo "Building rclcpp..."
-mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
+mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"
 cd "$ROOT_DIR/Source/rclcpp"
 
-mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
-mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
+mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Linux"
+mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Linux"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
 # To inspect compiler/linker commands
@@ -125,37 +119,36 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 #--event-handlers console_direct+ \
 
 colcon build --packages-skip-by-dep python_qt_binding \
- --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
+ --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-clean-cache \
  --cmake-args \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
- " -DCMAKE_INSTALL_RPATH=@loader_path" \
- " -DCMAKE_OSX_ARCHITECTURES=arm64" \
+ " -DCMAKE_INSTALL_RPATH='$ORIGIN'" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
- " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
- " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
- " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/libpython3.11.dylib'" \
- " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
- " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
+ " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " --no-warn-unused-cli"
   
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
 # Copy the binaries
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Mac"
+cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Linux"
 
 # Copy the libraries
-find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Libraries/Mac" \;
+find "$ROOT_DIR/Source/rclcpp/install" -name "*.so" -exec cp -P {} "$DEST/Libraries/Linux" \;
 
 # Copy the Python deps
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Mac"
+cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Linux"
 
 # Copy the "share" folder
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
+cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Linux"
 
 # Copy the includes
 INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -type d -maxdepth 1 -mindepth 1)
@@ -169,7 +162,7 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
 done
 
 # Resolve all symlinks in the directory
-find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
+find "$DEST/Libraries/Linux" -type l | while read -r SYMLINK; do
     # Get the target of the symlink
     TARGET=$(readlink -f "$SYMLINK")
     
@@ -184,10 +177,10 @@ find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
     fi
 done
 
-install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
+#install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Linux/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
 
 echo -e "Archiving outputs...\n"
-RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Mac-$TAG.tar.gz"
+RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Linux-$TAG.tar.gz"
 rm -rf "$RCLCPP_ARCHIVE"
 tar -C "$ROOT_DIR/Outputs" -czf "$RCLCPP_ARCHIVE" rclcpp
 
