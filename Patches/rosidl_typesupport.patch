@@ -1,8 +1,20 @@
 diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-index c662ffc..98e5dd8 100644
+index c662ffc..7c7b110 100644
 --- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 +++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-@@ -72,34 +72,54 @@ get_typesupport_handle_function(
+@@ -21,6 +21,11 @@
+ #include <memory>
+ #include <stdexcept>
+ #include <string>
++#ifdef _WIN32
++#include <windows.h>
++#else
++#include <dlfcn.h>
++#endif
+ 
+ #include "rcpputils/shared_library.hpp"
+ #include "rcutils/error_handling.h"
+@@ -72,34 +77,54 @@ get_typesupport_handle_function(
  
          try {
            lib = new rcpputils::SharedLibrary(library_name);
@@ -51,8 +63,8 @@ index c662ffc..98e5dd8 100644
 +        char * error = dlerror();
 +        if (error != NULL) {
 +          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
-+            "Failed to get symbol '%s' in global scope: %s",
-+            map->symbol_name[i], e.what());
++            "Failed to get symbol '%s' in global scope: %d",
++            map->symbol_name[i], error);
 +          return nullptr;
 +        }
 +#else
@@ -61,8 +73,8 @@ index c662ffc..98e5dd8 100644
 +        if (lib_symbol == NULL) {
            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
 -            "Failed to find symbol '%s' in library", map->symbol_name[i]);
-+            "Failed to get symbol '%s' in global scope: %s",
-+            map->symbol_name[i], e.what());
++            "Failed to get symbol '%s' in global scope: %d",
++            map->symbol_name[i], GetLastError());
            return nullptr;
          }
 -        sym = lib->get_symbol(map->symbol_name[i]);
