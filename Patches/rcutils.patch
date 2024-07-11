@@ -1,3 +1,16 @@
+diff --git a/include/rcutils/error_handling.h b/include/rcutils/error_handling.h
+index 23e84fa..8325510 100644
+--- a/include/rcutils/error_handling.h
++++ b/include/rcutils/error_handling.h
+@@ -121,7 +121,7 @@ typedef struct rcutils_error_state_s
+ } rcutils_error_state_t;
+ 
+ // make sure our math is right...
+-#if __STDC_VERSION__ >= 201112L
++#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+ static_assert(
+   sizeof(rcutils_error_string_t) == (
+     RCUTILS_ERROR_STATE_MESSAGE_MAX_LENGTH +
 diff --git a/src/shared_library.c b/src/shared_library.c
 index 0190afc..6fa21e2 100644
 --- a/src/shared_library.c
