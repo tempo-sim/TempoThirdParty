@@ -1,0 +1,12 @@
+diff --git a/pluginlib/include/pluginlib/class_loader_imp.hpp b/pluginlib/include/pluginlib/class_loader_imp.hpp
+index a41790b..b75a555 100644
+--- a/pluginlib/include/pluginlib/class_loader_imp.hpp
++++ b/pluginlib/include/pluginlib/class_loader_imp.hpp
+@@ -370,6 +370,7 @@ std::vector<std::string> ClassLoader<T>::getAllLibraryPathsToTry(
+   // Setup the directories to look in.
+   std::vector<std::string> all_search_paths = {
+     // for now just try lib and lib64 (and their respective "libexec" directories)
++    package_prefix,
+     package_prefix + path_separator + "lib",
+     package_prefix + path_separator + "lib64",
+     package_prefix + path_separator + "bin",  // also look in bin, for dll's on Windows
