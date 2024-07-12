@@ -120,6 +120,8 @@ cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
 cd "$ROOT_DIR/Source/rclcpp/pluginlib"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
+cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"
