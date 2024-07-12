@@ -118,6 +118,8 @@ cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
 cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
+cd "$ROOT_DIR/Source/rclcpp/pluginlib"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"

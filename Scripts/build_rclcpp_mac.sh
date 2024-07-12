@@ -111,6 +111,12 @@ cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
 cd "$ROOT_DIR/Source/rclcpp/image_common"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
+cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
+cd "$ROOT_DIR/Source/rclcpp/pluginlib"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -142,7 +148,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
  " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
  " --no-warn-unused-cli"
-  
+
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
 # Copy the binaries
@@ -160,7 +166,7 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
 # Copy the includes
 INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -type d -maxdepth 1 -mindepth 1)
 for INCLUDE_DIR in $INCLUDE_DIRS; do
-  LIBRARY_NAME=$(basename "$INCLUDE_DIR")  
+  LIBRARY_NAME=$(basename "$INCLUDE_DIR")
   if [ -e "$INCLUDE_DIR/$LIBRARY_NAME" ]; then
     cp -r "$INCLUDE_DIR"/* "$DEST/Includes"
   else
@@ -168,20 +174,44 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
   fi
 done
 
-# Resolve all symlinks in the directory
-find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
-    # Get the target of the symlink
-    TARGET=$(readlink -f "$SYMLINK")
-    
-    # Check if the target exists
-    if [ -e "$TARGET" ]; then
-        # Remove the symlink
-        rm "$SYMLINK"
-        # Copy the target file to the original symlink location
-        cp -a "$TARGET" "$SYMLINK"
+RESOLVE_AND_COPY() {
+    local LINK="$1"
+    local ORIGINAL_LINK="$1"
+    local VISITED=()
+
+    while [ -L "$LINK" ]; do
+        TARGET=$(readlink "$LINK")
+        
+        # Check for circular links
+        for V in "${VISITED[@]}"; do
+            if [ "$V" = "$TARGETED" ]; then
+                echo "Circular link detected for $ORIGINAL_LINK"
+                return 1
+            fi
+        done
+        
+        VISITED+=("$LINK")
+        
+        # If target is relative, make it absolute
+        if [[ "$TARGET" != /* ]]; then
+            TARGET="$(dirname "$LINK")/$TARGET"
+        fi
+        
+        LINK="$TARGET"
+    done
+
+    if [ -e "$LINK" ]; then
+        rm "$ORIGINAL_LINK"
+        cp -a "$LINK" "$ORIGINAL_LINK"
     else
-        echo "Target does not exist for $SYMLINK"
+        echo "Final target does not exist for $ORIGINAL_LINK"
+        return 1
     fi
+}
+
+# Resolve all symlinks in the directory
+find "$DEST/Libraries/Linux" -type l | while read -r SYMLINK; do
+    RESOLVE_AND_COPY "$SYMLINK"
 done
 
 install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
