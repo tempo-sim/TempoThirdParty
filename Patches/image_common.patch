@@ -59,3 +59,36 @@ index 0afadaf..605e7f9 100644
        // Remove the "_sub" at the end of each class name.
        loadableTransports.push_back(erase_last_copy(transportPlugin, "_sub"));
      } catch (const pluginlib::LibraryLoadException & e) {
+diff --git a/image_transport/src/publisher.cpp b/image_transport/src/publisher.cpp
+index b554125..bf87541 100644
+--- a/image_transport/src/publisher.cpp
++++ b/image_transport/src/publisher.cpp
+@@ -33,6 +33,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <iostream>
+ 
+ #include "rclcpp/expand_topic_or_service_name.hpp"
+ #include "rclcpp/logging.hpp"
+@@ -151,6 +152,20 @@ Publisher::Publisher(
+   }
+ 
+   if (impl_->publishers_.empty()) {
++    std::cout << "allowlist: ";
++    for (const std::string& elem: allowlist)
++    {
++      std::cout << elem + " ";
++    }
++    std::cout << std::endl;
++
++    std::cout << "all_transport_names: ";
++    for (const std::string& elem: all_transport_names)
++    {
++      std::cout << elem + " ";
++    }
++    std::cout << std::endl;
++
+     throw Exception(
+             "No plugins found! Does `rospack plugins --attrib=plugin "
+             "image_transport` find any packages?");

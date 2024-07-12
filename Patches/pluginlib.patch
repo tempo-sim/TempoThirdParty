@@ -1,8 +1,16 @@
 diff --git a/pluginlib/include/pluginlib/class_loader_imp.hpp b/pluginlib/include/pluginlib/class_loader_imp.hpp
-index a41790b..b75a555 100644
+index a41790b..7f152cd 100644
 --- a/pluginlib/include/pluginlib/class_loader_imp.hpp
 +++ b/pluginlib/include/pluginlib/class_loader_imp.hpp
-@@ -370,6 +370,7 @@ std::vector<std::string> ClassLoader<T>::getAllLibraryPathsToTry(
+@@ -46,6 +46,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <iostream>
+ 
+ #include "ament_index_cpp/get_package_prefix.hpp"
+ #include "ament_index_cpp/get_package_share_directory.hpp"
+@@ -370,6 +371,7 @@ std::vector<std::string> ClassLoader<T>::getAllLibraryPathsToTry(
    // Setup the directories to look in.
    std::vector<std::string> all_search_paths = {
      // for now just try lib and lib64 (and their respective "libexec" directories)
@@ -10,3 +18,48 @@ index a41790b..b75a555 100644
      package_prefix + path_separator + "lib",
      package_prefix + path_separator + "lib64",
      package_prefix + path_separator + "bin",  // also look in bin, for dll's on Windows
+@@ -378,6 +380,8 @@ std::vector<std::string> ClassLoader<T>::getAllLibraryPathsToTry(
+     package_prefix + path_separator + "bin" + path_separator + exporting_package_name,
+   };
+ 
++  std::cout << "Searching package_prefix: " << package_prefix << std::endl;
++
+   std::string stripped_library_name = stripAllButFileFromPath(library_name);
+ 
+   std::string library_name_alternative;  // either lib<library> or <library> without lib prefix
+@@ -417,9 +421,16 @@ std::vector<std::string> ClassLoader<T>::getAllLibraryPathsToTry(
+       }
+     }
+   } catch (const std::runtime_error & ex) {
++    std::cout << "throwing " + std::string(ex.what()) << std::endl;
+     throw std::runtime_error{ex.what()};
+   }
+ 
++  std::cout << "all_paths: ";
++  for (auto && path : all_paths) {
++    std::cout << path + " ";
++  }
++  std::cout << std::endl;
++
+   for (auto && path : all_paths) {
+     RCUTILS_LOG_DEBUG_NAMED("pluginlib.ClassLoader",
+       "[search path for '%s']: '%s'",
+@@ -489,8 +500,10 @@ std::string ClassLoader<T>::getClassLibraryPath(const std::string & lookup_name)
+     "Iterating through all possible paths where %s could be located...",
+     library_name.c_str());
+   for (auto it = paths_to_try.begin(); it != paths_to_try.end(); it++) {
++    std::cout << "Checking path " + *it << std::endl;
+     RCUTILS_LOG_DEBUG_NAMED("pluginlib.ClassLoader", "Checking path %s ", it->c_str());
+     if (rcpputils::fs::exists(*it)) {
++      std::cout << "Found at " + *it << std::endl;
+       RCUTILS_LOG_DEBUG_NAMED("pluginlib.ClassLoader", "Library %s found at explicit path %s.",
+         library_name.c_str(), it->c_str());
+       return *it;
+@@ -654,6 +667,7 @@ void ClassLoader<T>::loadLibraryForClass(const std::string & lookup_name)
+     lowlevel_class_loader_.loadLibrary(library_path);
+     it->second.resolved_library_path_ = library_path;
+   } catch (const class_loader::LibraryLoadException & ex) {
++    std::cout << "Error while loading class" << std::endl;
+     std::string error_string =
+       "Failed to load library " + library_path + ". "
+       "Make sure that you are calling the PLUGINLIB_EXPORT_CLASS macro in the "

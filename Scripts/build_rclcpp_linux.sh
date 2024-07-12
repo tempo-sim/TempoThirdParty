@@ -122,6 +122,8 @@ cd "$ROOT_DIR/Source/rclcpp/pluginlib"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
 cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
+cd "$ROOT_DIR/Source/rclcpp/class_loader"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"
