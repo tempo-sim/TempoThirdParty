@@ -1,0 +1,42 @@
+import os ;
+
+local UE_THIRD_PARTY_PATH = [ os.environ UE_THIRD_PARTY_PATH ] ;
+local LINUX_MULTIARCH_ROOT = [ os.environ LINUX_MULTIARCH_ROOT ] ;
+local LINUX_ARCH_NAME = [ os.environ LINUX_ARCH_NAME ] ;
+local CLANG_TOOLCHAIN_ROOT = $(LINUX_MULTIARCH_ROOT)/$(LINUX_ARCH_NAME) ;
+local CLANG_TOOLCHAIN_BIN = $(CLANG_TOOLCHAIN_ROOT)/bin ;
+
+using clang : unreal : $(CLANG_TOOLCHAIN_BIN)/clang++ :
+    <cxxflags>-isystem$(UE_THIRD_PARTY_PATH)/Unix/LibCxx/include/c++/v1
+    <cxxflags>-fexceptions
+    <cxxflags>-DPLATFORM_EXCEPTIONS_DISABLED=0
+    <cxxflags>-fmessage-length=0
+    <cxxflags>-fpascal-strings
+    <cxxflags>-fasm-blocks
+    <cxxflags>-ffp-contract=off
+    <cxxflags>-fvisibility-inlines-hidden
+    <cxxflags>-fPIC
+    <cxxflags>--target=$(LINUX_ARCH_NAME)
+    <cxxflags>-O3
+    <cxxflags>-DNDEBUG
+    <cxxflags>--sysroot=$(CLANG_TOOLCHAIN_ROOT)
+    <cxxflags>-fno-math-errno
+    <cxxflags>-fdiagnostics-format=msvc
+    <cxxflags>-funwind-tables
+    <cxxflags>-gdwarf-3
+    <cxxflags>-pthread
+    <cxxflags>-Wno-unused-command-line-argument
+    <cxxflags>-Wno-error=deprecated-declarations
+    <cxxflags>-Wno-strict-prototypes
+    <cxxflags>-Wno-deprecated-copy
+    <cxxflags>-v
+    <linkflags>-stdlib=libc++
+    <linkflags>-L$(UE_THIRD_PARTY_PATH)/Unix/LibCxx/lib/Unix/$(LINUX_ARCH_NAME)
+    ;
+
+using python
+     : 3.11 # version
+     : /home/pete/UE_5.4/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 # cmd-o>
+     : /home/pete/UE_5.4/Engine/Source/ThirdParty/Python3/Linux/include # includes
+     : /home/pete/UE_5.4/Engine/Binaries/ThirdParty/Python3/Linux/lib # libraries
+     ;

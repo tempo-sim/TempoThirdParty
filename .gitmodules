@@ -207,3 +207,23 @@
 	path = Source/rclcpp/tinyxml2
 	url = https://github.com/leethomason/tinyxml2.git
 	branch = v10.0.0
+[submodule "Source/rclcpp/image_transport_plugins"]
+	path = Source/rclcpp/image_transport_plugins
+	url = https://github.com/ros-perception/image_transport_plugins.git
+	branch = humble
+[submodule "Source/rclcpp/vision_opencv"]
+	path = Source/rclcpp/vision_opencv
+	url = https://github.com/ros-perception/vision_opencv.git
+	branch = humble
+[submodule "Source/rclcpp/opencv"]
+	path = Source/rclcpp/opencv
+	url = https://github.com/opencv/opencv.git
+[submodule "Source/rclcpp/theora"]
+	path = Source/rclcpp/theora
+	url = https://github.com/xiph/theora.git
+[submodule "Source/rclcpp/ogg"]
+	path = Source/rclcpp/ogg
+	url = https://github.com/xiph/ogg.git
+[submodule "Source/rclcpp/boost"]
+	path = Source/rclcpp/boost
+	url = https://github.com/boostorg/boost.git

@@ -30,24 +30,6 @@ if ! which pip; then
     exit 1
 fi
 
-# Check for tinyxml2
-if ! apt -qq list libtinyxml2-dev; then
-    echo "Couldn't find tinyxml2. Please install (brew install tinyxml2)."
-    exit 1
-fi
-
-# Check for asio
-if ! apt -qq list libasio-dev; then
-    echo "Couldn't find asio. Please install (brew install asio)."
-    exit 1
-fi
-#
-## Check for theora
-#if ! brew ls theora; then
-#    echo "Couldn't find theora. Please install (brew install theora)."
-#    exit 1
-#fi
-
 # Check for tag
 TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
 if [ "$TAG" = "undefined" ]; then
@@ -74,6 +56,12 @@ fi
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
+LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v22_clang-16.0.6-centos7"
+LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
+export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
+export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
+export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+
 echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
@@ -84,18 +72,8 @@ rm -rf "$ROOT_DIR/Builds/rclcpp"
 rm -rf "$ROOT_DIR/Source/rclcpp/install"
 rm -rf "$ROOT_DIR/Source/rclcpp/log"
 
-echo -e "Creating Python virtual environment for build.\n"
-cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
-source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
-pip install colcon-common-extensions
-pip install empy
-pip install lark==1.1.1
-pip install numpy
-# 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
-# paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
-# Python3.11 instead.
-pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
+NUM_JOBS="$(nproc --all)"
+echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
@@ -124,6 +102,58 @@ cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
 cd "$ROOT_DIR/Source/rclcpp/class_loader"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
+cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
+
+echo -e "Building boost"
+cd "$ROOT_DIR/Source/rclcpp/boost"
+./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
+./b2 install toolset=clang-unreal --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost-user-config.jam" -d+2
+
+#echo -e "Building opencv"
+#mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux/opencv" && cd "$ROOT_DIR/Builds/rclcpp/Linux/opencv"
+#cmake "$ROOT_DIR/Source/rclcpp/opencv" \
+#-DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
+#-DBUILD_opencv_dnn=OFF \
+#-DBUILD_PROTOBUF=OFF \
+#-DBUILD_opencv_python3=OFF \
+#-DBUILD_opencv_videoio=OFF \
+#-DBUILD_opencv_datasets=OFF \
+#-DBUILD_EXAMPLES=OFF \
+#-DBUILD_PERF_TESTS=OFF \
+#-DBUILD_TESTS=OFF \
+#-DBUILD_opencv_apps=OFF \
+#-DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Source/rclcpp/install"
+#cmake --build . --target install -j "$NUM_JOBS"
+
+export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
+export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
+export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+
+echo -e "Building ogg"
+cd "$ROOT_DIR/Source/rclcpp/ogg"
+./autogen.sh
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
+make install
+
+echo -e "Building theora"
+cd "$ROOT_DIR/Source/rclcpp/theora"
+./autogen.sh
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
+make install
+
+echo -e "Creating Python virtual environment for colcon build.\n"
+cd "$UNREAL_ENGINE_PATH"
+./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
+pip install colcon-common-extensions
+pip install empy
+pip install lark==1.1.1
+pip install numpy
+# 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
+# paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
+# Python3.11 instead.
+pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"
@@ -133,21 +163,29 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Linux"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Linux"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
-LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v22_clang-16.0.6-centos7"
-LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
-
 # To inspect compiler/linker commands
-#export VERBOSE=1
+# export VERBOSE=1
 # --event-handlers console_direct+ \
-export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
-export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
-export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+# -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/install' \
+export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
+export EXTRA_LINK_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-clean-cache \
+ --parallel-workers $NUM_JOBS \
  --cmake-args \
+ " -DBUILD_opencv_dnn=OFF" \
+ " -DBUILD_PROTOBUF=OFF" \
+ " -DBUILD_opencv_python3=OFF" \
+ " -DBUILD_opencv_videoio=OFF" \
+ " -DBUILD_opencv_datasets=OFF" \
+ " -DBUILD_EXAMPLES=OFF" \
+ " -DBUILD_PERF_TESTS=OFF" \
+ " -DBUILD_TESTS=OFF" \
+ " -DBUILD_opencv_apps=OFF" \
+ " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
@@ -162,7 +200,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DOPENSSL_VERSION=1.1.1t" \
  " -DCMAKE_TOOLCHAIN_FILE=$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
- " -DCMAKE_INSTALL_RPATH='$ORIGIN'" \
+ " -DCMAKE_INSTALL_RPATH='\$ORIGIN'" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
