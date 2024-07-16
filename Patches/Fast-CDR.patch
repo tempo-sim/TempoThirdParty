@@ -1,0 +1,14 @@
+diff --git a/include/fastcdr/config.h.in b/include/fastcdr/config.h.in
+index 26a6320..0d6fc59 100644
+--- a/include/fastcdr/config.h.in
++++ b/include/fastcdr/config.h.in
+@@ -36,7 +36,9 @@
+ #endif
+ 
+ #if HAVE_CXX_CONSTEXPR
++#ifndef CONSTEXPR
+ #define CONSTEXPR constexpr
++#endif
+ #else
+ #define CONSTEXPR const
+ #endif
