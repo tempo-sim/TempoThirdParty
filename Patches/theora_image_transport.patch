@@ -1,0 +1,30 @@
+diff --git a/theora_image_transport/CMakeLists.txt b/theora_image_transport/CMakeLists.txt
+index 67612f0..b780f97 100644
+--- a/theora_image_transport/CMakeLists.txt
++++ b/theora_image_transport/CMakeLists.txt
+@@ -69,6 +69,12 @@ target_link_libraries(${LIBRARY_NAME}
+   pluginlib::pluginlib
+   rclcpp::rclcpp
+ )
++target_link_directories(${LIBRARY_NAME} PRIVATE
++    ${PC_OGG_LIBRARY_DIRS}
++    ${PC_THEORA_LIBRARY_DIRS}
++    ${PC_THEORAENC_LIBRARY_DIRS}
++    ${PC_THEORADEC_LIBRARY_DIRS}
++)
+ 
+ add_executable(ogg_saver src/ogg_saver.cpp)
+ target_compile_definitions(ogg_saver PRIVATE
+@@ -86,6 +92,12 @@ target_link_libraries(ogg_saver
+   rclcpp::rclcpp
+   rcutils::rcutils
+ )
++target_link_directories(ogg_saver PRIVATE
++    ${PC_OGG_LIBRARY_DIRS}
++    ${PC_THEORA_LIBRARY_DIRS}
++    ${PC_THEORAENC_LIBRARY_DIRS}
++    ${PC_THEORADEC_LIBRARY_DIRS}
++)
+ 
+ ament_export_dependencies(
+   rosidl_default_runtime
