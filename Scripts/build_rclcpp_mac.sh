@@ -14,43 +14,43 @@ echo "Checking for prerequisites"
 
 # Check for git
 if ! which git; then
-    echo "Couldn't find git"
-    exit 1
+  echo "Couldn't find git"
+  exit 1
 fi
 
 # Check for cmake
 if ! which cmake; then
-    echo "Couldn't find cmake"
-    exit 1
+  echo "Couldn't find cmake"
+  exit 1
 fi
 
 # Check for pip
 if ! which pip; then
-    echo "Couldn't find pip"
-    exit 1
+  echo "Couldn't find pip"
+  exit 1
 fi
 
 # Check for brew
 if ! which brew; then
-    echo "Couldn't find brew. Please install (https://brew.sh/)"
+  echo "Couldn't find brew"
+  exit 1
+fi
+
+# Check for autoconf
+if ! brew ls autoconf; then
+    echo "Couldn't find autoconf. Please install (brew install autoconf)."
     exit 1
 fi
 
-# Check for tinyxml2
-if ! brew ls tinyxml2; then
-    echo "Couldn't find tinyxml2. Please install (brew install tinyxml2)."
+# Check for automake
+if ! brew ls automake; then
+    echo "Couldn't find automake. Please install (brew install automake)."
     exit 1
 fi
 
-# Check for asio
-if ! brew ls asio; then
-    echo "Couldn't find asio. Please install (brew install asio)."
-    exit 1
-fi
-
-# Check for theora
-if ! brew ls theora; then
-    echo "Couldn't find theora. Please install (brew install theora)."
+# Check for libtool
+if ! brew ls libtool; then
+    echo "Couldn't find libtool. Please install (brew install libtool)."
     exit 1
 fi
 
@@ -72,6 +72,15 @@ if [ ! -d "$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/python
   exit 1
 fi
 
+UE_THIRD_PARTY_PATH="$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty"
+if [ ! -d "${UE_THIRD_PARTY_PATH}" ]; then
+  echo "ThirdParty directory does not exist: $UE_THIRD_PARTY_PATH";
+  exit 1
+fi
+export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
+
+echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
+
 echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
@@ -82,17 +91,8 @@ rm -rf "$ROOT_DIR/Builds/rclcpp"
 rm -rf "$ROOT_DIR/Source/rclcpp/install"
 rm -rf "$ROOT_DIR/Source/rclcpp/log"
 
-echo -e "Creating Python virtual environment for build.\n"
-cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
-source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
-pip install colcon-common-extensions
-pip install lark==1.1.1
-pip install numpy
-# 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
-# paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
-# Python3.11 instead.
-pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
+NUM_JOBS="$(sysctl -n hw.ncpu)"
+echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/rclcpp/rcpputils"
@@ -121,6 +121,38 @@ cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
 cd "$ROOT_DIR/Source/rclcpp/class_loader"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
+cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
+
+echo -e "Building boost"
+cd "$ROOT_DIR/Source/rclcpp/boost"
+./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
+./b2 install --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-mac.jam" -d0
+
+echo -e "Building ogg"
+cd "$ROOT_DIR/Source/rclcpp/ogg"
+./autogen.sh
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
+make install
+
+echo -e "Building theora"
+cd "$ROOT_DIR/Source/rclcpp/theora"
+./autogen.sh
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
+make install
+
+echo -e "Creating Python virtual environment for colcon build.\n"
+cd "$UNREAL_ENGINE_PATH"
+./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
+pip install colcon-common-extensions
+pip install empy
+pip install lark==1.1.1
+pip install numpy
+# 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
+# paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
+# Python3.11 instead.
+pip install "$ROOT_DIR/Source/rclcpp/netifaces/netifaces-0.11.0-cp311-cp311-macosx_10_9_universal2.whl"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Mac"
@@ -132,14 +164,31 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
 # To inspect compiler/linker commands
 #export VERBOSE=1
-#--event-handlers console_direct+ \
-
+# --event-handlers console_direct+ \
+export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
+export EXTRA_LINK_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-clean-cache \
+ --parallel-workers "$NUM_JOBS" \
  --cmake-args \
+ " -DBUILD_opencv_dnn=OFF" \
+ " -DBUILD_PROTOBUF=OFF" \
+ " -DBUILD_opencv_python3=OFF" \
+ " -DBUILD_opencv_videoio=OFF" \
+ " -DBUILD_opencv_datasets=OFF" \
+ " -DBUILD_EXAMPLES=OFF" \
+ " -DBUILD_PERF_TESTS=OFF" \
+ " -DBUILD_TESTS=OFF" \
+ " -DBUILD_opencv_apps=OFF" \
+ " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
+ " -Dtinyxml2_SHARED_LIBS=ON" \
+ " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
+ " -DSM_RUN_RESULT=0" \
+ " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
+ " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_INSTALL_RPATH=@loader_path" \
  " -DCMAKE_OSX_ARCHITECTURES=arm64" \
@@ -149,8 +198,8 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/libpython3.11.dylib'" \
- " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
- " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15" \
+ " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
+ " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " --no-warn-unused-cli"
 
 DEST="$ROOT_DIR/Outputs/rclcpp"
@@ -214,11 +263,11 @@ RESOLVE_AND_COPY() {
 }
 
 # Resolve all symlinks in the directory
-find "$DEST/Libraries/Linux" -type l | while read -r SYMLINK; do
+find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
     RESOLVE_AND_COPY "$SYMLINK"
 done
 
-install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
+#install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
 
 echo -e "Archiving outputs...\n"
 RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Mac-$TAG.tar.gz"

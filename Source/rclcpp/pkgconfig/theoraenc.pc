@@ -10,5 +10,5 @@ Description: Theora video codec (encoder)
 Version: 1.1.1
 Requires: theoradec, ogg >= 1.1
 Conflicts:
-Libs: ${libdir}/libtheoraenc.so
+Libs: -L${libdir} -ltheoraenc
 Cflags: -I${includedir}

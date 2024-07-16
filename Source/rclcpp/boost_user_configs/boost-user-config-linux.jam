@@ -1,5 +1,6 @@
 import os ;
 
+local UNREAL_ENGINE_PATH = [ os.environ UNREAL_ENGINE_PATH ] ;
 local UE_THIRD_PARTY_PATH = [ os.environ UE_THIRD_PARTY_PATH ] ;
 local LINUX_MULTIARCH_ROOT = [ os.environ LINUX_MULTIARCH_ROOT ] ;
 local LINUX_ARCH_NAME = [ os.environ LINUX_ARCH_NAME ] ;
@@ -36,7 +37,7 @@ using clang : unreal : $(CLANG_TOOLCHAIN_BIN)/clang++ :
 
 using python
      : 3.11 # version
-     : /home/pete/UE_5.4/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 # cmd-o>
-     : /home/pete/UE_5.4/Engine/Source/ThirdParty/Python3/Linux/include # includes
-     : /home/pete/UE_5.4/Engine/Binaries/ThirdParty/Python3/Linux/lib # libraries
+     : $(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 # cmd-o>
+     : $(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Linux/include # includes
+     : $(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Linux/lib # libraries
      ;

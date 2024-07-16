@@ -108,27 +108,7 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.pa
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install toolset=clang-unreal --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost-user-config.jam" -d+2
-
-#echo -e "Building opencv"
-#mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux/opencv" && cd "$ROOT_DIR/Builds/rclcpp/Linux/opencv"
-#cmake "$ROOT_DIR/Source/rclcpp/opencv" \
-#-DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
-#-DBUILD_opencv_dnn=OFF \
-#-DBUILD_PROTOBUF=OFF \
-#-DBUILD_opencv_python3=OFF \
-#-DBUILD_opencv_videoio=OFF \
-#-DBUILD_opencv_datasets=OFF \
-#-DBUILD_EXAMPLES=OFF \
-#-DBUILD_PERF_TESTS=OFF \
-#-DBUILD_TESTS=OFF \
-#-DBUILD_opencv_apps=OFF \
-#-DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Source/rclcpp/install"
-#cmake --build . --target install -j "$NUM_JOBS"
-
-export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
-export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
-export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+./b2 install toolset=clang-unreal --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0
 
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
@@ -153,7 +133,7 @@ pip install numpy
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 # Python3.11 instead.
-pip install "$ROOT_DIR/Source/rclcpp/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
+pip install "$ROOT_DIR/Source/rclcpp/netifaces/netifaces-0.11.0-cp311-cp311-linux_x86_64.whl"
 
 echo "Building rclcpp..."
 mkdir -p "$ROOT_DIR/Builds/rclcpp/Linux"
@@ -166,15 +146,13 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # To inspect compiler/linker commands
 # export VERBOSE=1
 # --event-handlers console_direct+ \
-# -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/install' \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-export EXTRA_LINK_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
 colcon build --packages-skip-by-dep python_qt_binding \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-clean-cache \
- --parallel-workers $NUM_JOBS \
+ --parallel-workers "$NUM_JOBS" \
  --cmake-args \
  " -DBUILD_opencv_dnn=OFF" \
  " -DBUILD_PROTOBUF=OFF" \
@@ -190,14 +168,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
- " -DOPENSSL_FOUND=ON" \
- " -DOPENSSL_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Unix'" \
- " -DOPENSSL_CRYPTO_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libcrypto.a'" \
- " -DOPENSSL_CRYPTO_LIBRARIES='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libcrypto.a'" \
- " -DOPENSSL_SSL_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libssl.a'" \
- " -DOPENSSL_SSL_LIBRARIES='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libssl.a'" \
- " -DOPENSSL_LIBRARIES='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libssl.a $UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libcrypto.a'" \
- " -DOPENSSL_VERSION=1.1.1t" \
+ " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules'" \
  " -DCMAKE_TOOLCHAIN_FILE=$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN'" \
