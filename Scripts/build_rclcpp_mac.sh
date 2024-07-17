@@ -130,22 +130,26 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.pa
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
+rm -rf bin.v2
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-mac.jam" -d0 cxxflags="-mmacosx-version-min=10.15"
+./b2 install --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-mac.jam" -d0 \
+ cflags=-mmacosx-version-min=10.15 cxxflags=-mmacosx-version-min=10.15 mflags=-mmacosx-version-min=10.15 mmflags=-mmacosx-version-min=10.15 linkflags=-mmacosx-version-min=10.15
 
-export CCFLAGS="-mmacosx-version-min=10.15"
+export CFLAGS="-mmacosx-version-min=10.15"
+export CPPFLAGS="-mmacosx-version-min=10.15"
+
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
 ./autogen.sh
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
+make clean
 make install
 
-export CFLAGS="-mmacosx-version-min=10.15"
-export CPPFLAGS="-mmacosx-version-min=10.15"
 echo -e "Building theora"
 cd "$ROOT_DIR/Source/rclcpp/theora"
 ./autogen.sh
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
+make clean
 make install
 
 echo -e "Creating Python virtual environment for colcon build.\n"
@@ -173,8 +177,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 #export VERBOSE=1
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-export EXTRA_LINK_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
-colcon build --packages-skip-by-dep python_qt_binding \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -191,12 +194,14 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_opencv_apps=OFF" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
+ " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
  " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Mac'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
+ " -DCMAKE_POLICY_DEFAULT_CMP0074=OLD" \
  " -DCMAKE_INSTALL_RPATH=@loader_path" \
  " -DCMAKE_OSX_ARCHITECTURES=arm64" \
  " -DTRACETOOLS_DISABLED=ON" \

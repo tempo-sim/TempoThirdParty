@@ -151,7 +151,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # export VERBOSE=1
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -168,6 +168,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_opencv_apps=OFF" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
+ " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
@@ -175,6 +176,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DCMAKE_MODULE_PATH=$ROOT_DIR/Source/rclcpp/cmake/Modules/Linux" \
  " -DCMAKE_TOOLCHAIN_FILE=$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
+ " -DCMAKE_POLICY_DEFAULT_CMP0074=OLD" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN'" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \

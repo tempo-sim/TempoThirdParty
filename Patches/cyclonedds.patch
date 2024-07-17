@@ -66,3 +66,15 @@ index d66ac361..d7a3b952 100644
  
  include(HashUtilities)
  
+diff --git a/src/security/builtin_plugins/access_control/CMakeLists.txt b/src/security/builtin_plugins/access_control/CMakeLists.txt
+index 3acb7fbe..c6a43e3a 100644
+--- a/src/security/builtin_plugins/access_control/CMakeLists.txt
++++ b/src/security/builtin_plugins/access_control/CMakeLists.txt
+@@ -34,6 +34,7 @@ generate_export_header(
+ target_link_libraries(dds_security_ac PRIVATE security_openssl)
+ target_link_libraries(dds_security_ac PUBLIC ddsc)
+ target_link_libraries(dds_security_ac PUBLIC OpenSSL::SSL)
++target_link_libraries(dds_security_ac PUBLIC OpenSSL::Crypto)
+ if(CMAKE_GENERATOR MATCHES "Visual Studio")
+   set_target_properties(dds_security_ac PROPERTIES LINK_FLAGS "/ignore:4099")
+ endif()
