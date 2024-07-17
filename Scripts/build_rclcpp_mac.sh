@@ -131,14 +131,17 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.pa
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-mac.jam" -d0
+./b2 install --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-mac.jam" -d0 cxxflags="-mmacosx-version-min=10.15"
 
+export CCFLAGS="-mmacosx-version-min=10.15"
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
 ./autogen.sh
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
 make install
 
+export CFLAGS="-mmacosx-version-min=10.15"
+export CPPFLAGS="-mmacosx-version-min=10.15"
 echo -e "Building theora"
 cd "$ROOT_DIR/Source/rclcpp/theora"
 ./autogen.sh
