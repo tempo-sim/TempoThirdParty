@@ -1,9 +1,6 @@
 import os ;
 
 local UNREAL_ENGINE_PATH = [ os.environ UNREAL_ENGINE_PATH ] ;
-#local UNREAL_ENGINE_PATH = "/Users/shared/Epic Games/UE_5.4" ;
-#UNREAL_ENGINE_PATH = "\"$(UNREAL_ENGINE_PATH)\"" ;
-#UNREAL_ENGINE_PATH = $(UNREAL_ENGINE_PATH:T) ;
 
 using python
      : 3.11 # version
