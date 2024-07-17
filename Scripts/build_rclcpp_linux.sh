@@ -112,7 +112,7 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.pa
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install toolset=clang-unreal --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0
+./b2 install toolset=clang-unreal --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0 cxxflags="-std=c++11"
 
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
@@ -172,7 +172,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
- " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules'" \
+ " -DCMAKE_MODULE_PATH=$ROOT_DIR/Source/rclcpp/cmake/Modules/Linux" \
  " -DCMAKE_TOOLCHAIN_FILE=$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN'" \

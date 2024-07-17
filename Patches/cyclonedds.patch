@@ -1,97 +1,68 @@
-diff --git a/cmake/Modules/FindOpenSSL.cmake b/cmake/Modules/FindOpenSSL.cmake
-index 1de05bf6..e245a29c 100644
---- a/cmake/Modules/FindOpenSSL.cmake
-+++ b/cmake/Modules/FindOpenSSL.cmake
-@@ -9,7 +9,91 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index cbec187f..a1b8b299 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -34,7 +34,7 @@ endif()
+ # small mistake would run into errors.  CI builds can be configured differently.
+ option(WERROR "Treat compiler warnings as errors" OFF)
+ 
+-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
++list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
+ 
+ option(BUILD_IDLC "Build IDL preprocessor" ${not_crosscompiling})
+ option(BUILD_DDSPERF "Build ddsperf tool" ${not_crosscompiling})
+diff --git a/cmake/AppendHashScript.cmake b/cmake/AppendHashScript.cmake
+index f5438b9c..fc9e257b 100644
+--- a/cmake/AppendHashScript.cmake
++++ b/cmake/AppendHashScript.cmake
+@@ -1,4 +1,4 @@
+-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
++list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
+ 
+ include(HashUtilities)
+ 
+diff --git a/cmake/CheckHashScript.cmake b/cmake/CheckHashScript.cmake
+index f6f90218..46b5793b 100644
+--- a/cmake/CheckHashScript.cmake
++++ b/cmake/CheckHashScript.cmake
+@@ -1,4 +1,4 @@
+-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
++list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
+ 
+ include(HashUtilities)
+ 
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 0f7a713c..11838238 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -25,6 +25,7 @@ endif()
+ 
+ if(ENABLE_SSL AND OPENSSL_FOUND)
+   target_link_libraries(ddsc PRIVATE OpenSSL::SSL)
++  target_link_libraries(ddsc PRIVATE OpenSSL::Crypto)
+   if(CMAKE_GENERATOR MATCHES "Visual Studio")
+     set_target_properties(ddsc PROPERTIES LINK_FLAGS "/ignore:4099")
+   endif()
+diff --git a/src/core/xtests/cdrtest/CMakeLists.txt b/src/core/xtests/cdrtest/CMakeLists.txt
+index 6265191a..8be12131 100644
+--- a/src/core/xtests/cdrtest/CMakeLists.txt
++++ b/src/core/xtests/cdrtest/CMakeLists.txt
+@@ -11,7 +11,7 @@
  #
- # SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
- #
--if(TARGET CONAN_PKG::openssl)
-+if(OPENSSL_FOUND)
-+  if(NOT TARGET OpenSSL::Crypto AND
-+      (EXISTS "${OPENSSL_CRYPTO_LIBRARY}" OR
-+        EXISTS "${LIB_EAY_LIBRARY_DEBUG}" OR
-+        EXISTS "${LIB_EAY_LIBRARY_RELEASE}")
-+      )
-+    add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
-+    set_target_properties(OpenSSL::Crypto PROPERTIES
-+      INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
-+    if(EXISTS "${OPENSSL_CRYPTO_LIBRARY}")
-+      set_target_properties(OpenSSL::Crypto PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-+        IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}")
-+    endif()
-+    if(EXISTS "${LIB_EAY_LIBRARY_RELEASE}")
-+      set_property(TARGET OpenSSL::Crypto APPEND PROPERTY
-+        IMPORTED_CONFIGURATIONS RELEASE)
-+      set_target_properties(OpenSSL::Crypto PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
-+        IMPORTED_LOCATION_RELEASE "${LIB_EAY_LIBRARY_RELEASE}")
-+    endif()
-+    if(EXISTS "${LIB_EAY_LIBRARY_DEBUG}")
-+      set_property(TARGET OpenSSL::Crypto APPEND PROPERTY
-+        IMPORTED_CONFIGURATIONS DEBUG)
-+      set_target_properties(OpenSSL::Crypto PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-+        IMPORTED_LOCATION_DEBUG "${LIB_EAY_LIBRARY_DEBUG}")
-+    endif()
-+  endif()
-+
-+  if(NOT TARGET OpenSSL::SSL AND
-+      (EXISTS "${OPENSSL_SSL_LIBRARY}" OR
-+        EXISTS "${SSL_EAY_LIBRARY_DEBUG}" OR
-+        EXISTS "${SSL_EAY_LIBRARY_RELEASE}")
-+      )
-+    add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-+    set_target_properties(OpenSSL::SSL PROPERTIES
-+      INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
-+    if(EXISTS "${OPENSSL_SSL_LIBRARY}")
-+      set_target_properties(OpenSSL::SSL PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-+        IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}")
-+    endif()
-+    if(EXISTS "${SSL_EAY_LIBRARY_RELEASE}")
-+      set_property(TARGET OpenSSL::SSL APPEND PROPERTY
-+        IMPORTED_CONFIGURATIONS RELEASE)
-+      set_target_properties(OpenSSL::SSL PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
-+        IMPORTED_LOCATION_RELEASE "${SSL_EAY_LIBRARY_RELEASE}")
-+    endif()
-+    if(EXISTS "${SSL_EAY_LIBRARY_DEBUG}")
-+      set_property(TARGET OpenSSL::SSL APPEND PROPERTY
-+        IMPORTED_CONFIGURATIONS DEBUG)
-+      set_target_properties(OpenSSL::SSL PROPERTIES
-+        IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
-+        IMPORTED_LOCATION_DEBUG "${SSL_EAY_LIBRARY_DEBUG}")
-+    endif()
-+    if(TARGET OpenSSL::Crypto)
-+      set_target_properties(OpenSSL::SSL PROPERTIES
-+        INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
-+    endif()
-+  endif()
-+
-+  if("${OPENSSL_VERSION_MAJOR}.${OPENSSL_VERSION_MAJOR}.${OPENSSL_VERSION_FIX}" VERSION_GREATER_EQUAL "0.9.8")
-+    if(MSVC)
-+      if(EXISTS "${OPENSSL_INCLUDE_DIR}")
-+        set(_OPENSSL_applink_paths PATHS ${OPENSSL_INCLUDE_DIR})
-+      endif()
-+      find_file(OPENSSL_APPLINK_SOURCE
-+        NAMES
-+          openssl/applink.c
-+        ${_OPENSSL_applink_paths}
-+        NO_DEFAULT_PATH)
-+      if(OPENSSL_APPLINK_SOURCE)
-+        set(_OPENSSL_applink_interface_srcs ${OPENSSL_APPLINK_SOURCE})
-+      endif()
-+    endif()
-+    if(NOT TARGET OpenSSL::applink)
-+      add_library(OpenSSL::applink INTERFACE IMPORTED)
-+      set_property(TARGET OpenSSL::applink APPEND
-+        PROPERTY INTERFACE_SOURCES
-+          ${_OPENSSL_applink_interface_srcs})
-+    endif()
-+  endif()
-+elseif(TARGET CONAN_PKG::openssl)
-   add_library(OpenSSL::SSL INTERFACE IMPORTED)
-   target_link_libraries(OpenSSL::SSL INTERFACE CONAN_PKG::openssl)
-   set(OPENSSL_FOUND TRUE)
+ cmake_minimum_required(VERSION 3.16)
+ project(CDRTest LANGUAGES C)
+-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
++list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+ 
+ find_package(CycloneDDS REQUIRED)
+ find_package(OpenSplice COMPONENTS kernel sac REQUIRED)
+diff --git a/src/idl/postprocess-parser.cmake b/src/idl/postprocess-parser.cmake
+index d66ac361..d7a3b952 100644
+--- a/src/idl/postprocess-parser.cmake
++++ b/src/idl/postprocess-parser.cmake
+@@ -1,4 +1,4 @@
+-set(CMAKE_MODULE_PATH "${MAIN_PROJECT_DIR}/cmake/Modules")
++list(APPEND CMAKE_MODULE_PATH "${MAIN_PROJECT_DIR}/cmake/Modules")
+ 
+ include(HashUtilities)
+ 

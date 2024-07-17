@@ -192,7 +192,7 @@ colcon build --packages-skip-by-dep python_qt_binding \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
- " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules'" \
+ " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Mac'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_INSTALL_RPATH=@loader_path" \
  " -DCMAKE_OSX_ARCHITECTURES=arm64" \
