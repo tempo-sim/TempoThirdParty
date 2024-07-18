@@ -110,6 +110,8 @@ cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
 cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
+cd "$ROOT_DIR/Source/rclcpp/geometry2"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -179,6 +181,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DCMAKE_TOOLCHAIN_FILE=$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_POLICY_DEFAULT_CMP0074=OLD" \
+ " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN'" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \

@@ -127,6 +127,8 @@ cd "$ROOT_DIR/Source/rclcpp/class_loader"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
 cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
+cd "$ROOT_DIR/Source/rclcpp/geometry2"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
