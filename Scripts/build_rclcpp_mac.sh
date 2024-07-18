@@ -202,6 +202,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Mac'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_POLICY_DEFAULT_CMP0074=OLD" \
+ " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DCMAKE_INSTALL_RPATH=@loader_path" \
  " -DCMAKE_OSX_ARCHITECTURES=arm64" \
  " -DTRACETOOLS_DISABLED=ON" \
@@ -210,6 +211,8 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/libpython3.11.dylib'" \
+ " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " --no-warn-unused-cli"

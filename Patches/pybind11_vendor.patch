@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 309a628..042caad 100644
+index 309a628..c8e73b6 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -73,8 +73,10 @@ macro(build_pybind11)
+@@ -73,8 +73,12 @@ macro(build_pybind11)
      # the internal pybind11 variable to be called PYBIND11_DEBUG, which avoids
      # the issue.
      PATCH_COMMAND
@@ -11,9 +11,30 @@ index 309a628..042caad 100644
          ${CMAKE_CURRENT_SOURCE_DIR}/pybind11-2.9.1-fix-windows-debug.patch
 +      COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> git apply -p1 --ignore-space-change --whitespace=nowarn
 +        ${CMAKE_CURRENT_SOURCE_DIR}/pybind11-python3.11-compatibility.patch
++      COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> git apply -p1 --ignore-space-change --whitespace=nowarn
++        ${CMAKE_CURRENT_SOURCE_DIR}/pybind11-python3-add-library-bug.patch
    )
  
    # The external project will install to the build folder, but we'll install that on make install.
+diff --git a/pybind11-python3-add-library-bug.patch b/pybind11-python3-add-library-bug.patch
+new file mode 100644
+index 0000000..63ba8bd
+--- /dev/null
++++ b/pybind11-python3-add-library-bug.patch
+@@ -0,0 +1,13 @@
++diff --git a/tools/pybind11NewTools.cmake b/tools/pybind11NewTools.cmake
++index 0b4e21cc..31b36ac6 100644
++--- a/tools/pybind11NewTools.cmake
+++++ b/tools/pybind11NewTools.cmake
++@@ -201,6 +201,8 @@ function(pybind11_add_module target_name)
++     set(lib_type MODULE)
++   endif()
++ 
+++  find_package (Python3 COMPONENTS Interpreter Development)
+++
++   if("${_Python}" STREQUAL "Python")
++     python_add_library(${target_name} ${lib_type} ${ARG_UNPARSED_ARGUMENTS})
++   elseif("${_Python}" STREQUAL "Python3")
 diff --git a/pybind11-python3.11-compatibility.patch b/pybind11-python3.11-compatibility.patch
 new file mode 100644
 index 0000000..052df4c
