@@ -162,11 +162,16 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
- " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
- " -DZLIB_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
- " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
  " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
+ " -DPNG_FOUND=ON" \
+ " -DPNG_PNG_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
+ " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
+ " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
+ " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
+ " -DZLIB_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
+ " -DZLIB_FOUND=ON" \
+ " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DBUILD_opencv_dnn=OFF" \
  " -DBUILD_PROTOBUF=OFF" \
