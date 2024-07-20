@@ -186,6 +186,12 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
+ " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
+ " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.2.13/include'" \
+ " -DZLIB_USE_STATIC_LIBS=ON" \
+ " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27'" \
+ " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac'" \
+ " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DBUILD_opencv_dnn=OFF" \
  " -DBUILD_PROTOBUF=OFF" \
  " -DBUILD_opencv_python3=OFF" \
