@@ -129,6 +129,10 @@ cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
 cd "$ROOT_DIR/Source/rclcpp/geometry2"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
+cd "$ROOT_DIR/Source/rclcpp/rclpy"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rclpy.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -187,10 +191,15 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
  " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
+ " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
  " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.2.13/include'" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
+ " -DZLIB_FOUND=ON" \
  " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac'" \
+ " -DPNG_PNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27'" \
+ " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac/libpng.a'" \
+ " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac/libpng.a'" \
+ " -DPNG_FOUND=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DBUILD_opencv_dnn=OFF" \
  " -DBUILD_PROTOBUF=OFF" \
@@ -200,7 +209,9 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DBUILD_EXAMPLES=OFF" \
  " -DBUILD_PERF_TESTS=OFF" \
  " -DBUILD_TESTS=OFF" \
+ " -DBUILD_TESTING=OFF" \
  " -DBUILD_opencv_apps=OFF" \
+ " -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/opencv/cmake'" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
@@ -218,9 +229,10 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
- " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/lib/libpython3.11.dylib'" \
- " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/lib/libpython3.11.a'" \
+ " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/lib/libpython3.11.a'" \
  " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPython_USE_STATIC_LIBS=ON" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " --no-warn-unused-cli"
@@ -249,48 +261,6 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
 done
-
-RESOLVE_AND_COPY() {
-    local LINK="$1"
-    local ORIGINAL_LINK="$1"
-    local VISITED=()
-
-    while [ -L "$LINK" ]; do
-        TARGET=$(readlink "$LINK")
-        
-        # Check for circular links
-        for V in "${VISITED[@]}"; do
-            if [ "$V" = "$TARGETED" ]; then
-                echo "Circular link detected for $ORIGINAL_LINK"
-                return 1
-            fi
-        done
-        
-        VISITED+=("$LINK")
-        
-        # If target is relative, make it absolute
-        if [[ "$TARGET" != /* ]]; then
-            TARGET="$(dirname "$LINK")/$TARGET"
-        fi
-        
-        LINK="$TARGET"
-    done
-
-    if [ -e "$LINK" ]; then
-        rm "$ORIGINAL_LINK"
-        cp -a "$LINK" "$ORIGINAL_LINK"
-    else
-        echo "Final target does not exist for $ORIGINAL_LINK"
-        return 1
-    fi
-}
-
-# Resolve all symlinks in the directory
-find "$DEST/Libraries/Mac" -type l | while read -r SYMLINK; do
-    RESOLVE_AND_COPY "$SYMLINK"
-done
-
-#install_name_tool -add_rpath @loader_path/../../../ "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac/python3.11/site-packages/rclpy/_rclpy_pybind11.cpython-311-darwin.so"
 
 echo -e "Archiving outputs...\n"
 RCLCPP_ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-rclcpp-Mac-$TAG.tar.gz"

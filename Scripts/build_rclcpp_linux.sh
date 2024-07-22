@@ -112,11 +112,15 @@ cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
 cd "$ROOT_DIR/Source/rclcpp/geometry2"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
+cd "$ROOT_DIR/Source/rclcpp/rclpy"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rclpy.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install toolset=clang-unreal --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0 cxxflags="-std=c++11"
+./b2 install toolset=clang-unreal --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0 cxxflags="-std=c++11"
 
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
@@ -198,10 +202,11 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
- " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/lib/libpython3.11.a'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
- " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/lib/libpython3.11.a'" \
  " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPython_USE_STATIC_LIBS=ON" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include' -stdlib=libc++ -fuse-ld=lld" \
  " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " --no-warn-unused-cli"
@@ -229,46 +234,6 @@ for INCLUDE_DIR in $INCLUDE_DIRS; do
   else
     cp -r "$INCLUDE_DIR" "$DEST/Includes"
   fi
-done
-
-RESOLVE_AND_COPY() {
-    local LINK="$1"
-    local ORIGINAL_LINK="$1"
-    local VISITED=()
-
-    while [ -L "$LINK" ]; do
-        TARGET=$(readlink "$LINK")
-
-        # Check for circular links
-        for V in "${VISITED[@]}"; do
-            if [ "$V" = "$TARGETED" ]; then
-                echo "Circular link detected for $ORIGINAL_LINK"
-                return 1
-            fi
-        done
-
-        VISITED+=("$LINK")
-
-        # If target is relative, make it absolute
-        if [[ "$TARGET" != /* ]]; then
-            TARGET="$(dirname "$LINK")/$TARGET"
-        fi
-
-        LINK="$TARGET"
-    done
-
-    if [ -e "$LINK" ]; then
-        rm "$ORIGINAL_LINK"
-        cp -a "$LINK" "$ORIGINAL_LINK"
-    else
-        echo "Final target does not exist for $ORIGINAL_LINK"
-        return 1
-    fi
-}
-
-# Resolve all symlinks in the directory
-find "$DEST/Libraries/Linux" -type l | while read -r SYMLINK; do
-    RESOLVE_AND_COPY "$SYMLINK"
 done
 
 echo -e "Archiving outputs...\n"
