@@ -130,6 +130,34 @@ cd "$ROOT_DIR/Source/rclcpp/theora"
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
 make install
 
+echo -e "Building opencv"
+mkdir -p "$ROOT_DIR/Builds/rclcpp/opencv"
+cd "$ROOT_DIR/Builds/rclcpp/opencv"
+cmake \
+ -DCMAKE_BUILD_TYPE=RELEASE \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Source/rclcpp/install" \
+ -DOPENCV_GENERATE_PKGCONFIG=ON \
+ -DBUILD_opencv_dnn=OFF \
+ -DBUILD_PROTOBUF=OFF \
+ -DBUILD_opencv_python3=OFF \
+ -DBUILD_opencv_videoio=OFF \
+ -DBUILD_opencv_datasets=OFF \
+ -DBUILD_EXAMPLES=OFF \
+ -DBUILD_PERF_TESTS=OFF \
+ -DBUILD_TESTS=OFF \
+ -DBUILD_TESTING=OFF \
+ -DBUILD_opencv_apps=OFF \
+ -DINSTALL_PYTHON_EXAMPLES=OFF \
+ -DINSTALL_C_EXAMPLES=OFF \
+ -DPYTHON_EXECUTABLE="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3" \
+ -DBUILD_opencv_python2=OFF \
+ -DPYTHON3_EXECUTABLE="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/bin/python3" \
+ -DPYTHON3_INCLUDE_DIR="$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include" \
+ -DPYTHON3_PACKAGES_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/linux.toolchain.cmake" \
+ "$ROOT_DIR/Source/rclcpp/opencv"
+cmake --build . -t install -j "$NUM_JOBS"
+
 echo -e "Creating Python virtual environment for colcon build.\n"
 cd "$UNREAL_ENGINE_PATH"
 ./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
@@ -155,7 +183,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # export VERBOSE=1
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -173,15 +201,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DZLIB_FOUND=ON" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
- " -DBUILD_opencv_dnn=OFF" \
- " -DBUILD_PROTOBUF=OFF" \
- " -DBUILD_opencv_python3=OFF" \
- " -DBUILD_opencv_videoio=OFF" \
- " -DBUILD_opencv_datasets=OFF" \
- " -DBUILD_EXAMPLES=OFF" \
- " -DBUILD_PERF_TESTS=OFF" \
- " -DBUILD_TESTS=OFF" \
- " -DBUILD_opencv_apps=OFF" \
+ " -DOpenCV_DIR='$ROOT_DIR/Builds/rclcpp/opencv'" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
