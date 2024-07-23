@@ -129,10 +129,6 @@ cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
 cd "$ROOT_DIR/Source/rclcpp/geometry2"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
-cd "$ROOT_DIR/Source/rclcpp/rclpy"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rclpy.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -157,6 +153,34 @@ cd "$ROOT_DIR/Source/rclcpp/theora"
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
 make clean
 make install
+
+echo -e "Building opencv"
+mkdir -p "$ROOT_DIR/Builds/rclcpp/opencv"
+cd "$ROOT_DIR/Builds/rclcpp/opencv"
+cmake \
+ -DCMAKE_BUILD_TYPE=RELEASE \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Source/rclcpp/install" \
+ -DOPENCV_GENERATE_PKGCONFIG=ON \
+ -DBUILD_opencv_dnn=OFF \
+ -DBUILD_PROTOBUF=OFF \
+ -DBUILD_opencv_python3=OFF \
+ -DBUILD_opencv_videoio=OFF \
+ -DBUILD_opencv_datasets=OFF \
+ -DBUILD_EXAMPLES=OFF \
+ -DBUILD_PERF_TESTS=OFF \
+ -DBUILD_TESTS=OFF \
+ -DBUILD_TESTING=OFF \
+ -DBUILD_opencv_apps=OFF \
+ -DINSTALL_PYTHON_EXAMPLES=OFF \
+ -DINSTALL_C_EXAMPLES=OFF \
+ -DPYTHON_EXECUTABLE="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3" \
+ -DBUILD_opencv_python2=OFF \
+ -DPYTHON3_EXECUTABLE="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3" \
+ -DPYTHON3_INCLUDE_DIR="$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include" \
+ -DPYTHON3_PACKAGES_PATH="$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac" \
+ -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
+ "$ROOT_DIR/Source/rclcpp/opencv"
+cmake --build . -t install -j "$NUM_JOBS"
 
 echo -e "Creating Python virtual environment for colcon build.\n"
 cd "$UNREAL_ENGINE_PATH"
@@ -183,7 +207,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 #export VERBOSE=1
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV  \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -201,17 +225,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac/libpng.a'" \
  " -DPNG_FOUND=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
- " -DBUILD_opencv_dnn=OFF" \
- " -DBUILD_PROTOBUF=OFF" \
- " -DBUILD_opencv_python3=OFF" \
- " -DBUILD_opencv_videoio=OFF" \
- " -DBUILD_opencv_datasets=OFF" \
- " -DBUILD_EXAMPLES=OFF" \
- " -DBUILD_PERF_TESTS=OFF" \
- " -DBUILD_TESTS=OFF" \
- " -DBUILD_TESTING=OFF" \
- " -DBUILD_opencv_apps=OFF" \
- " -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/opencv/cmake'" \
+ " -DOpenCV_DIR='$ROOT_DIR/Builds/rclcpp/opencv'" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
@@ -222,17 +236,16 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost \
  " -DCMAKE_POLICY_DEFAULT_CMP0148=OLD" \
  " -DCMAKE_POLICY_DEFAULT_CMP0074=OLD" \
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
- " -DCMAKE_INSTALL_RPATH=@loader_path" \
+ " -DCMAKE_INSTALL_RPATH='@loader_path;@executable_path/../UE/Engine/Binaries/ThirdParty/Python3/Mac'" \
  " -DCMAKE_OSX_ARCHITECTURES=arm64" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
- " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/lib/libpython3.11.a'" \
- " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/lib/libpython3.11.a'" \
+ " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
+ " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
  " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
- " -DPython_USE_STATIC_LIBS=ON" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " -DCMAKE_C_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include' -mmacosx-version-min=10.15 -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument" \
  " --no-warn-unused-cli"
