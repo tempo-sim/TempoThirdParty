@@ -6,5 +6,5 @@ using python
      : 3.11 # version
      : "\"$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3\"" # cmd-o>
      : "$(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Mac/include" # includes
-     : "$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Max/lib" # libraries
+     : "$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Mac/lib" # libraries
      ;
