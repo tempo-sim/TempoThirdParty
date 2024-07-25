@@ -1,0 +1,25 @@
+diff --git a/test/dummy_shared_library/dummy_shared_library.c b/test/dummy_shared_library/dummy_shared_library.c
+index 7da551d..bbd8bf1 100644
+--- a/test/dummy_shared_library/dummy_shared_library.c
++++ b/test/dummy_shared_library/dummy_shared_library.c
+@@ -14,7 +14,7 @@
+ 
+ #include "./dummy_shared_library.h" // NOLINT
+ 
+-void print_name()
++void print_name(void)
+ {
+   printf("print_name\n");
+ }
+diff --git a/test/dummy_shared_library/dummy_shared_library.h b/test/dummy_shared_library/dummy_shared_library.h
+index 02c4a5c..45d9888 100644
+--- a/test/dummy_shared_library/dummy_shared_library.h
++++ b/test/dummy_shared_library/dummy_shared_library.h
+@@ -28,6 +28,6 @@
+ #include <stdio.h>
+ 
+ DUMMY_SHARED_LIBRARY_PUBLIC
+-void print_name();
++void print_name(void);
+ 
+ #endif  // DUMMY_SHARED_LIBRARY__DUMMY_SHARED_LIBRARY_H_

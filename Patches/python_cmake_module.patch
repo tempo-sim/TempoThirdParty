@@ -1,0 +1,40 @@
+diff --git a/cmake/Modules/FindPythonExtra.cmake b/cmake/Modules/FindPythonExtra.cmake
+index 9e18f83..cc826ef 100644
+--- a/cmake/Modules/FindPythonExtra.cmake
++++ b/cmake/Modules/FindPythonExtra.cmake
+@@ -54,11 +54,11 @@ find_package(PythonInterp 3.6 REQUIRED)
+ if(PYTHONINTERP_FOUND)
+   if(APPLE)
+     find_program(PYTHON_CONFIG_EXECUTABLE NAMES "python3-config")
+-    if(NOT PYTHON_CONFIG_EXECUTABLE)
+-      message(FATAL_ERROR "Cannot find python3-config executable")
+-    endif()
+ 
+     if(NOT DEFINED PythonExtra_INCLUDE_DIRS)
++      if(NOT PYTHON_CONFIG_EXECUTABLE)
++        message(STATUS "Cannot find python3-config executable")
++      endif()
+       execute_process(
+         COMMAND
+         "${PYTHON_CONFIG_EXECUTABLE}"
+@@ -87,6 +87,9 @@ if(PYTHONINTERP_FOUND)
+     message(STATUS "Using PythonExtra_INCLUDE_DIRS: ${PythonExtra_INCLUDE_DIRS}")
+ 
+     if(NOT DEFINED PythonExtra_LIBRARIES)
++      if(NOT PYTHON_CONFIG_EXECUTABLE)
++        message(STATUS "Cannot find python3-config executable")
++      endif()
+       execute_process(
+         COMMAND
+         "${PYTHON_CONFIG_EXECUTABLE}"
+@@ -132,9 +135,9 @@ if(PYTHONINTERP_FOUND)
+         ${_library_paths}
+         NO_SYSTEM_ENVIRONMENT_PATH
+       )
++      set(PythonExtra_LIBRARIES "${PYTHON_LIBRARY}")
+     endif()
+ 
+-    set(PythonExtra_LIBRARIES "${PYTHON_LIBRARY}")
+     message(STATUS "Using PythonExtra_LIBRARIES: ${PythonExtra_LIBRARIES}")
+   else()
+     find_package(PythonLibs 3.5 REQUIRED)

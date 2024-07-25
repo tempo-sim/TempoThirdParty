@@ -1,0 +1,31 @@
+diff --git a/include/boost/exception/diagnostic_information.hpp b/include/boost/exception/diagnostic_information.hpp
+index b26c502..af1c97f 100644
+--- a/include/boost/exception/diagnostic_information.hpp
++++ b/include/boost/exception/diagnostic_information.hpp
+@@ -13,6 +13,7 @@
+ #ifndef BOOST_NO_RTTI
+ #include <boost/core/demangle.hpp>
+ #endif
++#include <cxxabi.h>
+ #include <exception>
+ #include <sstream>
+ #include <string>
+@@ -51,11 +52,15 @@ boost
+         if( be || se )
+             return exception_detail::diagnostic_information_impl(be,se,true,verbose);
+ #if defined(__GLIBCXX__) && __cplusplus >= 201103L && !defined(BOOST_NO_RTTI)
+-        else if (auto* p=std::current_exception().__cxa_exception_type())
+-            return "Dynamic exception type: "+boost::core::demangle(p->name());
+-#endif
++        else
++            {
++            int status;
++            return abi::__cxa_demangle(abi::__cxa_current_exception_type()->name(), 0, 0, &status);
++            }
++#else
+         else
+             return "No diagnostic information available.";
++#endif
+         }
+     }
+ #endif

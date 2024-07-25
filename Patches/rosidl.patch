@@ -1,0 +1,18 @@
+diff --git a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
+index 713aa66..0c35f77 100644
+--- a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
++++ b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
+@@ -127,8 +127,12 @@ inline void value_to_yaml(const std::string & value, std::ostream & out)
+ inline void value_to_yaml(const std::u16string & value, std::ostream & out)
+ {
+   out << "\"";
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wdeprecated-declarations"
++  // https://stackoverflow.com/questions/42946335/deprecated-header-codecvt-replacement
+   std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+-  auto flags = out.flags();
++#pragma clang diagnostic pop
++auto flags = out.flags();
+   size_t index = 0;
+   while (index < value.size()) {
+     uint_least16_t character = static_cast<uint_least16_t>(value[index]);

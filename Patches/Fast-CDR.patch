@@ -1,0 +1,161 @@
+diff --git a/include/fastcdr/Cdr.h b/include/fastcdr/Cdr.h
+index 6e7bae1..f8e5931 100644
+--- a/include/fastcdr/Cdr.h
++++ b/include/fastcdr/Cdr.h
+@@ -24,11 +24,11 @@
+ #include <map>
+ #include <iostream>
+ 
+-#if !__APPLE__ && !__FreeBSD__ && !__VXWORKS__
++#if !(defined(__APPLE__) && __APPLE__) && !(defined(__FreeBSD__) && __FreeBSD__) && !(defined(__VXWORKS__) && __VXWORKS__)
+ #include <malloc.h>
+ #else
+ #include <stdlib.h>
+-#endif // if !__APPLE__ && !__FreeBSD__ && !__VXWORKS__
++#endif // #if !(defined(__APPLE__) && __APPLE__) && !(defined(__FreeBSD__) && __FreeBSD__) && !(defined(__VXWORKS__) && __VXWORKS__)
+ 
+ #if HAVE_CXX0X
+ #include <array>
+@@ -1378,7 +1378,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -1849,7 +1850,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -1880,7 +1882,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -1949,7 +1952,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -2009,7 +2013,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -2437,7 +2442,7 @@ public:
+     {
+         uint32_t length = 0;
+         const char* str = readString(length);
+-        string_t = std::string(str, length);
++        string_t.assign(str, length);
+         return *this;
+     }
+ 
+@@ -2469,7 +2474,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -2498,7 +2504,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -2667,7 +2674,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -3136,7 +3144,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -3167,7 +3176,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -3236,7 +3246,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+@@ -3379,7 +3390,8 @@ public:
+             Endianness endianness)
+     {
+         bool auxSwap = m_swapBytes;
+-        m_swapBytes = (m_swapBytes && (m_endianness == endianness)) || (!m_swapBytes && (m_endianness != endianness));
++        m_swapBytes = (m_swapBytes && (static_cast<Endianness>(m_endianness) == endianness)) ||
++                (!m_swapBytes && (static_cast<Endianness>(m_endianness) != endianness));
+ 
+         try
+         {
+diff --git a/include/fastcdr/config.h.in b/include/fastcdr/config.h.in
+index 26a6320..0d6fc59 100644
+--- a/include/fastcdr/config.h.in
++++ b/include/fastcdr/config.h.in
+@@ -36,7 +36,9 @@
+ #endif
+ 
+ #if HAVE_CXX_CONSTEXPR
++#ifndef CONSTEXPR
+ #define CONSTEXPR constexpr
++#endif
+ #else
+ #define CONSTEXPR const
+ #endif

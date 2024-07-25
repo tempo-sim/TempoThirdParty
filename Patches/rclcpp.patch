@@ -1,0 +1,461 @@
+diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
+index 1251e58b..0c1dfde3 100644
+--- a/rclcpp/include/rclcpp/context.hpp
++++ b/rclcpp/include/rclcpp/context.hpp
+@@ -330,7 +330,11 @@ public:
+   {
+     std::lock_guard<std::recursive_mutex> lock(sub_contexts_mutex_);
+ 
++#ifdef _LIBCPP_HAS_NO_RTTI
++    std::string type_i(SubContext::class_name);
++#else
+     std::type_index type_i(typeid(SubContext));
++#endif // _LIBCPP_HAS_NO_RTTI
+     std::shared_ptr<SubContext> sub_context;
+     auto it = sub_contexts_.find(type_i);
+     if (it == sub_contexts_.end()) {
+@@ -369,7 +373,11 @@ private:
+   // Keep shared ownership of the global logging mutex.
+   std::shared_ptr<std::recursive_mutex> logging_mutex_;
+ 
++#ifdef _LIBCPP_HAS_NO_RTTI
++  std::unordered_map<std::string, std::shared_ptr<void>> sub_contexts_;
++#else
+   std::unordered_map<std::type_index, std::shared_ptr<void>> sub_contexts_;
++#endif// _LIBCPP_HAS_NO_RTTI
+   // This mutex is recursive so that the constructor of a sub context may
+   // attempt to acquire another sub context.
+   std::recursive_mutex sub_contexts_mutex_;
+diff --git a/rclcpp/include/rclcpp/create_client.hpp b/rclcpp/include/rclcpp/create_client.hpp
+index 1a960b8d..72d6b803 100644
+--- a/rclcpp/include/rclcpp/create_client.hpp
++++ b/rclcpp/include/rclcpp/create_client.hpp
+@@ -46,7 +46,7 @@ create_client(
+     service_name,
+     options);
+ 
+-  auto cli_base_ptr = std::dynamic_pointer_cast<rclcpp::ClientBase>(cli);
++  auto cli_base_ptr = std::static_pointer_cast<rclcpp::ClientBase>(cli);
+   node_services->add_client(cli_base_ptr, group);
+   return cli;
+ }
+diff --git a/rclcpp/include/rclcpp/create_publisher.hpp b/rclcpp/include/rclcpp/create_publisher.hpp
+index f6088a33..c8567ab7 100644
+--- a/rclcpp/include/rclcpp/create_publisher.hpp
++++ b/rclcpp/include/rclcpp/create_publisher.hpp
+@@ -71,7 +71,7 @@ create_publisher(
+   // Add the publisher to the node topics interface.
+   node_topics_interface->add_publisher(pub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<PublisherT>(pub);
++  return std::static_pointer_cast<PublisherT>(pub);
+ }
+ }  // namespace detail
+ 
+diff --git a/rclcpp/include/rclcpp/create_service.hpp b/rclcpp/include/rclcpp/create_service.hpp
+index 9aaa02a1..c8ab90a5 100644
+--- a/rclcpp/include/rclcpp/create_service.hpp
++++ b/rclcpp/include/rclcpp/create_service.hpp
+@@ -48,7 +48,7 @@ create_service(
+   auto serv = Service<ServiceT>::make_shared(
+     node_base->get_shared_rcl_node_handle(),
+     service_name, any_service_callback, service_options);
+-  auto serv_base_ptr = std::dynamic_pointer_cast<ServiceBase>(serv);
++  auto serv_base_ptr = std::static_pointer_cast<ServiceBase>(serv);
+   node_services->add_service(serv_base_ptr, group);
+   return serv;
+ }
+diff --git a/rclcpp/include/rclcpp/create_subscription.hpp b/rclcpp/include/rclcpp/create_subscription.hpp
+index 5b84930f..d1996b4f 100644
+--- a/rclcpp/include/rclcpp/create_subscription.hpp
++++ b/rclcpp/include/rclcpp/create_subscription.hpp
+@@ -136,7 +136,7 @@ create_subscription(
+   auto sub = node_topics_interface->create_subscription(topic_name, factory, actual_qos);
+   node_topics_interface->add_subscription(sub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<SubscriptionT>(sub);
++  return std::static_pointer_cast<SubscriptionT>(sub);
+ }
+ }  // namespace detail
+ 
+diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+index c2e747e7..1c74ef19 100644
+--- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+@@ -153,6 +153,7 @@ private:
+     buffer_->enqueue(std::move(shared_msg));
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename DestinationT>
+   typename std::enable_if<
+@@ -175,6 +176,7 @@ private:
+ 
+     buffer_->enqueue(std::move(unique_msg));
+   }
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageSharedPtr to MessageSharedPtr
+   template<typename OriginT>
+@@ -199,6 +201,7 @@ private:
+     return buffer_->dequeue();
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename OriginT>
+   typename std::enable_if<
+@@ -221,6 +224,7 @@ private:
+ 
+     return unique_msg;
+   }
++#endif // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageUniquePtr to MessageUniquePtr
+   template<typename OriginT>
+diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+index cfd82eeb..f37416ee 100644
+--- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
++++ b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+@@ -94,6 +94,8 @@ private:
+   RCLCPP_DISABLE_COPY(IntraProcessManager)
+ 
+ public:
++  static const std::string class_name;
++
+   RCLCPP_SMART_PTR_DEFINITIONS(IntraProcessManager)
+ 
+   RCLCPP_PUBLIC
+@@ -367,26 +369,21 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+-        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++      const std::string subscription_type = subscription_base->get_type();
++      
++      auto subscription = (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
++        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>>(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         subscription->provide_intra_process_data(message);
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+-        ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++      auto ros_message_subscription = (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
++        ROSMessageTypeAllocator, ROSMessageTypeDeleter>>(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+-        throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
+-                "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+-                "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++        throw std::runtime_error("Subscription was of unexpected type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT>::is_specialized::value) {
+@@ -446,10 +443,11 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+-        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++      const std::string subscription_type = subscription_base->get_type();
++      
++      auto subscription = (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
++        PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>>(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         if (std::next(it) == subscription_ids.end()) {
+           // If this is the last subscription, give up ownership
+@@ -468,17 +466,11 @@ private:
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
+-        rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+-        ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++      auto ros_message_subscription = (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
++        ROSMessageTypeAllocator, ROSMessageTypeDeleter>>(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+-        throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
+-                "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+-                "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++        throw std::runtime_error("Subscription was of unexpected type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT, ROSMessageType>::is_specialized::value) {
+diff --git a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+index 7b8b3b83..17430ebf 100644
+--- a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+@@ -45,6 +45,8 @@ public:
+   using ConstMessageSharedPtr = std::shared_ptr<const RosMessageT>;
+   using MessageUniquePtr = std::unique_ptr<RosMessageT, ROSMessageTypeDeleter>;
+ 
++  virtual std::string get_type() const override { return "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer"; }
++
+   SubscriptionROSMsgIntraProcessBuffer(
+     rclcpp::Context::SharedPtr context,
+     const std::string & topic_name,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+index 037d1aaa..76d80ba7 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+@@ -38,6 +38,8 @@ class SubscriptionIntraProcessBase : public rclcpp::Waitable
+ public:
+   RCLCPP_SMART_PTR_ALIASES_ONLY(SubscriptionIntraProcessBase)
+ 
++  virtual std::string get_type() const { return "rclcpp::experimental::SubscriptionIntraProcessBase"; }
++
+   enum class EntityType : std::size_t
+   {
+     Subscription,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+index 3c715126..cb195000 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+@@ -72,6 +72,8 @@ public:
+     SubscribedTypeDeleter
+     >::UniquePtr;
+ 
++  virtual std::string get_type() const override { return "rclcpp::experimental::SubscriptionIntraProcessBuffer"; }
++
+   SubscriptionIntraProcessBuffer(
+     std::shared_ptr<Alloc> allocator,
+     rclcpp::Context::SharedPtr context,
+diff --git a/rclcpp/include/rclcpp/graph_listener.hpp b/rclcpp/include/rclcpp/graph_listener.hpp
+index 79357b95..f9b8164a 100644
+--- a/rclcpp/include/rclcpp/graph_listener.hpp
++++ b/rclcpp/include/rclcpp/graph_listener.hpp
+@@ -63,6 +63,8 @@ public:
+ class GraphListener : public std::enable_shared_from_this<GraphListener>
+ {
+ public:
++  static const std::string class_name;
++
+   RCLCPP_PUBLIC
+   explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
+ 
+diff --git a/rclcpp/include/rclcpp/node_options.hpp b/rclcpp/include/rclcpp/node_options.hpp
+index 53bdedea..c9075c85 100644
+--- a/rclcpp/include/rclcpp/node_options.hpp
++++ b/rclcpp/include/rclcpp/node_options.hpp
+@@ -191,9 +191,11 @@ public:
+    * Defaults to false for now, as there are still some cases where it is not
+    * desirable.
+    */
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+   RCLCPP_PUBLIC
+   NodeOptions &
+   use_intra_process_comms(bool use_intra_process_comms);
++#endif
+ 
+   /// Return the enable_topic_statistics flag.
+   RCLCPP_PUBLIC
+diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
+index 11bf9c6e..e58d0b72 100644
+--- a/rclcpp/include/rclcpp/subscription.hpp
++++ b/rclcpp/include/rclcpp/subscription.hpp
+@@ -178,6 +178,7 @@ public:
+         RCL_SUBSCRIPTION_MESSAGE_LOST);
+     }
+ 
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+     // Setup intra process publishing if requested.
+     if (rclcpp::detail::resolve_use_intra_process(options_, *node_base)) {
+       using rclcpp::detail::resolve_intra_process_buffer_type;
+@@ -225,6 +226,7 @@ public:
+       uint64_t intra_process_subscription_id = ipm->add_subscription(subscription_intra_process_);
+       this->setup_intra_process(intra_process_subscription_id, ipm);
+     }
++#endif // RCLCPP_INTRA_PROCESS_DISABLED
+ 
+     if (subscription_topic_statistics != nullptr) {
+       this->subscription_topic_statistics_ = std::move(subscription_topic_statistics);
+diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
+index a1727eab..0d13aff6 100644
+--- a/rclcpp/include/rclcpp/subscription_factory.hpp
++++ b/rclcpp/include/rclcpp/subscription_factory.hpp
+@@ -117,7 +117,7 @@ create_subscription_factory(
+       // require this->shared_from_this() which cannot be called from
+       // the constructor.
+       sub->post_init_setup(node_base, qos, options);
+-      auto sub_base_ptr = std::dynamic_pointer_cast<SubscriptionBase>(sub);
++      auto sub_base_ptr = std::static_pointer_cast<SubscriptionBase>(sub);
+       return sub_base_ptr;
+     }
+   };
+diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
+index e0b516b5..b4556fbd 100644
+--- a/rclcpp/src/rclcpp/graph_listener.cpp
++++ b/rclcpp/src/rclcpp/graph_listener.cpp
+@@ -36,6 +36,7 @@ namespace rclcpp
+ {
+ namespace graph_listener
+ {
++const std::string GraphListener::class_name = "rclcpp::graph_listener::GraphListener";
+ 
+ GraphListener::GraphListener(const std::shared_ptr<Context> & parent_context)
+ : weak_parent_context_(parent_context),
+diff --git a/rclcpp/src/rclcpp/intra_process_manager.cpp b/rclcpp/src/rclcpp/intra_process_manager.cpp
+index efce4afe..bca76d65 100644
+--- a/rclcpp/src/rclcpp/intra_process_manager.cpp
++++ b/rclcpp/src/rclcpp/intra_process_manager.cpp
+@@ -22,6 +22,7 @@ namespace rclcpp
+ {
+ namespace experimental
+ {
++const std::string IntraProcessManager::class_name = "rclcpp::experimental::IntraProcessManager";
+ 
+ static std::atomic<uint64_t> _next_unique_id {1};
+ 
+diff --git a/rclcpp/src/rclcpp/parameter_client.cpp b/rclcpp/src/rclcpp/parameter_client.cpp
+index 38ced0e1..fca20645 100644
+--- a/rclcpp/src/rclcpp/parameter_client.cpp
++++ b/rclcpp/src/rclcpp/parameter_client.cpp
+@@ -56,7 +56,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::get_parameters,
+     options);
+-  auto get_parameters_base = std::dynamic_pointer_cast<ClientBase>(get_parameters_client_);
++  auto get_parameters_base = std::static_pointer_cast<ClientBase>(get_parameters_client_);
+   node_services_interface->add_client(get_parameters_base, group);
+ 
+   get_parameter_types_client_ = Client<rcl_interfaces::srv::GetParameterTypes>::make_shared(
+@@ -65,7 +65,7 @@ AsyncParametersClient::AsyncParametersClient(
+     remote_node_name_ + "/" + parameter_service_names::get_parameter_types,
+     options);
+   auto get_parameter_types_base =
+-    std::dynamic_pointer_cast<ClientBase>(get_parameter_types_client_);
++    std::static_pointer_cast<ClientBase>(get_parameter_types_client_);
+   node_services_interface->add_client(get_parameter_types_base, group);
+ 
+   set_parameters_client_ = Client<rcl_interfaces::srv::SetParameters>::make_shared(
+@@ -73,7 +73,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::set_parameters,
+     options);
+-  auto set_parameters_base = std::dynamic_pointer_cast<ClientBase>(set_parameters_client_);
++  auto set_parameters_base = std::static_pointer_cast<ClientBase>(set_parameters_client_);
+   node_services_interface->add_client(set_parameters_base, group);
+ 
+   set_parameters_atomically_client_ =
+@@ -82,7 +82,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::set_parameters_atomically,
+     options);
+-  auto set_parameters_atomically_base = std::dynamic_pointer_cast<ClientBase>(
++  auto set_parameters_atomically_base = std::static_pointer_cast<ClientBase>(
+     set_parameters_atomically_client_);
+   node_services_interface->add_client(set_parameters_atomically_base, group);
+ 
+@@ -91,7 +91,7 @@ AsyncParametersClient::AsyncParametersClient(
+     node_graph_interface,
+     remote_node_name_ + "/" + parameter_service_names::list_parameters,
+     options);
+-  auto list_parameters_base = std::dynamic_pointer_cast<ClientBase>(list_parameters_client_);
++  auto list_parameters_base = std::static_pointer_cast<ClientBase>(list_parameters_client_);
+   node_services_interface->add_client(list_parameters_base, group);
+ 
+   describe_parameters_client_ = Client<rcl_interfaces::srv::DescribeParameters>::make_shared(
+@@ -100,7 +100,7 @@ AsyncParametersClient::AsyncParametersClient(
+     remote_node_name_ + "/" + parameter_service_names::describe_parameters,
+     options);
+   auto describe_parameters_base =
+-    std::dynamic_pointer_cast<ClientBase>(describe_parameters_client_);
++    std::static_pointer_cast<ClientBase>(describe_parameters_client_);
+   node_services_interface->add_client(describe_parameters_base, group);
+ }
+ 
+diff --git a/rclcpp/test/rclcpp/test_intra_process_manager.cpp b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
+index 45d916b0..c0548033 100644
+--- a/rclcpp/test/rclcpp/test_intra_process_manager.cpp
++++ b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
+@@ -195,6 +195,8 @@ class SubscriptionIntraProcessBase
+ public:
+   RCLCPP_SMART_PTR_ALIASES_ONLY(SubscriptionIntraProcessBase)
+ 
++  virtual std::string get_type() const { return "rclcpp::experimental::mock::SubscriptionIntraProcessBase"; }
++
+   explicit SubscriptionIntraProcessBase(
+     rclcpp::Context::SharedPtr context,
+     const std::string & topic = "topic",
+diff --git a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
+index 22fd7f9c..667d4ec7 100644
+--- a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
++++ b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
+@@ -115,7 +115,7 @@ LifecycleNode::create_client(
+     service_name,
+     options);
+ 
+-  auto cli_base_ptr = std::dynamic_pointer_cast<ClientBase>(cli);
++  auto cli_base_ptr = std::static_pointer_cast<ClientBase>(cli);
+   node_services_->add_client(cli_base_ptr, group);
+   return cli;
+ }
+diff --git a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp b/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
+index 13110d29..0f521b55 100644
+--- a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
++++ b/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
+@@ -129,7 +129,7 @@ public:
+           &state_machine_.com_interface.srv_change_state,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_change_state_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_change_state_),
+           nullptr);
+       }
+ 
+@@ -145,7 +145,7 @@ public:
+           &state_machine_.com_interface.srv_get_state,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_state_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_state_),
+           nullptr);
+       }
+ 
+@@ -161,7 +161,7 @@ public:
+           &state_machine_.com_interface.srv_get_available_states,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_available_states_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_available_states_),
+           nullptr);
+       }
+ 
+@@ -178,7 +178,7 @@ public:
+           &state_machine_.com_interface.srv_get_available_transitions,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_available_transitions_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_available_transitions_),
+           nullptr);
+       }
+ 
+@@ -195,7 +195,7 @@ public:
+           &state_machine_.com_interface.srv_get_transition_graph,
+           any_cb);
+         node_services_interface_->add_service(
+-          std::dynamic_pointer_cast<rclcpp::ServiceBase>(srv_get_transition_graph_),
++          std::static_pointer_cast<rclcpp::ServiceBase>(srv_get_transition_graph_),
+           nullptr);
+       }
+     }

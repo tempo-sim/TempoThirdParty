@@ -1,0 +1,89 @@
+diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
+index c662ffc..7c7b110 100644
+--- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
++++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
+@@ -21,6 +21,11 @@
+ #include <memory>
+ #include <stdexcept>
+ #include <string>
++#ifdef _WIN32
++#include <windows.h>
++#else
++#include <dlfcn.h>
++#endif
+ 
+ #include "rcpputils/shared_library.hpp"
+ #include "rcutils/error_handling.h"
+@@ -72,34 +77,54 @@ get_typesupport_handle_function(
+ 
+         try {
+           lib = new rcpputils::SharedLibrary(library_name);
++          map->data[i] = lib;
+         } catch (const std::runtime_error & e) {
+-          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
+-          return nullptr;
++          // We'll fall back on searching for the symbol in the global scope.
+         } catch (const std::bad_alloc & e) {
+-          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
+-          return nullptr;
++          // We'll fall back on searching for the symbol in the global scope.
+         }
+-        map->data[i] = lib;
+       }
+-      auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
+-      lib = const_cast<rcpputils::SharedLibrary *>(clib);
+ 
+       void * sym = nullptr;
+ 
+-      try {
+-        if (!lib->has_symbol(map->symbol_name[i])) {
++      if (map->data[i]) {
++        auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
++        lib = const_cast<rcpputils::SharedLibrary *>(clib);
++
++        try {
++          if (!lib->has_symbol(map->symbol_name[i])) {
++            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++              "Failed to find symbol '%s' in library", map->symbol_name[i]);
++            return nullptr;
++          }
++          sym = lib->get_symbol(map->symbol_name[i]);
++        } catch (const std::exception & e) {
++          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++            "Failed to get symbol '%s' in library: %s",
++            map->symbol_name[i], e.what());
++          return nullptr;
++        }
++      } else {
++      // Fall back on searching for the symbol in the global scope
++#ifndef _WIN32
++        sym = dlsym(RTLD_DEFAULT, map->symbol_name[i]);
++        char * error = dlerror();
++        if (error != NULL) {
++          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++            "Failed to get symbol '%s' in global scope: %d",
++            map->symbol_name[i], error);
++          return nullptr;
++        }
++#else
++        HMODULE hModule = GetModuleHandle(NULL);
++        sym = GetProcAddress(hModule, map->symbol_name[i]);
++        if (lib_symbol == NULL) {
+           RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Failed to find symbol '%s' in library", map->symbol_name[i]);
++            "Failed to get symbol '%s' in global scope: %d",
++            map->symbol_name[i], GetLastError());
+           return nullptr;
+         }
+-        sym = lib->get_symbol(map->symbol_name[i]);
+-      } catch (const std::exception & e) {
+-        RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-          "Failed to get symbol '%s' in library: %s",
+-          map->symbol_name[i], e.what());
+-        return nullptr;
++#endif  // _WIN32
+       }
+ 
+       typedef const TypeSupport * (* funcSignature)(void);
