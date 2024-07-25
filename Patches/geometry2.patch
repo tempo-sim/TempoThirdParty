@@ -1,13 +1,12 @@
 diff --git a/geometry2/package.xml b/geometry2/package.xml
-index 5d32c060..94c37f8b 100644
+index 5d32c060..c0d88090 100644
 --- a/geometry2/package.xml
 +++ b/geometry2/package.xml
-@@ -18,7 +18,7 @@
+@@ -18,7 +18,6 @@
    <buildtool_depend>ament_cmake</buildtool_depend>
  
    <exec_depend>tf2</exec_depend>
 -  <exec_depend>tf2_bullet</exec_depend>
-+  <!--exec_depend>tf2_bullet</exec_depend-->
    <exec_depend>tf2_eigen</exec_depend>
    <exec_depend>tf2_eigen_kdl</exec_depend>
    <exec_depend>tf2_geometry_msgs</exec_depend>

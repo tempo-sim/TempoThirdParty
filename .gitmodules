@@ -239,3 +239,6 @@
 	path = Source/rclcpp/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
 	branch = humble
+[submodule "Source/rclcpp/vorbis"]
+	path = Source/rclcpp/vorbis
+	url = git@github.com:xiph/vorbis.git
