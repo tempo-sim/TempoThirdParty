@@ -242,3 +242,6 @@
 [submodule "Source/rclcpp/vorbis"]
 	path = Source/rclcpp/vorbis
 	url = git@github.com:xiph/vorbis.git
+[submodule "Source/rclcpp/asio"]
+	path = Source/rclcpp/asio
+	url = https://github.com/chriskohlhoff/asio.git

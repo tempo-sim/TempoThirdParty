@@ -1,5 +1,5 @@
 diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-index c662ffc..7c7b110 100644
+index c662ffc..29537c9 100644
 --- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 +++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 @@ -21,6 +21,11 @@
@@ -70,7 +70,7 @@ index c662ffc..7c7b110 100644
 +#else
 +        HMODULE hModule = GetModuleHandle(NULL);
 +        sym = GetProcAddress(hModule, map->symbol_name[i]);
-+        if (lib_symbol == NULL) {
++        if (sym == NULL) {
            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
 -            "Failed to find symbol '%s' in library", map->symbol_name[i]);
 +            "Failed to get symbol '%s' in global scope: %d",
