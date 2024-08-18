@@ -1,45 +1,188 @@
+diff --git a/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake b/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
+index 98eeed8..52c38ae 100644
+--- a/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
++++ b/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
+@@ -98,7 +98,7 @@ set_property(TARGET ${rosidl_generate_interfaces_TARGET}${_target_suffix}
+   PROPERTY DEFINE_SYMBOL "ROSIDL_GENERATOR_C_BUILDING_DLL_${PROJECT_NAME}")
+ 
+ set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+-  PROPERTIES CXX_STANDARD 14)
++  PROPERTIES CXX_STANDARD 17)
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+     PROPERTIES COMPILE_OPTIONS -Wall -Wextra -Wpedantic)
+diff --git a/rosidl_typesupport_c/resource/msg__type_support.cpp.em b/rosidl_typesupport_c/resource/msg__type_support.cpp.em
+index bd2e929..74bc3ab 100644
+--- a/rosidl_typesupport_c/resource/msg__type_support.cpp.em
++++ b/rosidl_typesupport_c/resource/msg__type_support.cpp.em
+@@ -132,6 +132,7 @@ ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(rosidl_typesupport_c, @(', '.j
+ @[else]@
+   return ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(@(list(type_supports)[0]), @(', '.join([package_name] + list(interface_path.parents[0].parts))), @(message.structure.namespaced_type.name))();
+ @[end if]@
++
+ }
+ 
+ #ifdef __cplusplus
+diff --git a/rosidl_typesupport_cpp/CMakeLists.txt b/rosidl_typesupport_cpp/CMakeLists.txt
+index c6aa1cb..fe8e5eb 100644
+--- a/rosidl_typesupport_cpp/CMakeLists.txt
++++ b/rosidl_typesupport_cpp/CMakeLists.txt
+@@ -28,6 +28,20 @@ add_library(${PROJECT_NAME}
+   src/identifier.cpp
+   src/message_type_support_dispatch.cpp
+   src/service_type_support_dispatch.cpp)
++  
++set_target_properties(${PROJECT_NAME} PROPERTIES 
++    COMPILE_PDB_NAME ${PROJECT_NAME}
++    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
++    COMPILE_FLAGS "/Zi"
++    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
++)
++
++target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
++target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
++
++target_compile_options(${PROJECT_NAME} PRIVATE /Zi)
++target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
++  
+ if(WIN32)
+   target_compile_definitions(${PROJECT_NAME}
+     PRIVATE "ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL")
+diff --git a/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake b/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
+index 6783240..4007c54 100644
+--- a/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
++++ b/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
+@@ -92,7 +92,7 @@ endif()
+ set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+   PROPERTIES
+     DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL"
+-    CXX_STANDARD 14)
++    CXX_STANDARD 17)
+ 
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   target_compile_options(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+diff --git a/rosidl_typesupport_cpp/resource/msg__type_support.cpp.em b/rosidl_typesupport_cpp/resource/msg__type_support.cpp.em
+index 32d481e..ef3daac 100644
+--- a/rosidl_typesupport_cpp/resource/msg__type_support.cpp.em
++++ b/rosidl_typesupport_cpp/resource/msg__type_support.cpp.em
+@@ -32,6 +32,11 @@ if len(type_supports) != 1:
+ #include "@(header_file)"
+ @[end for]@
+ @
++
++// Explicitly instantiate and export both versions of the message so that its symbols will be generated.
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(message.structure.namespaced_type.name)_<std::allocator<void>>;
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(message.structure.namespaced_type.name)_<std::pmr::polymorphic_allocator<void>>;
++
+ @[if len(type_supports) != 1]@
+ @[  for ns in message.structure.namespaced_type.namespaces]@
+ 
+@@ -127,7 +132,19 @@ namespace rosidl_typesupport_cpp
+ template<>
+ ROSIDL_TYPESUPPORT_CPP_PUBLIC
+ const rosidl_message_type_support_t *
+-get_message_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(message.structure.namespaced_type.name)>()
++get_message_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(message.structure.namespaced_type.name)_<std::allocator<void>>>()
++{
++@[if len(type_supports) != 1]@
++  return &::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::rosidl_typesupport_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
++@[else]@
++  return ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(@(list(type_supports)[0]), @(', '.join([package_name] + list(interface_path.parents[0].parts))), @(message.structure.namespaced_type.name))();
++@[end if]@
++}
++
++template<>
++ROSIDL_TYPESUPPORT_CPP_PUBLIC
++const rosidl_message_type_support_t *
++get_message_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(message.structure.namespaced_type.name)_<std::pmr::polymorphic_allocator<void>>>()
+ {
+ @[if len(type_supports) != 1]@
+   return &::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::rosidl_typesupport_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
+diff --git a/rosidl_typesupport_cpp/resource/srv__type_support.cpp.em b/rosidl_typesupport_cpp/resource/srv__type_support.cpp.em
+index d1b603d..7db3aaa 100644
+--- a/rosidl_typesupport_cpp/resource/srv__type_support.cpp.em
++++ b/rosidl_typesupport_cpp/resource/srv__type_support.cpp.em
+@@ -48,6 +48,13 @@ if len(type_supports) != 1:
+ #include "@(header_file)"
+ @[end for]@
+ @
++
++// Explicitly instantiate and export both versions of the request and response messages so that their symbols will be generated.
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.request_message.structure.namespaced_type.name)_<std::allocator<void>>;
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.request_message.structure.namespaced_type.name)_<std::pmr::polymorphic_allocator<void>>;
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.response_message.structure.namespaced_type.name)_<std::allocator<void>>;
++// template struct ROSIDL_TYPESUPPORT_CPP_PUBLIC @('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.response_message.structure.namespaced_type.name)_<std::pmr::polymorphic_allocator<void>>;
++
+ @[if len(type_supports) != 1]@
+ @[  for ns in service.namespaced_type.namespaces]@
+ 
 diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-index c662ffc..29537c9 100644
+index c662ffc..3cf07ba 100644
 --- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 +++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-@@ -21,6 +21,11 @@
+@@ -18,12 +18,20 @@
+ #include <cstddef>
+ #include <cstdio>
+ #include <cstring>
++#include <iostream>
  #include <memory>
  #include <stdexcept>
  #include <string>
 +#ifdef _WIN32
 +#include <windows.h>
++#include <psapi.h>
 +#else
 +#include <dlfcn.h>
 +#endif
  
  #include "rcpputils/shared_library.hpp"
  #include "rcutils/error_handling.h"
-@@ -72,34 +77,54 @@ get_typesupport_handle_function(
++#include "rcutils/logging_macros.h"
+ #include "rcutils/snprintf.h"
+ #include "rosidl_typesupport_c/type_support_map.h"
+ 
+@@ -38,19 +46,23 @@ get_typesupport_handle_function(
+   const TypeSupport * handle, const char * identifier) noexcept
+ {
+   if (strcmp(handle->typesupport_identifier, identifier) == 0) {
++    RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "returning handle? %x", handle);
+     return handle;
+   }
+ 
+   if (handle->typesupport_identifier == rosidl_typesupport_cpp::typesupport_identifier) {
++    RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "The identifiers match");
+     const type_support_map_t * map = \
+       static_cast<const type_support_map_t *>(handle->data);
+     for (size_t i = 0; i < map->size; ++i) {
+       if (strcmp(map->typesupport_identifier[i], identifier) != 0) {
++        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Continue");
+         continue;
+       }
+       rcpputils::SharedLibrary * lib = nullptr;
+ 
+       if (!map->data[i]) {
++        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "!map->data[i]");
+         char library_basename[1024];
+         int ret = rcutils_snprintf(
+           library_basename, 1023, "%s__%s",
+@@ -72,45 +84,89 @@ get_typesupport_handle_function(
  
          try {
            lib = new rcpputils::SharedLibrary(library_name);
 +          map->data[i] = lib;
          } catch (const std::runtime_error & e) {
--          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
--            "Could not load library %s: %s", library_name.c_str(), e.what());
--          return nullptr;
 +          // We'll fall back on searching for the symbol in the global scope.
-         } catch (const std::bad_alloc & e) {
--          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
--            "Could not load library %s: %s", library_name.c_str(), e.what());
--          return nullptr;
++          RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Falling back to global 1");
++        } catch (const std::bad_alloc & e) {
 +          // We'll fall back on searching for the symbol in the global scope.
-         }
--        map->data[i] = lib;
-       }
--      auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
--      lib = const_cast<rcpputils::SharedLibrary *>(clib);
- 
-       void * sym = nullptr;
- 
--      try {
--        if (!lib->has_symbol(map->symbol_name[i])) {
++          RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Falling back to global 2");
++        }
++      }
++
++      void * sym = nullptr;
++
 +      if (map->data[i]) {
++        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "map->data[i]");
 +        auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
 +        lib = const_cast<rcpputils::SharedLibrary *>(clib);
 +
@@ -51,10 +194,12 @@ index c662ffc..29537c9 100644
 +          }
 +          sym = lib->get_symbol(map->symbol_name[i]);
 +        } catch (const std::exception & e) {
-+          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+           RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
 +            "Failed to get symbol '%s' in library: %s",
 +            map->symbol_name[i], e.what());
-+          return nullptr;
+           return nullptr;
+-        } catch (const std::bad_alloc & e) {
 +        }
 +      } else {
 +      // Fall back on searching for the symbol in the global scope
@@ -62,15 +207,42 @@ index c662ffc..29537c9 100644
 +        sym = dlsym(RTLD_DEFAULT, map->symbol_name[i]);
 +        char * error = dlerror();
 +        if (error != NULL) {
-+          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+           RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
 +            "Failed to get symbol '%s' in global scope: %d",
 +            map->symbol_name[i], error);
-+          return nullptr;
-+        }
+           return nullptr;
+         }
+-        map->data[i] = lib;
+-      }
+-      auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
+-      lib = const_cast<rcpputils::SharedLibrary *>(clib);
 +#else
-+        HMODULE hModule = GetModuleHandle(NULL);
-+        sym = GetProcAddress(hModule, map->symbol_name[i]);
-+        if (sym == NULL) {
++        // Windows does not have a way to search the whole process space at once,
++        // so get each module and search individually.
++        HANDLE hProcess = GetCurrentProcess();
++        HMODULE hModules[1024];
++        DWORD cbNeeded;
+ 
+-      void * sym = nullptr;
++        RCUTILS_LOG_DEBUG_NAMED(
++          "type_support_dispatch", "Searching for symbol %s", map->symbol_name[i]);
++        if (EnumProcessModules(hProcess, hModules, sizeof(hModules), &cbNeeded)) {
++          for (unsigned int module_idx = 0; module_idx < (cbNeeded / sizeof(HMODULE)); ++module_idx) {
++            sym = GetProcAddress(hModules[module_idx], map->symbol_name[i]);
++            if (sym) {
++              RCUTILS_LOG_DEBUG_NAMED(
++                "type_support_dispatch", "Actually found symbol %s", map->symbol_name[i]);
++              break;
++            }
++          }
++        }
+ 
+-      try {
+-        if (!lib->has_symbol(map->symbol_name[i])) {
++        if (sym == nullptr) {
++          RCUTILS_LOG_DEBUG_NAMED(
++            "type_support_dispatch", "Did not found symbol %s", map->symbol_name[i]);
            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
 -            "Failed to find symbol '%s' in library", map->symbol_name[i]);
 +            "Failed to get symbol '%s' in global scope: %d",
@@ -87,3 +259,18 @@ index c662ffc..29537c9 100644
        }
  
        typedef const TypeSupport * (* funcSignature)(void);
+       funcSignature func = reinterpret_cast<funcSignature>(sym);
+       const TypeSupport * ts = func();
++      RCUTILS_LOG_DEBUG_NAMED(
++        "type_support_dispatch", "Returning symbol %x", sym);
+       return ts;
+     }
+   }
+   RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-    "Handle's typesupport identifier (%s) is not supported by this library",
+-    handle->typesupport_identifier);
++    "Handle's typesupport identifier (%s) is not supported by this library. Only (%s) is.",
++    handle->typesupport_identifier, rosidl_typesupport_cpp::typesupport_identifier);
+   return nullptr;
+ }
+ 

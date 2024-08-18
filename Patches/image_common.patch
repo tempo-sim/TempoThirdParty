@@ -1,3 +1,57 @@
+diff --git a/camera_calibration_parsers/src/parse_ini.cpp b/camera_calibration_parsers/src/parse_ini.cpp
+index dfc0965..0bcfe65 100644
+--- a/camera_calibration_parsers/src/parse_ini.cpp
++++ b/camera_calibration_parsers/src/parse_ini.cpp
+@@ -214,10 +214,10 @@ bool parse_camera_section(
+ 
+   auto d = parse_matrix<1, 8>(++distortion);
+   if (std::isnan(d[5])) {
+-    cam_info.d = std::vector<double>(d.begin(), d.begin() + 5);
++    cam_info.d.assign(d.begin(), d.begin() + 5);
+     cam_info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+   } else {
+-    cam_info.d = std::vector<double>(d.begin(), d.end());
++    cam_info.d.assign(d.begin(), d.end());
+     cam_info.distortion_model = sensor_msgs::distortion_models::RATIONAL_POLYNOMIAL;
+   }
+ 
+diff --git a/camera_calibration_parsers/src/parse_yml.cpp b/camera_calibration_parsers/src/parse_yml.cpp
+index 82743b1..c0b2f9f 100644
+--- a/camera_calibration_parsers/src/parse_yml.cpp
++++ b/camera_calibration_parsers/src/parse_yml.cpp
+@@ -146,7 +146,7 @@ bool writeCalibrationYml(
+   emitter << YAML::Key << CAM_YML_NAME << YAML::Value << camera_name;
+   emitter << YAML::Key << K_YML_NAME << YAML::Value <<
+     SimpleMatrix(3, 3, const_cast<double *>(&cam_info.k[0]));
+-  emitter << YAML::Key << DMODEL_YML_NAME << YAML::Value << cam_info.distortion_model;
++  emitter << YAML::Key << DMODEL_YML_NAME << YAML::Value << std::string(cam_info.distortion_model.c_str());
+   emitter << YAML::Key << D_YML_NAME << YAML::Value << SimpleMatrix(
+     1,
+     static_cast<int>(cam_info.d.size()),
+@@ -210,7 +210,9 @@ bool readCalibrationYml(
+ 
+     // Different distortion models may have different numbers of parameters
+     if (doc[DMODEL_YML_NAME]) {
+-      doc[DMODEL_YML_NAME] >> cam_info.distortion_model;
++      std::string distortion_model;
++      doc[DMODEL_YML_NAME] >> distortion_model;
++      cam_info.distortion_model.assign(distortion_model.begin(), distortion_model.end());
+     } else {
+       // Assume plumb bob for backwards compatibility
+       cam_info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+diff --git a/image_transport/include/image_transport/publisher_plugin.hpp b/image_transport/include/image_transport/publisher_plugin.hpp
+index aa04e9a..fa7637f 100644
+--- a/image_transport/include/image_transport/publisher_plugin.hpp
++++ b/image_transport/include/image_transport/publisher_plugin.hpp
+@@ -110,7 +110,7 @@ public:
+     msg.encoding = message.encoding;
+     msg.is_bigendian = message.is_bigendian;
+     msg.step = message.step;
+-    msg.data = std::vector<uint8_t>(data, data + msg.step * msg.height);
++    msg.data.assign(data, data + msg.step * msg.height);
+ 
+     publish(msg);
+   }
 diff --git a/image_transport/src/image_transport.cpp b/image_transport/src/image_transport.cpp
 index 0afadaf..605e7f9 100644
 --- a/image_transport/src/image_transport.cpp

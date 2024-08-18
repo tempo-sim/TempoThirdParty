@@ -1,3 +1,40 @@
+diff --git a/rclcpp/CMakeLists.txt b/rclcpp/CMakeLists.txt
+index 9572f422..311151e2 100644
+--- a/rclcpp/CMakeLists.txt
++++ b/rclcpp/CMakeLists.txt
+@@ -179,6 +179,20 @@ foreach(interface_file ${interface_files})
+ endforeach()
+ 
+ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS})
++
++set_target_properties(${PROJECT_NAME} PROPERTIES 
++    COMPILE_PDB_NAME ${PROJECT_NAME}
++    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
++    COMPILE_FLAGS "/Zi"
++    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
++)
++
++target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
++target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
++
++target_compile_options(${PROJECT_NAME} PRIVATE /Zi)
++target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
++
+ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+ # TODO(wjwwood): address all deprecation warnings and then remove this
+ if(WIN32)
+diff --git a/rclcpp/include/rclcpp/client.hpp b/rclcpp/include/rclcpp/client.hpp
+index d1751ae1..a1eb73fc 100644
+--- a/rclcpp/include/rclcpp/client.hpp
++++ b/rclcpp/include/rclcpp/client.hpp
+@@ -19,6 +19,7 @@
+ #include <future>
+ #include <unordered_map>
+ #include <memory>
++#include <memory_resource>
+ #include <mutex>
+ #include <optional>  // NOLINT, cpplint doesn't think this is a cpp std header
+ #include <sstream>
 diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
 index 1251e58b..0c1dfde3 100644
 --- a/rclcpp/include/rclcpp/context.hpp
@@ -39,10 +76,45 @@ index 1a960b8d..72d6b803 100644
    node_services->add_client(cli_base_ptr, group);
    return cli;
  }
+diff --git a/rclcpp/include/rclcpp/create_generic_publisher.hpp b/rclcpp/include/rclcpp/create_generic_publisher.hpp
+index 296446f7..4277178f 100644
+--- a/rclcpp/include/rclcpp/create_generic_publisher.hpp
++++ b/rclcpp/include/rclcpp/create_generic_publisher.hpp
+@@ -41,7 +41,7 @@ namespace rclcpp
+  * Not all publisher options are currently respected, the only relevant options for this
+  * publisher are `event_callbacks`, `use_default_callbacks`, and `%callback_group`.
+  */
+-template<typename AllocatorT = std::allocator<void>>
++template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+ std::shared_ptr<GenericPublisher> create_generic_publisher(
+   rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr topics_interface,
+   const std::string & topic_name,
+diff --git a/rclcpp/include/rclcpp/create_generic_subscription.hpp b/rclcpp/include/rclcpp/create_generic_subscription.hpp
+index f5281cc6..cf817243 100644
+--- a/rclcpp/include/rclcpp/create_generic_subscription.hpp
++++ b/rclcpp/include/rclcpp/create_generic_subscription.hpp
+@@ -45,7 +45,7 @@ namespace rclcpp
+  * Not all publisher options are currently respected, the only relevant options for this
+  * publisher are `event_callbacks`, `use_default_callbacks`, and `%callback_group`.
+  */
+-template<typename AllocatorT = std::allocator<void>>
++template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+ std::shared_ptr<GenericSubscription> create_generic_subscription(
+   rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr topics_interface,
+   const std::string & topic_name,
 diff --git a/rclcpp/include/rclcpp/create_publisher.hpp b/rclcpp/include/rclcpp/create_publisher.hpp
-index f6088a33..c8567ab7 100644
+index f6088a33..c4469c25 100644
 --- a/rclcpp/include/rclcpp/create_publisher.hpp
 +++ b/rclcpp/include/rclcpp/create_publisher.hpp
+@@ -38,7 +38,7 @@ namespace detail
+ /// Create and return a publisher of the given MessageT type.
+ template<
+   typename MessageT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   typename PublisherT = rclcpp::Publisher<MessageT, AllocatorT>,
+   typename NodeParametersT,
+   typename NodeTopicsT>
 @@ -71,7 +71,7 @@ create_publisher(
    // Add the publisher to the node topics interface.
    node_topics_interface->add_publisher(pub, options.callback_group);
@@ -52,6 +124,24 @@ index f6088a33..c8567ab7 100644
  }
  }  // namespace detail
  
+@@ -87,7 +87,7 @@ create_publisher(
+  */
+ template<
+   typename MessageT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   typename PublisherT = rclcpp::Publisher<MessageT, AllocatorT>,
+   typename NodeT>
+ std::shared_ptr<PublisherT>
+@@ -107,7 +107,7 @@ create_publisher(
+ /// Create and return a publisher of the given MessageT type.
+ template<
+   typename MessageT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   typename PublisherT = rclcpp::Publisher<MessageT, AllocatorT>>
+ std::shared_ptr<PublisherT>
+ create_publisher(
 diff --git a/rclcpp/include/rclcpp/create_service.hpp b/rclcpp/include/rclcpp/create_service.hpp
 index 9aaa02a1..c8ab90a5 100644
 --- a/rclcpp/include/rclcpp/create_service.hpp
@@ -66,7 +156,7 @@ index 9aaa02a1..c8ab90a5 100644
    return serv;
  }
 diff --git a/rclcpp/include/rclcpp/create_subscription.hpp b/rclcpp/include/rclcpp/create_subscription.hpp
-index 5b84930f..d1996b4f 100644
+index 5b84930f..584fd7fd 100644
 --- a/rclcpp/include/rclcpp/create_subscription.hpp
 +++ b/rclcpp/include/rclcpp/create_subscription.hpp
 @@ -136,7 +136,7 @@ create_subscription(
@@ -78,10 +168,108 @@ index 5b84930f..d1996b4f 100644
  }
  }  // namespace detail
  
+@@ -169,7 +169,7 @@ create_subscription(
+ template<
+   typename MessageT,
+   typename CallbackT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   typename SubscriptionT = rclcpp::Subscription<MessageT, AllocatorT>,
+   typename MessageMemoryStrategyT = typename SubscriptionT::MessageMemoryStrategyType,
+   typename NodeT>
+@@ -199,7 +199,7 @@ create_subscription(
+ template<
+   typename MessageT,
+   typename CallbackT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   typename SubscriptionT = rclcpp::Subscription<MessageT, AllocatorT>,
+   typename MessageMemoryStrategyT = typename SubscriptionT::MessageMemoryStrategyType>
+ typename std::shared_ptr<SubscriptionT>
+diff --git a/rclcpp/include/rclcpp/detail/qos_parameters.hpp b/rclcpp/include/rclcpp/detail/qos_parameters.hpp
+index 651e58e7..d155e040 100644
+--- a/rclcpp/include/rclcpp/detail/qos_parameters.hpp
++++ b/rclcpp/include/rclcpp/detail/qos_parameters.hpp
+@@ -117,10 +117,10 @@ declare_parameter_or_get(
+  * \param default_qos User provided qos. It will be used as a default for the parameters declared.
+  * \return qos profile based on the user provided parameter overrides.
+  */
+-template<typename NodeT, typename EntityQosParametersTraits>
++template<typename NodeT, typename EntityQosParametersTraits, typename AllocatorT>
+ rclcpp::QoS
+   declare_qos_parameters(
+-  const ::rclcpp::QosOverridingOptions & options,
++  const ::rclcpp::QosOverridingOptions<AllocatorT> & options,
+   NodeT & node,
+   const std::string & topic_name,
+   const ::rclcpp::QoS & default_qos,
+@@ -128,7 +128,7 @@ rclcpp::QoS
+ 
+ #else
+ 
+-template<typename NodeT, typename EntityQosParametersTraits>
++template<typename NodeT, typename EntityQosParametersTraits, typename AllocatorT>
+ std::enable_if_t<
+   (rclcpp::node_interfaces::has_node_parameters_interface<
+     decltype(std::declval<typename rcpputils::remove_pointer<NodeT>::type>())>::value ||
+@@ -136,7 +136,7 @@ std::enable_if_t<
+   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr>::value),
+   rclcpp::QoS>
+ declare_qos_parameters(
+-  const ::rclcpp::QosOverridingOptions & options,
++  const ::rclcpp::QosOverridingOptions<AllocatorT> & options,
+   NodeT & node,
+   const std::string & topic_name,
+   const ::rclcpp::QoS & default_qos,
+@@ -186,7 +186,7 @@ declare_qos_parameters(
+     auto result = validation_callback(qos);
+     if (!result.successful) {
+       throw rclcpp::exceptions::InvalidQosOverridesException{
+-              "validation callback failed: " + result.reason};
++              "validation callback failed: " + std::string(result.reason.c_str())};
+     }
+   }
+   return qos;
+@@ -194,7 +194,7 @@ declare_qos_parameters(
+ 
+ // TODO(ivanpauno): This overload cannot declare the QoS parameters, as a node parameters interface
+ // was not provided.
+-template<typename NodeT, typename EntityQosParametersTraits>
++template<typename NodeT, typename EntityQosParametersTraits, typename AllocatorT>
+ std::enable_if_t<
+   !(rclcpp::node_interfaces::has_node_parameters_interface<
+     decltype(std::declval<typename rcpputils::remove_pointer<NodeT>::type>())>::value ||
+@@ -202,7 +202,7 @@ std::enable_if_t<
+   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr>::value),
+   rclcpp::QoS>
+ declare_qos_parameters(
+-  const ::rclcpp::QosOverridingOptions & options,
++  const ::rclcpp::QosOverridingOptions<AllocatorT> & options,
+   NodeT &,
+   const std::string &,
+   const ::rclcpp::QoS & default_qos,
 diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
-index c2e747e7..1c74ef19 100644
+index c2e747e7..359a5e30 100644
 --- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
 +++ b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+@@ -47,7 +47,7 @@ public:
+ 
+ template<
+   typename MessageT,
+-  typename Alloc = std::allocator<void>,
++  typename Alloc = std::pmr::polymorphic_allocator<void>,
+   typename MessageDeleter = std::default_delete<MessageT>>
+ class IntraProcessBuffer : public IntraProcessBufferBase
+ {
+@@ -68,7 +68,7 @@ public:
+ 
+ template<
+   typename MessageT,
+-  typename Alloc = std::allocator<void>,
++  typename Alloc = std::pmr::polymorphic_allocator<void>,
+   typename MessageDeleter = std::default_delete<MessageT>,
+   typename BufferT = std::unique_ptr<MessageT>>
+ class TypedIntraProcessBuffer : public IntraProcessBuffer<MessageT, Alloc, MessageDeleter>
 @@ -153,6 +153,7 @@ private:
      buffer_->enqueue(std::move(shared_msg));
    }
@@ -114,6 +302,19 @@ index c2e747e7..1c74ef19 100644
  
    // MessageUniquePtr to MessageUniquePtr
    template<typename OriginT>
+diff --git a/rclcpp/include/rclcpp/experimental/create_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/create_intra_process_buffer.hpp
+index 4d7668b9..51466ab5 100644
+--- a/rclcpp/include/rclcpp/experimental/create_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/create_intra_process_buffer.hpp
+@@ -31,7 +31,7 @@ namespace experimental
+ 
+ template<
+   typename MessageT,
+-  typename Alloc = std::allocator<void>,
++  typename Alloc = std::pmr::polymorphic_allocator<void>,
+   typename Deleter = std::default_delete<MessageT>>
+ typename rclcpp::experimental::buffers::IntraProcessBuffer<MessageT, Alloc, Deleter>::UniquePtr
+ create_intra_process_buffer(
 diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
 index cfd82eeb..f37416ee 100644
 --- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
@@ -202,9 +403,18 @@ index cfd82eeb..f37416ee 100644
  
        if constexpr (rclcpp::TypeAdapter<MessageT, ROSMessageType>::is_specialized::value) {
 diff --git a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
-index 7b8b3b83..17430ebf 100644
+index 7b8b3b83..7f281266 100644
 --- a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
 +++ b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+@@ -32,7 +32,7 @@ namespace experimental
+ 
+ template<
+   typename RosMessageT,
+-  typename Alloc = std::allocator<void>,
++  typename Alloc = std::pmr::polymorphic_allocator<void>,
+   typename Deleter = std::default_delete<void>
+ >
+ class SubscriptionROSMsgIntraProcessBuffer : public SubscriptionIntraProcessBase
 @@ -45,6 +45,8 @@ public:
    using ConstMessageSharedPtr = std::shared_ptr<const RosMessageT>;
    using MessageUniquePtr = std::unique_ptr<RosMessageT, ROSMessageTypeDeleter>;
@@ -214,6 +424,19 @@ index 7b8b3b83..17430ebf 100644
    SubscriptionROSMsgIntraProcessBuffer(
      rclcpp::Context::SharedPtr context,
      const std::string & topic_name,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process.hpp
+index ec89ebc5..d4f9fd6d 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process.hpp
+@@ -44,7 +44,7 @@ template<
+   typename SubscribedTypeAlloc = std::allocator<SubscribedType>,
+   typename SubscribedTypeDeleter = std::default_delete<SubscribedType>,
+   typename ROSMessageType = SubscribedType,
+-  typename Alloc = std::allocator<void>
++  typename Alloc = std::pmr::polymorphic_allocator<void>
+ >
+ class SubscriptionIntraProcess
+   : public SubscriptionIntraProcessBuffer<
 diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
 index 037d1aaa..76d80ba7 100644
 --- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
@@ -240,6 +463,32 @@ index 3c715126..cb195000 100644
    SubscriptionIntraProcessBuffer(
      std::shared_ptr<Alloc> allocator,
      rclcpp::Context::SharedPtr context,
+diff --git a/rclcpp/include/rclcpp/generic_publisher.hpp b/rclcpp/include/rclcpp/generic_publisher.hpp
+index e1b46002..b6f8c314 100644
+--- a/rclcpp/include/rclcpp/generic_publisher.hpp
++++ b/rclcpp/include/rclcpp/generic_publisher.hpp
+@@ -66,7 +66,7 @@ public:
+    * Not all publisher options are currently respected, the only relevant options for this
+    * publisher are `event_callbacks`, `use_default_callbacks`, and `%callback_group`.
+    */
+-  template<typename AllocatorT = std::allocator<void>>
++  template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   GenericPublisher(
+     rclcpp::node_interfaces::NodeBaseInterface * node_base,
+     std::shared_ptr<rcpputils::SharedLibrary> ts_lib,
+diff --git a/rclcpp/include/rclcpp/generic_subscription.hpp b/rclcpp/include/rclcpp/generic_subscription.hpp
+index 673712ee..08b22aa7 100644
+--- a/rclcpp/include/rclcpp/generic_subscription.hpp
++++ b/rclcpp/include/rclcpp/generic_subscription.hpp
+@@ -67,7 +67,7 @@ public:
+    * subscription are `event_callbacks`, `use_default_callbacks`, `ignore_local_publications`, and
+    * `%callback_group`.
+    */
+-  template<typename AllocatorT = std::allocator<void>>
++  template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   GenericSubscription(
+     rclcpp::node_interfaces::NodeBaseInterface * node_base,
+     const std::shared_ptr<rcpputils::SharedLibrary> ts_lib,
 diff --git a/rclcpp/include/rclcpp/graph_listener.hpp b/rclcpp/include/rclcpp/graph_listener.hpp
 index 79357b95..f9b8164a 100644
 --- a/rclcpp/include/rclcpp/graph_listener.hpp
@@ -253,6 +502,431 @@ index 79357b95..f9b8164a 100644
    RCLCPP_PUBLIC
    explicit GraphListener(const rclcpp::Context::SharedPtr & parent_context);
  
+diff --git a/rclcpp/include/rclcpp/loaned_message.hpp b/rclcpp/include/rclcpp/loaned_message.hpp
+index 6b30e271..4bef3d5c 100644
+--- a/rclcpp/include/rclcpp/loaned_message.hpp
++++ b/rclcpp/include/rclcpp/loaned_message.hpp
+@@ -28,7 +28,7 @@
+ namespace rclcpp
+ {
+ 
+-template<typename MessageT, typename AllocatorT = std::allocator<void>>
++template<typename MessageT, typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+ class LoanedMessage
+ {
+   using MessageAllocatorTraits = rclcpp::allocator::AllocRebind<MessageT, AllocatorT>;
+@@ -58,7 +58,7 @@ public:
+    */
+   LoanedMessage(
+     const rclcpp::PublisherBase & pub,
+-    std::allocator<MessageT> allocator)
++    std::pmr::polymorphic_allocator<void> allocator)
+   : pub_(pub),
+     message_(nullptr),
+     message_allocator_(std::move(allocator))
+@@ -108,7 +108,7 @@ public:
+   ]]
+   LoanedMessage(
+     const rclcpp::PublisherBase * pub,
+-    std::shared_ptr<std::allocator<MessageT>> allocator)
++    std::shared_ptr<std::pmr::polymorphic_allocator<void>> allocator)
+   : LoanedMessage(*pub, *allocator)
+   {}
+ 
+diff --git a/rclcpp/include/rclcpp/message_memory_strategy.hpp b/rclcpp/include/rclcpp/message_memory_strategy.hpp
+index f548d953..88e6d4f7 100644
+--- a/rclcpp/include/rclcpp/message_memory_strategy.hpp
++++ b/rclcpp/include/rclcpp/message_memory_strategy.hpp
+@@ -37,7 +37,7 @@ namespace message_memory_strategy
+ 
+ /// Default allocation strategy for messages received by subscriptions.
+ /** A message memory strategy must be templated on the type of the subscription it belongs to. */
+-template<typename MessageT, typename Alloc = std::allocator<void>>
++template<typename MessageT, typename Alloc = std::pmr::polymorphic_allocator<void>>
+ class MessageMemoryStrategy
+ {
+ public:
+diff --git a/rclcpp/include/rclcpp/node.hpp b/rclcpp/include/rclcpp/node.hpp
+index 65b87977..3b631eac 100644
+--- a/rclcpp/include/rclcpp/node.hpp
++++ b/rclcpp/include/rclcpp/node.hpp
+@@ -189,7 +189,7 @@ public:
+    */
+   template<
+     typename MessageT,
+-    typename AllocatorT = std::allocator<void>,
++    typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+     typename PublisherT = rclcpp::Publisher<MessageT, AllocatorT>>
+   std::shared_ptr<PublisherT>
+   create_publisher(
+@@ -211,7 +211,7 @@ public:
+   template<
+     typename MessageT,
+     typename CallbackT,
+-    typename AllocatorT = std::allocator<void>,
++    typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+     typename SubscriptionT = rclcpp::Subscription<MessageT, AllocatorT>,
+     typename MessageMemoryStrategyT = typename SubscriptionT::MessageMemoryStrategyType
+   >
+@@ -283,7 +283,7 @@ public:
+    * publisher are `event_callbacks`, `use_default_callbacks`, and `%callback_group`.
+    * \return Shared pointer to the created generic publisher.
+    */
+-  template<typename AllocatorT = std::allocator<void>>
++  template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   std::shared_ptr<rclcpp::GenericPublisher> create_generic_publisher(
+     const std::string & topic_name,
+     const std::string & topic_type,
+@@ -308,7 +308,7 @@ public:
+  * `%callback_group`.
+    * \return Shared pointer to the created generic subscription.
+    */
+-  template<typename AllocatorT = std::allocator<void>>
++  template<typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   std::shared_ptr<rclcpp::GenericSubscription> create_generic_subscription(
+     const std::string & topic_name,
+     const std::string & topic_type,
+diff --git a/rclcpp/include/rclcpp/node_interfaces/node_parameters.hpp b/rclcpp/include/rclcpp/node_interfaces/node_parameters.hpp
+index 6f0d5b0e..db652b00 100644
+--- a/rclcpp/include/rclcpp/node_interfaces/node_parameters.hpp
++++ b/rclcpp/include/rclcpp/node_interfaces/node_parameters.hpp
+@@ -105,7 +105,7 @@ public:
+ 
+   RCLCPP_PUBLIC
+   const rclcpp::ParameterValue &
+-  declare_parameter(
++  declare_parameter_impl(
+     const std::string & name,
+     const rclcpp::ParameterValue & default_value,
+     const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
+@@ -114,7 +114,7 @@ public:
+ 
+   RCLCPP_PUBLIC
+   const rclcpp::ParameterValue &
+-  declare_parameter(
++  declare_parameter_impl(
+     const std::string & name,
+     rclcpp::ParameterType type,
+     const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
+@@ -123,11 +123,11 @@ public:
+ 
+   RCLCPP_PUBLIC
+   void
+-  undeclare_parameter(const std::string & name) override;
++  undeclare_parameter_impl(const std::string & name) override;
+ 
+   RCLCPP_PUBLIC
+   bool
+-  has_parameter(const std::string & name) const override;
++  has_parameter_impl(const std::string & name) const override;
+ 
+   RCLCPP_PUBLIC
+   std::vector<rcl_interfaces::msg::SetParametersResult>
+@@ -141,15 +141,15 @@ public:
+ 
+   RCLCPP_PUBLIC
+   std::vector<rclcpp::Parameter>
+-  get_parameters(const std::vector<std::string> & names) const override;
++  get_parameters_impl(const std::vector<std::string> & names) const override;
+ 
+   RCLCPP_PUBLIC
+   rclcpp::Parameter
+-  get_parameter(const std::string & name) const override;
++  get_parameter_impl(const std::string & name) const override;
+ 
+   RCLCPP_PUBLIC
+   bool
+-  get_parameter(
++  get_parameter_impl(
+     const std::string & name,
+     rclcpp::Parameter & parameter) const override;
+ 
+@@ -161,15 +161,15 @@ public:
+ 
+   RCLCPP_PUBLIC
+   std::vector<rcl_interfaces::msg::ParameterDescriptor>
+-  describe_parameters(const std::vector<std::string> & names) const override;
++  describe_parameters_impl(const std::vector<std::string> & names) const override;
+ 
+   RCLCPP_PUBLIC
+   std::vector<uint8_t>
+-  get_parameter_types(const std::vector<std::string> & names) const override;
++  get_parameter_types_impl(const std::vector<std::string> & names) const override;
+ 
+   RCLCPP_PUBLIC
+   rcl_interfaces::msg::ListParametersResult
+-  list_parameters(const std::vector<std::string> & prefixes, uint64_t depth) const override;
++  list_parameters_impl(const std::vector<std::string> & prefixes, uint64_t depth) const override;
+ 
+   RCLCPP_PUBLIC
+   RCUTILS_WARN_UNUSED
+diff --git a/rclcpp/include/rclcpp/node_interfaces/node_parameters_interface.hpp b/rclcpp/include/rclcpp/node_interfaces/node_parameters_interface.hpp
+index 743c1b8d..e41fc330 100644
+--- a/rclcpp/include/rclcpp/node_interfaces/node_parameters_interface.hpp
++++ b/rclcpp/include/rclcpp/node_interfaces/node_parameters_interface.hpp
+@@ -59,47 +59,63 @@ public:
+   /**
+    * \sa rclcpp::Node::declare_parameter
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   const rclcpp::ParameterValue &
+   declare_parameter(
+-    const std::string & name,
++    const std::basic_string<CharType, Traits, Allocator> & name,
+     const rclcpp::ParameterValue & default_value,
+     const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
+     rcl_interfaces::msg::ParameterDescriptor(),
+-    bool ignore_override = false) = 0;
++    bool ignore_override = false)
++    {
++      return declare_parameter_impl(
++        std::string(name.c_str()),
++        default_value,
++        parameter_descriptor,
++        ignore_override);
++    }
+ 
+   /// Declare a parameter.
+   /**
+    * \sa rclcpp::Node::declare_parameter
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   const rclcpp::ParameterValue &
+   declare_parameter(
+-    const std::string & name,
++    const std::basic_string<CharType, Traits, Allocator> & name,
+     rclcpp::ParameterType type,
+     const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
+     rcl_interfaces::msg::ParameterDescriptor(),
+-    bool ignore_override = false) = 0;
++    bool ignore_override = false)
++    {
++      return declare_parameter_impl(
++        std::string(name.c_str()),
++        type,
++        parameter_descriptor,
++        ignore_override);
++    }
+ 
+   /// Undeclare a parameter.
+   /**
+    * \sa rclcpp::Node::undeclare_parameter
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   void
+-  undeclare_parameter(const std::string & name) = 0;
++  undeclare_parameter(const std::basic_string<CharType, Traits, Allocator> & name)
++  {
++    return undeclare_parameter_impl(std::string(name.c_str()));
++  }
+ 
+   /// Return true if the parameter has been declared, otherwise false.
+   /**
+    * \sa rclcpp::Node::has_parameter
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   bool
+-  has_parameter(const std::string & name) const = 0;
++  has_parameter(const std::basic_string<CharType, Traits, Allocator> & name) const
++  {
++    return has_parameter_impl(std::string(name.c_str()));
++  }
+ 
+   /// Set one or more parameters, one at a time.
+   /**
+@@ -126,10 +142,18 @@ public:
+    * \return the list of parameters that were found.
+    * Any parameter not found is omitted from the returned list.
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename StringAllocator, typename VectorAllocator>
+   std::vector<rclcpp::Parameter>
+-  get_parameters(const std::vector<std::string> & names) const = 0;
++  get_parameters(const std::vector<std::basic_string<CharType, Traits, StringAllocator>, VectorAllocator> & _names) const
++  {
++    std::vector<std::string> names;
++    names.resize(_names.size());
++    for (int i = 0; i < _names.size(); ++i)
++    {
++      names[i].assign(_names[i].begin(), _names[i].end());
++    }
++    return get_parameters_impl(names);
++  }
+ 
+   /// Get the description of one parameter given a name.
+   /*
+@@ -137,10 +161,12 @@ public:
+    * \return the parameter if it exists on the node.
+    * \throws std::out_of_range if the parameter does not exist on the node.
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   rclcpp::Parameter
+-  get_parameter(const std::string & name) const = 0;
++  get_parameter(const std::basic_string<CharType, Traits, Allocator> & name) const
++  {
++    return get_parameter_impl(std::string(name.c_str()));
++  }
+ 
+   /// Get the description of one parameter given a name.
+   /*
+@@ -149,12 +175,14 @@ public:
+    * \return true if the parameter exists on the node, or
+    * \return false if the parameter does not exist.
+    */
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename Allocator>
+   bool
+   get_parameter(
+-    const std::string & name,
+-    rclcpp::Parameter & parameter) const = 0;
++    const std::basic_string<CharType, Traits, Allocator> & name,
++    rclcpp::Parameter & parameter) const
++    {
++      return get_parameter_impl(std::string(name.c_str()), parameter);
++    }
+ 
+   /// Get all parameters that have the specified prefix into the parameters map.
+   /*
+@@ -170,20 +198,44 @@ public:
+     const std::string & prefix,
+     std::map<std::string, rclcpp::Parameter> & parameters) const = 0;
+ 
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename StringAllocator, typename VectorAllocator>
+   std::vector<rcl_interfaces::msg::ParameterDescriptor>
+-  describe_parameters(const std::vector<std::string> & names) const = 0;
++  describe_parameters(const std::vector<std::basic_string<CharType, Traits, StringAllocator>, VectorAllocator> & _names) const
++  {
++    std::vector<std::string> names;
++    names.resize(_names.size());
++    for (int i = 0; i < _names.size(); ++i)
++    {
++      names[i].assign(_names[i].begin(), _names[i].end());
++    }
++    return describe_parameters_impl(names);
++  }
+ 
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename StringAllocator, typename VectorAllocator>
+   std::vector<uint8_t>
+-  get_parameter_types(const std::vector<std::string> & names) const = 0;
++  get_parameter_types(const std::vector<std::basic_string<CharType, Traits, StringAllocator>, VectorAllocator> & _names) const
++  {
++    std::vector<std::string> names;
++    names.resize(_names.size());
++    for (int i = 0; i < _names.size(); ++i)
++    {
++        names[i].assign(_names[i].begin(), _names[i].end());
++    }
++    return get_parameter_types_impl(names);
++  }
+ 
+-  RCLCPP_PUBLIC
+-  virtual
++  template<typename CharType, typename Traits, typename StringAllocator, typename VectorAllocator>
+   rcl_interfaces::msg::ListParametersResult
+-  list_parameters(const std::vector<std::string> & prefixes, uint64_t depth) const = 0;
++  list_parameters(const std::vector<std::basic_string<CharType, Traits, StringAllocator>, VectorAllocator> & _prefixes, uint64_t depth) const
++  {
++    std::vector<std::string> prefixes;
++    prefixes.resize(_prefixes.size());
++    for (int i = 0; i < _prefixes.size(); ++i)
++    {
++      prefixes[i].assign(_prefixes[i].begin(), _prefixes[i].end());
++    }
++    return list_parameters_impl(prefixes, depth);
++  }
+ 
+   using OnParametersSetCallbackType = OnSetParametersCallbackHandle::OnParametersSetCallbackType;
+ 
+@@ -210,6 +262,73 @@ public:
+   virtual
+   const std::map<std::string, rclcpp::ParameterValue> &
+   get_parameter_overrides() const = 0;
++
++private:
++  RCLCPP_PUBLIC
++  virtual
++  const rclcpp::ParameterValue &
++  declare_parameter_impl(
++    const std::string & name,
++    const rclcpp::ParameterValue & default_value,
++    const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
++    rcl_interfaces::msg::ParameterDescriptor(),
++    bool ignore_override = false) = 0;
++
++  /// Declare a parameter.
++  /**
++   * \sa rclcpp::Node::declare_parameter
++   */
++  RCLCPP_PUBLIC
++  virtual
++  const rclcpp::ParameterValue &
++  declare_parameter_impl(
++    const std::string & name,
++    rclcpp::ParameterType type,
++    const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor =
++    rcl_interfaces::msg::ParameterDescriptor(),
++    bool ignore_override = false) = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  void
++  undeclare_parameter_impl(const std::string & name) = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  bool
++  has_parameter_impl(const std::string & name) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  std::vector<rclcpp::Parameter>
++  get_parameters_impl(const std::vector<std::string> & names) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  rclcpp::Parameter
++  get_parameter_impl(const std::string & name) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  bool
++  get_parameter_impl(
++    const std::string & name,
++    rclcpp::Parameter & parameter) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  std::vector<rcl_interfaces::msg::ParameterDescriptor>
++  describe_parameters_impl(const std::vector<std::string> & names) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  std::vector<uint8_t>
++  get_parameter_types_impl(const std::vector<std::string> & names) const = 0;
++
++  RCLCPP_PUBLIC
++  virtual
++  rcl_interfaces::msg::ListParametersResult
++  list_parameters_impl(const std::vector<std::string> & prefixes, uint64_t depth) const = 0;
+ };
+ 
+ }  // namespace node_interfaces
 diff --git a/rclcpp/include/rclcpp/node_options.hpp b/rclcpp/include/rclcpp/node_options.hpp
 index 53bdedea..c9075c85 100644
 --- a/rclcpp/include/rclcpp/node_options.hpp
@@ -269,10 +943,439 @@ index 53bdedea..c9075c85 100644
  
    /// Return the enable_topic_statistics flag.
    RCLCPP_PUBLIC
+diff --git a/rclcpp/include/rclcpp/parameter.hpp b/rclcpp/include/rclcpp/parameter.hpp
+index 85f088d0..b1579a45 100644
+--- a/rclcpp/include/rclcpp/parameter.hpp
++++ b/rclcpp/include/rclcpp/parameter.hpp
+@@ -153,7 +153,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::string &
++  const std::string
+   as_string() const;
+ 
+   /// Get value of parameter as byte array (vector<uint8_t>).
+@@ -161,7 +161,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::vector<uint8_t> &
++  const std::vector<uint8_t>
+   as_byte_array() const;
+ 
+   /// Get value of parameter as bool array (vector<bool>).
+@@ -169,7 +169,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::vector<bool> &
++  const std::vector<bool>
+   as_bool_array() const;
+ 
+   /// Get value of parameter as integer array (vector<int64_t>).
+@@ -177,7 +177,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::vector<int64_t> &
++  const std::vector<int64_t>
+   as_integer_array() const;
+ 
+   /// Get value of parameter as double array (vector<double>).
+@@ -185,7 +185,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::vector<double> &
++  const std::vector<double>
+   as_double_array() const;
+ 
+   /// Get value of parameter as string array (vector<std::string>).
+@@ -193,7 +193,7 @@ public:
+    * \throws rclcpp::ParameterTypeException if the type doesn't match
+    */
+   RCLCPP_PUBLIC
+-  const std::vector<std::string> &
++  const std::vector<std::string>
+   as_string_array() const;
+ 
+   /// Convert a parameter message in a Parameter class object.
+diff --git a/rclcpp/include/rclcpp/parameter_client.hpp b/rclcpp/include/rclcpp/parameter_client.hpp
+index 5e509bbf..4c6cfc0a 100644
+--- a/rclcpp/include/rclcpp/parameter_client.hpp
++++ b/rclcpp/include/rclcpp/parameter_client.hpp
+@@ -204,7 +204,7 @@ public:
+ 
+   template<
+     typename CallbackT,
+-    typename AllocatorT = std::allocator<void>>
++    typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   typename rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr
+   on_parameter_event(
+     CallbackT && callback,
+@@ -230,7 +230,7 @@ public:
+   template<
+     typename CallbackT,
+     typename NodeT,
+-    typename AllocatorT = std::allocator<void>>
++    typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+   static typename rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr
+   on_parameter_event(
+     NodeT && node,
+diff --git a/rclcpp/include/rclcpp/parameter_value.hpp b/rclcpp/include/rclcpp/parameter_value.hpp
+index f74c36a8..3efe1264 100644
+--- a/rclcpp/include/rclcpp/parameter_value.hpp
++++ b/rclcpp/include/rclcpp/parameter_value.hpp
+@@ -177,73 +177,79 @@ public:
+ 
+   template<ParameterType type>
+   constexpr
+-  typename std::enable_if<type == ParameterType::PARAMETER_STRING, const std::string &>::type
++  typename std::enable_if<type == ParameterType::PARAMETER_STRING, std::string>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_STRING) {
+       throw ParameterTypeException(ParameterType::PARAMETER_STRING, get_type());
+     }
+-    return value_.string_value;
++    return std::string(value_.string_value.c_str());
+   }
+ 
+   template<ParameterType type>
+   constexpr
+   typename std::enable_if<
+-    type == ParameterType::PARAMETER_BYTE_ARRAY, const std::vector<uint8_t> &>::type
++    type == ParameterType::PARAMETER_BYTE_ARRAY, std::vector<uint8_t>>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_BYTE_ARRAY) {
+       throw ParameterTypeException(ParameterType::PARAMETER_BYTE_ARRAY, get_type());
+     }
+-    return value_.byte_array_value;
++    return std::vector<uint8_t>(value_.byte_array_value.begin(), value_.byte_array_value.end());
+   }
+ 
+   template<ParameterType type>
+   constexpr
+   typename std::enable_if<
+-    type == ParameterType::PARAMETER_BOOL_ARRAY, const std::vector<bool> &>::type
++    type == ParameterType::PARAMETER_BOOL_ARRAY, std::vector<bool>>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_BOOL_ARRAY) {
+       throw ParameterTypeException(ParameterType::PARAMETER_BOOL_ARRAY, get_type());
+     }
+-    return value_.bool_array_value;
++    return std::vector<bool>(value_.bool_array_value.begin(), value_.bool_array_value.end());
+   }
+ 
+   template<ParameterType type>
+   constexpr
+   typename std::enable_if<
+-    type == ParameterType::PARAMETER_INTEGER_ARRAY, const std::vector<int64_t> &>::type
++    type == ParameterType::PARAMETER_INTEGER_ARRAY, std::vector<int64_t>>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER_ARRAY) {
+       throw ParameterTypeException(ParameterType::PARAMETER_INTEGER_ARRAY, get_type());
+     }
+-    return value_.integer_array_value;
++    return std::vector<int64_t>(value_.integer_array_value.begin(), value_.integer_array_value.end());
+   }
+ 
+   template<ParameterType type>
+   constexpr
+   typename std::enable_if<
+-    type == ParameterType::PARAMETER_DOUBLE_ARRAY, const std::vector<double> &>::type
++    type == ParameterType::PARAMETER_DOUBLE_ARRAY, std::vector<double>>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE_ARRAY) {
+       throw ParameterTypeException(ParameterType::PARAMETER_DOUBLE_ARRAY, get_type());
+     }
+-    return value_.double_array_value;
++    return std::vector<double>(value_.double_array_value.begin(), value_.double_array_value.end());
+   }
+ 
+   template<ParameterType type>
+   constexpr
+   typename std::enable_if<
+-    type == ParameterType::PARAMETER_STRING_ARRAY, const std::vector<std::string> &>::type
++    type == ParameterType::PARAMETER_STRING_ARRAY, std::vector<std::string>>::type
+   get() const
+   {
+     if (value_.type != rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY) {
+       throw ParameterTypeException(ParameterType::PARAMETER_STRING_ARRAY, get_type());
+     }
+-    return value_.string_array_value;
++    std::vector<std::string> out;
++    out.reserve(value_.string_array_value.size());
++    for (const auto& string_value : value_.string_array_value)
++    {
++      out.push_back(std::string(string_value.begin(), string_value.end()));
++    }
++    return out;
+   }
+ 
+   // The following get() variants allow the use of primitive types
+@@ -275,7 +281,7 @@ public:
+ 
+   template<typename type>
+   constexpr
+-  typename std::enable_if<std::is_convertible<type, std::string>::value, const std::string &>::type
++  typename std::enable_if<std::is_convertible<type, std::string>::value, std::string>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_STRING>();
+@@ -285,7 +291,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<uint8_t> &>::value, const std::vector<uint8_t> &>::type
++      type, std::vector<uint8_t>>::value, std::vector<uint8_t>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_BYTE_ARRAY>();
+@@ -295,7 +301,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<bool> &>::value, const std::vector<bool> &>::type
++      type, std::vector<bool>>::value, std::vector<bool>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_BOOL_ARRAY>();
+@@ -305,7 +311,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<int> &>::value, const std::vector<int64_t> &>::type
++      type, std::vector<int>>::value, std::vector<int64_t>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_INTEGER_ARRAY>();
+@@ -315,7 +321,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<int64_t> &>::value, const std::vector<int64_t> &>::type
++      type, const std::vector<int64_t> &>::value, std::vector<int64_t>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_INTEGER_ARRAY>();
+@@ -325,7 +331,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<float> &>::value, const std::vector<double> &>::type
++      type, std::vector<float>>::value, std::vector<double>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_DOUBLE_ARRAY>();
+@@ -335,7 +341,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<double> &>::value, const std::vector<double> &>::type
++      type, std::vector<double>>::value, std::vector<double>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_DOUBLE_ARRAY>();
+@@ -345,7 +351,7 @@ public:
+   constexpr
+   typename std::enable_if<
+     std::is_convertible<
+-      type, const std::vector<std::string> &>::value, const std::vector<std::string> &>::type
++      type, std::vector<std::string>>::value, std::vector<std::string>>::type
+   get() const
+   {
+     return get<ParameterType::PARAMETER_STRING_ARRAY>();
+diff --git a/rclcpp/include/rclcpp/publisher.hpp b/rclcpp/include/rclcpp/publisher.hpp
+index 78b57006..680fbfdc 100644
+--- a/rclcpp/include/rclcpp/publisher.hpp
++++ b/rclcpp/include/rclcpp/publisher.hpp
+@@ -73,7 +73,7 @@ class LoanedMessage;
+  * specialization which allows ROSMessageType to be void.
+  * \sa rclcpp::TypeAdapter for more details.
+  */
+-template<typename MessageT, typename AllocatorT = std::allocator<void>>
++template<typename MessageT, typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+ class Publisher : public PublisherBase
+ {
+ public:
+diff --git a/rclcpp/include/rclcpp/publisher_options.hpp b/rclcpp/include/rclcpp/publisher_options.hpp
+index 3c88ebcc..3971ef1e 100644
+--- a/rclcpp/include/rclcpp/publisher_options.hpp
++++ b/rclcpp/include/rclcpp/publisher_options.hpp
+@@ -57,8 +57,6 @@ struct PublisherOptionsBase
+   /// Optional RMW implementation specific payload to be used during creation of the publisher.
+   std::shared_ptr<rclcpp::detail::RMWImplementationSpecificPublisherPayload>
+   rmw_implementation_payload = nullptr;
+-
+-  QosOverridingOptions qos_overriding_options;
+ };
+ 
+ /// Structure containing optional configuration for Publishers.
+@@ -112,6 +110,8 @@ struct PublisherOptionsWithAllocator : public PublisherOptionsBase
+     return this->allocator;
+   }
+ 
++  QosOverridingOptions<Allocator> qos_overriding_options;
++
+ private:
+   using PlainAllocator =
+     typename std::allocator_traits<Allocator>::template rebind_alloc<char>;
+@@ -135,7 +135,7 @@ private:
+   mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
+ };
+ 
+-using PublisherOptions = PublisherOptionsWithAllocator<std::allocator<void>>;
++using PublisherOptions = PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>;
+ 
+ }  // namespace rclcpp
+ 
+diff --git a/rclcpp/include/rclcpp/qos_overriding_options.hpp b/rclcpp/include/rclcpp/qos_overriding_options.hpp
+index c20248de..29df3441 100644
+--- a/rclcpp/include/rclcpp/qos_overriding_options.hpp
++++ b/rclcpp/include/rclcpp/qos_overriding_options.hpp
+@@ -18,6 +18,7 @@
+ #include <functional>
+ #include <initializer_list>
+ #include <ostream>
++#include <stdexcept>
+ #include <string>
+ #include <utility>
+ #include <vector>
+@@ -27,6 +28,7 @@
+ 
+ #include "rcl_interfaces/msg/set_parameters_result.hpp"
+ #include "rmw/qos_policy_kind.h"
++#include "rmw/qos_string_conversions.h"
+ 
+ namespace rclcpp
+ {
+@@ -53,8 +55,10 @@ RCLCPP_PUBLIC
+ std::ostream &
+ operator<<(std::ostream & os, const QosPolicyKind & qpk);
+ 
+-using QosCallbackResult = rcl_interfaces::msg::SetParametersResult;
+-using QosCallback = std::function<QosCallbackResult(const rclcpp::QoS &)>;
++template <typename AllocatorT>
++using QosCallbackResult = rcl_interfaces::msg::SetParametersResult_<AllocatorT>;
++template <typename AllocatorT>
++using QosCallback = std::function<QosCallbackResult<AllocatorT>(const rclcpp::QoS &)>;
+ 
+ namespace detail
+ {
+@@ -86,11 +90,11 @@ class QosParameters;
+  *          depth: 10
+  * ```
+  */
++template <typename AllocatorT = std::pmr::polymorphic_allocator<void>>
+ class QosOverridingOptions
+ {
+ public:
+   /// Default constructor, no overrides allowed.
+-  RCLCPP_PUBLIC
+   QosOverridingOptions() = default;
+ 
+   /// Construct passing a list of QoS policies and a verification callback.
+@@ -111,23 +115,32 @@ public:
+    *   the qos profile set by the user.
+    * \param id id of the entity.
+    */
+-  RCLCPP_PUBLIC
+   QosOverridingOptions(
+     std::initializer_list<QosPolicyKind> policy_kinds,
+-    QosCallback validation_callback = nullptr,
+-    std::string id = {});
++    QosCallback<AllocatorT> validation_callback = nullptr,
++    std::string id = {})
++  : id_{std::move(id)},
++    policy_kinds_{policy_kinds},
++    validation_callback_{std::move(validation_callback)}
++  {}
+ 
+-  RCLCPP_PUBLIC
+   const std::string &
+-  get_id() const;
++  get_id() const
++  {
++    return id_;
++  }
+ 
+-  RCLCPP_PUBLIC
+   const std::vector<QosPolicyKind> &
+-  get_policy_kinds() const;
++  get_policy_kinds() const
++  {
++    return policy_kinds_;
++  }
+ 
+-  RCLCPP_PUBLIC
+-  const QosCallback &
+-  get_validation_callback() const;
++  const QosCallback<AllocatorT> &
++  get_validation_callback() const
++  {
++    return validation_callback_;
++  }
+ 
+   /// Construct passing a list of QoS policies and a verification callback.
+   /**
+@@ -135,10 +148,14 @@ public:
+    *
+    * History, Depth, Reliability.
+    */
+-  RCLCPP_PUBLIC
+   static
+   QosOverridingOptions
+-  with_default_policies(QosCallback validation_callback = nullptr, std::string id = {});
++  with_default_policies(QosCallback<AllocatorT> validation_callback = nullptr, std::string id = {})
++  {
++    static std::initializer_list<QosPolicyKind> kDefaultPolicies =
++      {QosPolicyKind::History, QosPolicyKind::Depth, QosPolicyKind::Reliability};
++    return QosOverridingOptions{kDefaultPolicies, validation_callback, id};
++  }
+ 
+ private:
+   /// \internal Id of the entity requesting to create parameters.
+@@ -146,7 +163,7 @@ private:
+   /// \internal Policy kinds that are allowed to be reconfigured.
+   std::vector<QosPolicyKind> policy_kinds_;
+   /// \internal Validation callback that will be called to verify the profile.
+-  QosCallback validation_callback_;
++  QosCallback<AllocatorT> validation_callback_;
+ };
+ 
+ }  // namespace rclcpp
+diff --git a/rclcpp/include/rclcpp/strategies/allocator_memory_strategy.hpp b/rclcpp/include/rclcpp/strategies/allocator_memory_strategy.hpp
+index 88698179..9b3b7a7c 100644
+--- a/rclcpp/include/rclcpp/strategies/allocator_memory_strategy.hpp
++++ b/rclcpp/include/rclcpp/strategies/allocator_memory_strategy.hpp
+@@ -43,7 +43,7 @@ namespace allocator_memory_strategy
+  * the rmw implementation after the executor waits for work, based on the number of entities that
+  * come through.
+  */
+-template<typename Alloc = std::allocator<void>>
++template<typename Alloc = std::pmr::polymorphic_allocator<void>>
+ class AllocatorMemoryStrategy : public memory_strategy::MemoryStrategy
+ {
+ public:
 diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
-index 11bf9c6e..e58d0b72 100644
+index 11bf9c6e..302e3f39 100644
 --- a/rclcpp/include/rclcpp/subscription.hpp
 +++ b/rclcpp/include/rclcpp/subscription.hpp
+@@ -61,7 +61,7 @@ class NodeTopicsInterface;
+ /// Subscription implementation, templated on the type of message this subscription receives.
+ template<
+   typename MessageT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   /// MessageT::custom_type if MessageT is a TypeAdapter,
+   /// otherwise just MessageT.
+   typename SubscribedT = typename rclcpp::TypeAdapter<MessageT>::custom_type,
 @@ -178,6 +178,7 @@ public:
          RCL_SUBSCRIPTION_MESSAGE_LOST);
      }
@@ -302,6 +1405,153 @@ index a1727eab..0d13aff6 100644
        return sub_base_ptr;
      }
    };
+diff --git a/rclcpp/include/rclcpp/subscription_options.hpp b/rclcpp/include/rclcpp/subscription_options.hpp
+index 2b819da3..2c169d4e 100644
+--- a/rclcpp/include/rclcpp/subscription_options.hpp
++++ b/rclcpp/include/rclcpp/subscription_options.hpp
+@@ -81,8 +81,6 @@ struct SubscriptionOptionsBase
+ 
+   TopicStatisticsOptions topic_stats_options;
+ 
+-  QosOverridingOptions qos_overriding_options;
+-
+   ContentFilterOptions content_filter_options;
+ };
+ 
+@@ -156,6 +154,8 @@ struct SubscriptionOptionsWithAllocator : public SubscriptionOptionsBase
+     return this->allocator;
+   }
+ 
++  QosOverridingOptions<Allocator> qos_overriding_options;
++
+ private:
+   using PlainAllocator =
+     typename std::allocator_traits<Allocator>::template rebind_alloc<char>;
+@@ -179,7 +179,7 @@ private:
+   mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
+ };
+ 
+-using SubscriptionOptions = SubscriptionOptionsWithAllocator<std::allocator<void>>;
++using SubscriptionOptions = SubscriptionOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>;
+ }  // namespace rclcpp
+ 
+ #endif  // RCLCPP__SUBSCRIPTION_OPTIONS_HPP_
+diff --git a/rclcpp/include/rclcpp/subscription_traits.hpp b/rclcpp/include/rclcpp/subscription_traits.hpp
+index 34f2cc92..0c1bd3c7 100644
+--- a/rclcpp/include/rclcpp/subscription_traits.hpp
++++ b/rclcpp/include/rclcpp/subscription_traits.hpp
+@@ -77,7 +77,7 @@ struct extract_message_type<std::unique_ptr<MessageT, Deleter>>: extract_message
+ 
+ template<
+   typename CallbackT,
+-  typename AllocatorT = std::allocator<void>,
++  typename AllocatorT = std::pmr::polymorphic_allocator<void>,
+   // Do not attempt if CallbackT is an integer (mistaken for depth)
+   typename = std::enable_if_t<!std::is_integral<
+     std::remove_cv_t<std::remove_reference_t<CallbackT>>>::value>,
+diff --git a/rclcpp/include/rclcpp/time.hpp b/rclcpp/include/rclcpp/time.hpp
+index 15533f39..eac367cd 100644
+--- a/rclcpp/include/rclcpp/time.hpp
++++ b/rclcpp/include/rclcpp/time.hpp
+@@ -26,6 +26,10 @@
+ namespace rclcpp
+ {
+ 
++RCLCPP_PUBLIC
++rcl_time_point_t
++init_time_point(rcl_clock_type_t& clock_type);
++
+ class Clock;
+ 
+ class Time
+@@ -63,10 +67,18 @@ public:
+    * \param clock_type clock type
+    * \throws std::runtime_error if seconds are negative
+    */
+-  RCLCPP_PUBLIC
+   Time(
+     const builtin_interfaces::msg::Time & time_msg,
+-    rcl_clock_type_t clock_type = RCL_ROS_TIME);
++    rcl_clock_type_t clock_type = RCL_ROS_TIME)
++  : rcl_time_(init_time_point(clock_type))
++   {
++    if (time_msg.sec < 0) {
++     throw std::runtime_error("cannot store a negative time point in rclcpp::Time");
++    }
++  
++    rcl_time_.nanoseconds = RCL_S_TO_NS(static_cast<int64_t>(time_msg.sec));
++    rcl_time_.nanoseconds += time_msg.nanosec;
++   }
+ 
+   /// Time constructor
+   /**
+@@ -80,8 +92,20 @@ public:
+   virtual ~Time();
+ 
+   /// Return a builtin_interfaces::msg::Time object based
+-  RCLCPP_PUBLIC
+-  operator builtin_interfaces::msg::Time() const;
++  operator builtin_interfaces::msg::Time() const
++  {
++    builtin_interfaces::msg::Time msg_time;
++    constexpr rcl_time_point_value_t kRemainder = RCL_S_TO_NS(1);
++    const auto result = std::div(rcl_time_.nanoseconds, kRemainder);
++    if (result.rem >= 0) {
++     msg_time.sec = static_cast<std::int32_t>(result.quot);
++     msg_time.nanosec = static_cast<std::uint32_t>(result.rem);
++    } else {
++     msg_time.sec = static_cast<std::int32_t>(result.quot - 1);
++     msg_time.nanosec = static_cast<std::uint32_t>(kRemainder + result.rem);
++    }
++    return msg_time;
++  }
+ 
+   /**
+    * \throws std::runtime_error if seconds are negative
+@@ -96,9 +120,12 @@ public:
+    * Equivalent to *this = Time(time_msg, RCL_ROS_TIME).
+    * \throws std::runtime_error if seconds are negative
+    */
+-  RCLCPP_PUBLIC
+   Time &
+-  operator=(const builtin_interfaces::msg::Time & time_msg);
++  operator=(const builtin_interfaces::msg::Time & time_msg)
++  {
++    *this = Time(time_msg);
++    return *this;
++  }
+ 
+   /**
+    * \throws std::runtime_error if the time sources are different
+diff --git a/rclcpp/include/rclcpp/topic_statistics/subscription_topic_statistics.hpp b/rclcpp/include/rclcpp/topic_statistics/subscription_topic_statistics.hpp
+index 4b922140..7ea132d5 100644
+--- a/rclcpp/include/rclcpp/topic_statistics/subscription_topic_statistics.hpp
++++ b/rclcpp/include/rclcpp/topic_statistics/subscription_topic_statistics.hpp
+@@ -130,7 +130,7 @@ public:
+   virtual void publish_message_and_reset_measurements()
+   {
+     std::vector<MetricsMessage> msgs;
+-    rclcpp::Time window_end{get_current_nanoseconds_since_epoch()};
++    rclcpp::Time window_end(get_current_nanoseconds_since_epoch());
+ 
+     {
+       std::lock_guard<std::mutex> lock(mutex_);
+@@ -138,12 +138,12 @@ public:
+         const auto collected_stats = collector->GetStatisticsResults();
+         collector->ClearCurrentMeasurements();
+ 
+-        auto message = libstatistics_collector::collector::GenerateStatisticMessage(
++        MetricsMessage message = libstatistics_collector::collector::GenerateStatisticMessage(
+           node_name_,
+           collector->GetMetricName(),
+           collector->GetMetricUnit(),
+-          window_start_,
+-          window_end,
++          static_cast<builtin_interfaces::msg::Time>(window_start_),
++          static_cast<builtin_interfaces::msg::Time>(window_end),
+           collected_stats);
+         msgs.push_back(message);
+       }
 diff --git a/rclcpp/src/rclcpp/graph_listener.cpp b/rclcpp/src/rclcpp/graph_listener.cpp
 index e0b516b5..b4556fbd 100644
 --- a/rclcpp/src/rclcpp/graph_listener.cpp
@@ -326,8 +1576,258 @@ index efce4afe..bca76d65 100644
  
  static std::atomic<uint64_t> _next_unique_id {1};
  
+diff --git a/rclcpp/src/rclcpp/node.cpp b/rclcpp/src/rclcpp/node.cpp
+index 8107458f..e39e9648 100644
+--- a/rclcpp/src/rclcpp/node.cpp
++++ b/rclcpp/src/rclcpp/node.cpp
+@@ -390,7 +390,7 @@ Node::get_parameters(
+ rcl_interfaces::msg::ParameterDescriptor
+ Node::describe_parameter(const std::string & name) const
+ {
+-  auto result = node_parameters_->describe_parameters({name});
++  auto result = node_parameters_->describe_parameters(std::vector<std::string>({name}));
+   if (0 == result.size()) {
+     throw rclcpp::exceptions::ParameterNotDeclaredException(name);
+   }
+diff --git a/rclcpp/src/rclcpp/node_interfaces/node_parameters.cpp b/rclcpp/src/rclcpp/node_interfaces/node_parameters.cpp
+index aeaaa9a4..e9ea2b5c 100644
+--- a/rclcpp/src/rclcpp/node_interfaces/node_parameters.cpp
++++ b/rclcpp/src/rclcpp/node_interfaces/node_parameters.cpp
+@@ -59,7 +59,7 @@ NodeParameters::NodeParameters(
+ {
+   using MessageT = rcl_interfaces::msg::ParameterEvent;
+   using PublisherT = rclcpp::Publisher<MessageT>;
+-  using AllocatorT = std::allocator<void>;
++  using AllocatorT = std::pmr::polymorphic_allocator<void>;
+   // TODO(wjwwood): expose this allocator through the Parameter interface.
+   rclcpp::PublisherOptionsWithAllocator<AllocatorT> publisher_options(
+     parameter_event_publisher_options);
+@@ -160,7 +160,7 @@ __check_parameter_value_in_range(
+     }
+     if ((v < integer_range.from_value) || (v > integer_range.to_value)) {
+       result.successful = false;
+-      result.reason = format_range_reason(descriptor.name, "integer");
++      result.reason = format_range_reason(std::string(descriptor.name.c_str()), "integer");
+       return result;
+     }
+     if (integer_range.step == 0) {
+@@ -170,7 +170,7 @@ __check_parameter_value_in_range(
+       return result;
+     }
+     result.successful = false;
+-    result.reason = format_range_reason(descriptor.name, "integer");
++    result.reason = format_range_reason(std::string(descriptor.name.c_str()), "integer");
+     return result;
+   }
+ 
+@@ -182,7 +182,7 @@ __check_parameter_value_in_range(
+     }
+     if ((v < fp_range.from_value) || (v > fp_range.to_value)) {
+       result.successful = false;
+-      result.reason = format_range_reason(descriptor.name, "floating point");
++      result.reason = format_range_reason(std::string(descriptor.name.c_str()), "floating point");
+       return result;
+     }
+     if (fp_range.step == 0.0) {
+@@ -193,7 +193,7 @@ __check_parameter_value_in_range(
+       return result;
+     }
+     result.successful = false;
+-    result.reason = format_range_reason(descriptor.name, "floating point");
++    result.reason = format_range_reason(std::string(descriptor.name.c_str()), "floating point");
+     return result;
+   }
+   return result;
+@@ -451,10 +451,10 @@ declare_parameter_helper(
+     {
+       // TODO(ivanpauno): Refactor the logic so we don't need the above `strncmp` and we can
+       // detect between both exceptions more elegantly.
+-      throw rclcpp::exceptions::InvalidParameterTypeException(name, result.reason);
++      throw rclcpp::exceptions::InvalidParameterTypeException(name, std::string(result.reason.c_str()));
+     }
+     throw rclcpp::exceptions::InvalidParameterValueException(
+-            "parameter '" + name + "' could not be set: " + result.reason);
++            "parameter '" + std::string(name.c_str()) + "' could not be set: " + std::string(result.reason.c_str()));
+   }
+ 
+   // Publish if events_publisher_ is not nullptr, which may be if disabled in the constructor.
+@@ -468,7 +468,7 @@ declare_parameter_helper(
+ }
+ 
+ const rclcpp::ParameterValue &
+-NodeParameters::declare_parameter(
++NodeParameters::declare_parameter_impl(
+   const std::string & name,
+   const rclcpp::ParameterValue & default_value,
+   const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor,
+@@ -493,7 +493,7 @@ NodeParameters::declare_parameter(
+ }
+ 
+ const rclcpp::ParameterValue &
+-NodeParameters::declare_parameter(
++NodeParameters::declare_parameter_impl(
+   const std::string & name,
+   rclcpp::ParameterType type,
+   const rcl_interfaces::msg::ParameterDescriptor & parameter_descriptor,
+@@ -529,7 +529,7 @@ NodeParameters::declare_parameter(
+ }
+ 
+ void
+-NodeParameters::undeclare_parameter(const std::string & name)
++NodeParameters::undeclare_parameter_impl(const std::string & name)
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+ 
+@@ -554,7 +554,7 @@ NodeParameters::undeclare_parameter(const std::string & name)
+ }
+ 
+ bool
+-NodeParameters::has_parameter(const std::string & name) const
++NodeParameters::has_parameter_impl(const std::string & name) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+ 
+@@ -782,7 +782,7 @@ NodeParameters::set_parameters_atomically(const std::vector<rclcpp::Parameter> &
+ }
+ 
+ std::vector<rclcpp::Parameter>
+-NodeParameters::get_parameters(const std::vector<std::string> & names) const
++NodeParameters::get_parameters_impl(const std::vector<std::string> & names) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+   std::vector<rclcpp::Parameter> results;
+@@ -805,7 +805,7 @@ NodeParameters::get_parameters(const std::vector<std::string> & names) const
+ }
+ 
+ rclcpp::Parameter
+-NodeParameters::get_parameter(const std::string & name) const
++NodeParameters::get_parameter_impl(const std::string & name) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+ 
+@@ -826,7 +826,7 @@ NodeParameters::get_parameter(const std::string & name) const
+ }
+ 
+ bool
+-NodeParameters::get_parameter(
++NodeParameters::get_parameter_impl(
+   const std::string & name,
+   rclcpp::Parameter & parameter) const
+ {
+@@ -866,7 +866,7 @@ NodeParameters::get_parameters_by_prefix(
+ }
+ 
+ std::vector<rcl_interfaces::msg::ParameterDescriptor>
+-NodeParameters::describe_parameters(const std::vector<std::string> & names) const
++NodeParameters::describe_parameters_impl(const std::vector<std::string> & names) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+   std::vector<rcl_interfaces::msg::ParameterDescriptor> results;
+@@ -894,7 +894,7 @@ NodeParameters::describe_parameters(const std::vector<std::string> & names) cons
+ }
+ 
+ std::vector<uint8_t>
+-NodeParameters::get_parameter_types(const std::vector<std::string> & names) const
++NodeParameters::get_parameter_types_impl(const std::vector<std::string> & names) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+   std::vector<uint8_t> results;
+@@ -920,7 +920,7 @@ NodeParameters::get_parameter_types(const std::vector<std::string> & names) cons
+ }
+ 
+ rcl_interfaces::msg::ListParametersResult
+-NodeParameters::list_parameters(const std::vector<std::string> & prefixes, uint64_t depth) const
++NodeParameters::list_parameters_impl(const std::vector<std::string> & prefixes, uint64_t depth) const
+ {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
+   rcl_interfaces::msg::ListParametersResult result;
+@@ -947,15 +947,15 @@ NodeParameters::list_parameters(const std::vector<std::string> & prefixes, uint6
+         return false;
+       });
+     if (get_all || prefix_matches) {
+-      result.names.push_back(kv.first);
++      result.names.emplace_back(kv.first.c_str());
+       size_t last_separator = kv.first.find_last_of(separator);
+       if (std::string::npos != last_separator) {
+         std::string prefix = kv.first.substr(0, last_separator);
+         if (
+-          std::find(result.prefixes.cbegin(), result.prefixes.cend(), prefix) ==
++          std::find_if(result.prefixes.cbegin(), result.prefixes.cend(), [&prefix](const auto& result_prefix){ return strcmp(prefix.c_str(), result_prefix.c_str()) == 0; }) ==
+           result.prefixes.cend())
+         {
+-          result.prefixes.push_back(prefix);
++          result.prefixes.emplace_back(prefix.c_str());
+         }
+       }
+     }
+diff --git a/rclcpp/src/rclcpp/parameter.cpp b/rclcpp/src/rclcpp/parameter.cpp
+index 673e06ab..31b6ab51 100644
+--- a/rclcpp/src/rclcpp/parameter.cpp
++++ b/rclcpp/src/rclcpp/parameter.cpp
+@@ -41,7 +41,7 @@ Parameter::Parameter(const std::string & name, const rclcpp::ParameterValue & va
+ }
+ 
+ Parameter::Parameter(const rclcpp::node_interfaces::ParameterInfo & parameter_info)
+-: Parameter(parameter_info.descriptor.name, parameter_info.value)
++: Parameter(std::string(parameter_info.descriptor.name.c_str()), parameter_info.value)
+ {
+ }
+ 
+@@ -105,37 +105,37 @@ Parameter::as_double() const
+   return get_value<ParameterType::PARAMETER_DOUBLE>();
+ }
+ 
+-const std::string &
++const std::string
+ Parameter::as_string() const
+ {
+   return get_value<ParameterType::PARAMETER_STRING>();
+ }
+ 
+-const std::vector<uint8_t> &
++const std::vector<uint8_t>
+ Parameter::as_byte_array() const
+ {
+   return get_value<ParameterType::PARAMETER_BYTE_ARRAY>();
+ }
+ 
+-const std::vector<bool> &
++const std::vector<bool>
+ Parameter::as_bool_array() const
+ {
+   return get_value<ParameterType::PARAMETER_BOOL_ARRAY>();
+ }
+ 
+-const std::vector<int64_t> &
++const std::vector<int64_t>
+ Parameter::as_integer_array() const
+ {
+   return get_value<ParameterType::PARAMETER_INTEGER_ARRAY>();
+ }
+ 
+-const std::vector<double> &
++const std::vector<double>
+ Parameter::as_double_array() const
+ {
+   return get_value<ParameterType::PARAMETER_DOUBLE_ARRAY>();
+ }
+ 
+-const std::vector<std::string> &
++const std::vector<std::string>
+ Parameter::as_string_array() const
+ {
+   return get_value<ParameterType::PARAMETER_STRING_ARRAY>();
+@@ -144,7 +144,7 @@ Parameter::as_string_array() const
+ Parameter
+ Parameter::from_parameter_msg(const rcl_interfaces::msg::Parameter & parameter)
+ {
+-  return Parameter(parameter.name, parameter.value);
++  return Parameter(std::string(parameter.name.c_str()), parameter.value);
+ }
+ 
+ rcl_interfaces::msg::Parameter
 diff --git a/rclcpp/src/rclcpp/parameter_client.cpp b/rclcpp/src/rclcpp/parameter_client.cpp
-index 38ced0e1..fca20645 100644
+index 38ced0e1..15f7c47c 100644
 --- a/rclcpp/src/rclcpp/parameter_client.cpp
 +++ b/rclcpp/src/rclcpp/parameter_client.cpp
 @@ -56,7 +56,7 @@ AsyncParametersClient::AsyncParametersClient(
@@ -384,6 +1884,343 @@ index 38ced0e1..fca20645 100644
    node_services_interface->add_client(describe_parameters_base, group);
  }
  
+@@ -116,7 +116,11 @@ AsyncParametersClient::get_parameters(
+   auto future_result = promise_result->get_future().share();
+ 
+   auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
+-  request->names = names;
++  request->names.resize(names.size());
++  for (int i = 0; i < names.size(); ++i)
++  {
++    request->names[i].assign(names[i].begin(), names[i].end());
++  }
+ 
+   get_parameters_client_->async_send_request(
+     request,
+@@ -156,14 +160,18 @@ AsyncParametersClient::describe_parameters(
+   auto future_result = promise_result->get_future().share();
+ 
+   auto request = std::make_shared<rcl_interfaces::srv::DescribeParameters::Request>();
+-  request->names = names;
++  request->names.resize(names.size());
++  for (int i = 0; i < names.size(); ++i)
++  {
++    request->names[i].assign(names[i].begin(), names[i].end());
++  }
+ 
+   describe_parameters_client_->async_send_request(
+     request,
+     [promise_result, future_result, callback](
+       rclcpp::Client<rcl_interfaces::srv::DescribeParameters>::SharedFuture cb_f)
+     {
+-      promise_result->set_value(cb_f.get()->descriptors);
++      promise_result->set_value(std::vector<rcl_interfaces::msg::ParameterDescriptor>(cb_f.get()->descriptors.begin(), cb_f.get()->descriptors.end()));
+       if (callback != nullptr) {
+         callback(future_result);
+       }
+@@ -185,7 +193,11 @@ AsyncParametersClient::get_parameter_types(
+   auto future_result = promise_result->get_future().share();
+ 
+   auto request = std::make_shared<rcl_interfaces::srv::GetParameterTypes::Request>();
+-  request->names = names;
++  request->names.resize(names.size());
++  for (int i = 0; i < names.size(); ++i)
++  {
++    request->names[i].assign(names[i].begin(), names[i].end());
++  }
+ 
+   get_parameter_types_client_->async_send_request(
+     request,
+@@ -197,7 +209,7 @@ AsyncParametersClient::get_parameter_types(
+       for (auto & pt : pts) {
+         types.push_back(static_cast<rclcpp::ParameterType>(pt));
+       }
+-      promise_result->set_value(types);
++      promise_result->set_value(std::vector<rclcpp::ParameterType>(types.begin(), types.end()));
+       if (callback != nullptr) {
+         callback(future_result);
+       }
+@@ -230,7 +242,7 @@ AsyncParametersClient::set_parameters(
+     [promise_result, future_result, callback](
+       rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedFuture cb_f)
+     {
+-      promise_result->set_value(cb_f.get()->results);
++      promise_result->set_value(std::vector<rcl_interfaces::msg::SetParametersResult>(cb_f.get()->results.begin(), cb_f.get()->results.end()));
+       if (callback != nullptr) {
+         callback(future_result);
+       }
+@@ -335,7 +347,11 @@ AsyncParametersClient::list_parameters(
+   auto future_result = promise_result->get_future().share();
+ 
+   auto request = std::make_shared<rcl_interfaces::srv::ListParameters::Request>();
+-  request->prefixes = prefixes;
++  request->prefixes.resize(prefixes.size());
++  for (int i = 0; i < prefixes.size(); ++i)
++  {
++    request->prefixes[i].assign(prefixes[i].begin(), prefixes[i].end());
++  }
+   request->depth = depth;
+ 
+   list_parameters_client_->async_send_request(
+diff --git a/rclcpp/src/rclcpp/parameter_event_handler.cpp b/rclcpp/src/rclcpp/parameter_event_handler.cpp
+index 6ba52668..941c34e9 100644
+--- a/rclcpp/src/rclcpp/parameter_event_handler.cpp
++++ b/rclcpp/src/rclcpp/parameter_event_handler.cpp
+@@ -104,19 +104,19 @@ ParameterEventHandler::get_parameter_from_event(
+   const std::string & parameter_name,
+   const std::string & node_name)
+ {
+-  if (event.node != node_name) {
++  if (strcmp(event.node.c_str(), node_name.c_str()) != 0) {
+     return false;
+   }
+ 
+   for (auto & new_parameter : event.new_parameters) {
+-    if (new_parameter.name == parameter_name) {
++    if (strcmp(new_parameter.name.c_str(), parameter_name.c_str()) == 0) {
+       parameter = rclcpp::Parameter::from_parameter_msg(new_parameter);
+       return true;
+     }
+   }
+ 
+   for (auto & changed_parameter : event.changed_parameters) {
+-    if (changed_parameter.name == parameter_name) {
++    if (strcmp(changed_parameter.name.c_str(), parameter_name.c_str()) == 0) {
+       parameter = rclcpp::Parameter::from_parameter_msg(changed_parameter);
+       return true;
+     }
+diff --git a/rclcpp/src/rclcpp/parameter_events_filter.cpp b/rclcpp/src/rclcpp/parameter_events_filter.cpp
+index be9882c8..57894aa2 100644
+--- a/rclcpp/src/rclcpp/parameter_events_filter.cpp
++++ b/rclcpp/src/rclcpp/parameter_events_filter.cpp
+@@ -30,7 +30,7 @@ ParameterEventsFilter::ParameterEventsFilter(
+ {
+   if (std::find(types.begin(), types.end(), EventType::NEW) != types.end()) {
+     for (auto & new_parameter : event->new_parameters) {
+-      if (std::find(names.begin(), names.end(), new_parameter.name) != names.end()) {
++      if (std::find_if(names.begin(), names.end(), [&new_parameter](const auto& name){ return strcmp(new_parameter.name.c_str(), name.c_str()) == 0; }) != names.end()) {
+         result_.push_back(
+           EventPair(EventType::NEW, &new_parameter));
+       }
+@@ -38,7 +38,7 @@ ParameterEventsFilter::ParameterEventsFilter(
+   }
+   if (std::find(types.begin(), types.end(), EventType::CHANGED) != types.end()) {
+     for (auto & changed_parameter : event->changed_parameters) {
+-      if (std::find(names.begin(), names.end(), changed_parameter.name) != names.end()) {
++      if (std::find_if(names.begin(), names.end(), [&changed_parameter](const auto& name){ return strcmp(changed_parameter.name.c_str(), name.c_str()) == 0; }) != names.end()) {
+         result_.push_back(
+           EventPair(EventType::CHANGED, &changed_parameter));
+       }
+@@ -46,7 +46,7 @@ ParameterEventsFilter::ParameterEventsFilter(
+   }
+   if (std::find(types.begin(), types.end(), EventType::DELETED) != types.end()) {
+     for (auto & deleted_parameter : event->deleted_parameters) {
+-      if (std::find(names.begin(), names.end(), deleted_parameter.name) != names.end()) {
++      if (std::find_if(names.begin(), names.end(), [&deleted_parameter](const auto& name){ return strcmp(deleted_parameter.name.c_str(), name.c_str()) == 0; }) != names.end()) {
+         result_.push_back(
+           EventPair(EventType::DELETED, &deleted_parameter));
+       }
+diff --git a/rclcpp/src/rclcpp/parameter_service.cpp b/rclcpp/src/rclcpp/parameter_service.cpp
+index 5c309174..e8f71586 100644
+--- a/rclcpp/src/rclcpp/parameter_service.cpp
++++ b/rclcpp/src/rclcpp/parameter_service.cpp
+@@ -135,7 +135,7 @@ ParameterService::ParameterService(
+     {
+       try {
+         auto descriptors = node_params->describe_parameters(request->names);
+-        response->descriptors = descriptors;
++        response->descriptors.assign(descriptors.begin(), descriptors.end());
+       } catch (const rclcpp::exceptions::ParameterNotDeclaredException & ex) {
+         RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "Failed to describe parameters: %s", ex.what());
+       }
+diff --git a/rclcpp/src/rclcpp/parameter_value.cpp b/rclcpp/src/rclcpp/parameter_value.cpp
+index e88b2254..48126ccd 100644
+--- a/rclcpp/src/rclcpp/parameter_value.cpp
++++ b/rclcpp/src/rclcpp/parameter_value.cpp
+@@ -166,7 +166,7 @@ ParameterValue::ParameterValue(const double double_value)
+ 
+ ParameterValue::ParameterValue(const std::string & string_value)
+ {
+-  value_.string_value = string_value;
++  value_.string_value.assign(string_value.begin(), string_value.end());
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+ }
+ 
+@@ -176,13 +176,13 @@ ParameterValue::ParameterValue(const char * string_value)
+ 
+ ParameterValue::ParameterValue(const std::vector<uint8_t> & byte_array_value)
+ {
+-  value_.byte_array_value = byte_array_value;
++  value_.byte_array_value.assign(byte_array_value.cbegin(), byte_array_value.cend());
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_BYTE_ARRAY;
+ }
+ 
+ ParameterValue::ParameterValue(const std::vector<bool> & bool_array_value)
+ {
+-  value_.bool_array_value = bool_array_value;
++  value_.bool_array_value.assign(bool_array_value.cbegin(), bool_array_value.cend());
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL_ARRAY;
+ }
+ 
+@@ -194,7 +194,7 @@ ParameterValue::ParameterValue(const std::vector<int> & int_array_value)
+ 
+ ParameterValue::ParameterValue(const std::vector<int64_t> & int_array_value)
+ {
+-  value_.integer_array_value = int_array_value;
++  value_.integer_array_value.assign(int_array_value.cbegin(), int_array_value.cend());
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER_ARRAY;
+ }
+ 
+@@ -206,13 +206,18 @@ ParameterValue::ParameterValue(const std::vector<float> & float_array_value)
+ 
+ ParameterValue::ParameterValue(const std::vector<double> & double_array_value)
+ {
+-  value_.double_array_value = double_array_value;
++  value_.double_array_value.assign(double_array_value.cbegin(), double_array_value.cend());
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE_ARRAY;
+ }
+ 
+ ParameterValue::ParameterValue(const std::vector<std::string> & string_array_value)
+ {
+-  value_.string_array_value = string_array_value;
++  value_.string_array_value.clear();
++  value_.string_array_value.resize(string_array_value.size());
++  for (int i = 0; i < string_array_value.size(); ++i)
++  {
++    value_.string_array_value[i].assign(string_array_value[i].begin(), string_array_value[i].end());
++  }
+   value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+ }
+ 
+diff --git a/rclcpp/src/rclcpp/qos_overriding_options.cpp b/rclcpp/src/rclcpp/qos_overriding_options.cpp
+index ab5d705b..f6f32ca9 100644
+--- a/rclcpp/src/rclcpp/qos_overriding_options.cpp
++++ b/rclcpp/src/rclcpp/qos_overriding_options.cpp
+@@ -43,42 +43,4 @@ operator<<(std::ostream & oss, const QosPolicyKind & qpk)
+   return oss << qos_policy_kind_to_cstr(qpk);
+ }
+ 
+-static std::initializer_list<QosPolicyKind> kDefaultPolicies =
+-{QosPolicyKind::History, QosPolicyKind::Depth, QosPolicyKind::Reliability};
+-
+-QosOverridingOptions::QosOverridingOptions(
+-  std::initializer_list<QosPolicyKind> policy_kinds,
+-  QosCallback validation_callback,
+-  std::string id)
+-: id_{std::move(id)},
+-  policy_kinds_{policy_kinds},
+-  validation_callback_{std::move(validation_callback)}
+-{}
+-
+-QosOverridingOptions
+-QosOverridingOptions::with_default_policies(
+-  QosCallback validation_callback,
+-  std::string id)
+-{
+-  return QosOverridingOptions{kDefaultPolicies, validation_callback, id};
+-}
+-
+-const std::string &
+-QosOverridingOptions::get_id() const
+-{
+-  return id_;
+-}
+-
+-const std::vector<QosPolicyKind> &
+-QosOverridingOptions::get_policy_kinds() const
+-{
+-  return policy_kinds_;
+-}
+-
+-const QosCallback &
+-QosOverridingOptions::get_validation_callback() const
+-{
+-  return validation_callback_;
+-}
+-
+ }  // namespace rclcpp
+diff --git a/rclcpp/src/rclcpp/time.cpp b/rclcpp/src/rclcpp/time.cpp
+index 556a5e69..bb3379f3 100644
+--- a/rclcpp/src/rclcpp/time.cpp
++++ b/rclcpp/src/rclcpp/time.cpp
+@@ -29,11 +29,11 @@
+ 
+ #include "rclcpp/utilities.hpp"
+ 
+-namespace
++namespace rclcpp
+ {
+ 
+ rcl_time_point_t
+-init_time_point(rcl_clock_type_t & clock_type)
++init_time_point(rcl_clock_type_t& clock_type)
+ {
+   rcl_time_point_t time_point;
+   time_point.clock_type = clock_type;
+@@ -41,11 +41,6 @@ init_time_point(rcl_clock_type_t & clock_type)
+   return time_point;
+ }
+ 
+-}  // namespace
+-
+-namespace rclcpp
+-{
+-
+ Time::Time(int32_t seconds, uint32_t nanoseconds, rcl_clock_type_t clock_type)
+ : rcl_time_(init_time_point(clock_type))
+ {
+@@ -65,19 +60,6 @@ Time::Time(int64_t nanoseconds, rcl_clock_type_t clock_type)
+ 
+ Time::Time(const Time & rhs) = default;
+ 
+-Time::Time(
+-  const builtin_interfaces::msg::Time & time_msg,
+-  rcl_clock_type_t clock_type)
+-: rcl_time_(init_time_point(clock_type))
+-{
+-  if (time_msg.sec < 0) {
+-    throw std::runtime_error("cannot store a negative time point in rclcpp::Time");
+-  }
+-
+-  rcl_time_.nanoseconds = RCL_S_TO_NS(static_cast<int64_t>(time_msg.sec));
+-  rcl_time_.nanoseconds += time_msg.nanosec;
+-}
+-
+ Time::Time(const rcl_time_point_t & time_point)
+ : rcl_time_(time_point)
+ {
+@@ -88,31 +70,9 @@ Time::~Time()
+ {
+ }
+ 
+-Time::operator builtin_interfaces::msg::Time() const
+-{
+-  builtin_interfaces::msg::Time msg_time;
+-  constexpr rcl_time_point_value_t kRemainder = RCL_S_TO_NS(1);
+-  const auto result = std::div(rcl_time_.nanoseconds, kRemainder);
+-  if (result.rem >= 0) {
+-    msg_time.sec = static_cast<std::int32_t>(result.quot);
+-    msg_time.nanosec = static_cast<std::uint32_t>(result.rem);
+-  } else {
+-    msg_time.sec = static_cast<std::int32_t>(result.quot - 1);
+-    msg_time.nanosec = static_cast<std::uint32_t>(kRemainder + result.rem);
+-  }
+-  return msg_time;
+-}
+-
+ Time &
+ Time::operator=(const Time & rhs) = default;
+ 
+-Time &
+-Time::operator=(const builtin_interfaces::msg::Time & time_msg)
+-{
+-  *this = Time(time_msg);
+-  return *this;
+-}
+-
+ bool
+ Time::operator==(const rclcpp::Time & rhs) const
+ {
 diff --git a/rclcpp/test/rclcpp/test_intra_process_manager.cpp b/rclcpp/test/rclcpp/test_intra_process_manager.cpp
 index 45d916b0..c0548033 100644
 --- a/rclcpp/test/rclcpp/test_intra_process_manager.cpp
@@ -397,6 +2234,47 @@ index 45d916b0..c0548033 100644
    explicit SubscriptionIntraProcessBase(
      rclcpp::Context::SharedPtr context,
      const std::string & topic = "topic",
+diff --git a/rclcpp_components/src/component_manager.cpp b/rclcpp_components/src/component_manager.cpp
+index 16329a42..f8528c5c 100644
+--- a/rclcpp_components/src/component_manager.cpp
++++ b/rclcpp_components/src/component_manager.cpp
+@@ -148,19 +148,19 @@ ComponentManager::create_node_options(const std::shared_ptr<LoadNode::Request> r
+   std::vector<std::string> remap_rules;
+   remap_rules.reserve(request->remap_rules.size() * 2 + 1);
+   remap_rules.push_back("--ros-args");
+-  for (const std::string & rule : request->remap_rules) {
++  for (const auto & rule : request->remap_rules) {
+     remap_rules.push_back("-r");
+-    remap_rules.push_back(rule);
++    remap_rules.emplace_back(rule.c_str());
+   }
+ 
+   if (!request->node_name.empty()) {
+     remap_rules.push_back("-r");
+-    remap_rules.push_back("__node:=" + request->node_name);
++    remap_rules.push_back("__node:=" + std::string(request->node_name.c_str()));
+   }
+ 
+   if (!request->node_namespace.empty()) {
+     remap_rules.push_back("-r");
+-    remap_rules.push_back("__ns:=" + request->node_namespace);
++    remap_rules.push_back("__ns:=" + std::string(request->node_namespace.c_str()));
+   }
+ 
+   auto options = rclcpp::NodeOptions()
+@@ -225,10 +225,10 @@ ComponentManager::on_load_node(
+   (void) request_header;
+ 
+   try {
+-    auto resources = get_component_resources(request->package_name);
++    auto resources = get_component_resources(std::string(request->package_name.c_str()));
+ 
+     for (const auto & resource : resources) {
+-      if (resource.first != request->plugin_name) {
++      if (strcmp(resource.first.c_str(), request->plugin_name.c_str()) != 0) {
+         continue;
+       }
+       auto factory = create_component_factory(resource);
 diff --git a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
 index 22fd7f9c..667d4ec7 100644
 --- a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
@@ -410,6 +2288,19 @@ index 22fd7f9c..667d4ec7 100644
    node_services_->add_client(cli_base_ptr, group);
    return cli;
  }
+diff --git a/rclcpp_lifecycle/src/lifecycle_node.cpp b/rclcpp_lifecycle/src/lifecycle_node.cpp
+index 333edf41..b408c143 100644
+--- a/rclcpp_lifecycle/src/lifecycle_node.cpp
++++ b/rclcpp_lifecycle/src/lifecycle_node.cpp
+@@ -252,7 +252,7 @@ LifecycleNode::get_parameter(
+ rcl_interfaces::msg::ParameterDescriptor
+ LifecycleNode::describe_parameter(const std::string & name) const
+ {
+-  auto result = node_parameters_->describe_parameters({name});
++  auto result = node_parameters_->describe_parameters(std::vector<std::string>({name}));
+   if (0 == result.size()) {
+     throw rclcpp::exceptions::ParameterNotDeclaredException(name);
+   }
 diff --git a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp b/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
 index 13110d29..0f521b55 100644
 --- a/rclcpp_lifecycle/src/lifecycle_node_interface_impl.hpp
