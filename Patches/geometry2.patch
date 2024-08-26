@@ -5564,7 +5564,7 @@ index afb90fb6..d386533b 100644
    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 diff --git a/tf2/include/tf2/buffer_core.h b/tf2/include/tf2/buffer_core.h
-index b8eb7fe4..72598b31 100644
+index b8eb7fe4..724c38b0 100644
 --- a/tf2/include/tf2/buffer_core.h
 +++ b/tf2/include/tf2/buffer_core.h
 @@ -33,7 +33,6 @@
@@ -5575,13 +5575,15 @@ index b8eb7fe4..72598b31 100644
  #include <cmath>
  #include <functional>
  #include <map>
-@@ -51,6 +50,63 @@
+@@ -51,6 +50,65 @@
  #include "tf2/transform_storage.h"
  #include "tf2/visibility_control.h"
  
 +#include <cassert>
 +#include <chrono>
++#ifdef _WIN32
 +#include <xmemory>
++#endif
 +
 +#include "tf2/time_cache.h"
 +#include "tf2/exceptions.h"
@@ -5639,7 +5641,7 @@ index b8eb7fe4..72598b31 100644
  namespace tf2
  {
  
-@@ -65,10 +121,128 @@ enum TransformableResult
+@@ -65,10 +123,128 @@ enum TransformableResult
    TransformAvailable,
    TransformFailure,
  };
@@ -5768,7 +5770,7 @@ index b8eb7fe4..72598b31 100644
  /** \brief A Class which provides coordinate transforms between any two frames in a system.
   *
   * This class provides a simple interface to allow recording and lookup of
-@@ -87,7 +261,8 @@ static constexpr Duration BUFFER_CORE_DEFAULT_CACHE_TIME = std::chrono::seconds(
+@@ -87,7 +263,8 @@ static constexpr Duration BUFFER_CORE_DEFAULT_CACHE_TIME = std::chrono::seconds(
   *
   * All function calls which pass frame ids can potentially throw the exception tf::LookupException
   */
@@ -5778,7 +5780,7 @@ index b8eb7fe4..72598b31 100644
  {
  public:
    /************* Constants ***********************/
-@@ -100,15 +275,33 @@ public:
+@@ -100,15 +277,33 @@ public:
     * \param cache_time How long to keep a history of transforms in nanoseconds
     *
     */
@@ -5818,7 +5820,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Add transform information to the tf data structure
     * \param transform The transform to store
-@@ -116,13 +309,29 @@ public:
+@@ -116,13 +311,29 @@ public:
     * \param is_static Record this transform as a static transform.  It will be good across all time.  (This cannot be changed after the first call.)
     * \return True unless an error occured
     */
@@ -5852,7 +5854,7 @@ index b8eb7fe4..72598b31 100644
    /** \brief Get the transform between two frames by frame ID.
     * \param target_frame The frame to which data should be transformed
     * \param source_frame The frame where the data originated
-@@ -132,11 +341,33 @@ public:
+@@ -132,11 +343,33 @@ public:
     * Possible exceptions tf2::LookupException, tf2::ConnectivityException,
     * tf2::ExtrapolationException, tf2::InvalidArgumentException
     */
@@ -5889,7 +5891,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Get the transform between two frames by frame ID assuming fixed frame.
     * \param target_frame The frame to which data should be transformed
-@@ -150,12 +381,36 @@ public:
+@@ -150,12 +383,36 @@ public:
     * tf2::ExtrapolationException, tf2::InvalidArgumentException
     */
  
@@ -5929,7 +5931,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Test if a transform is possible
     * \param target_frame The frame into which to transform
-@@ -164,10 +419,28 @@ public:
+@@ -164,10 +421,28 @@ public:
     * \param error_msg A pointer to a string which will be filled with why the transform failed, if not nullptr
     * \return True if the transform is possible, false otherwise
     */
@@ -5960,7 +5962,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Test if a transform is possible
     * \param target_frame The frame into which to transform
-@@ -178,33 +451,127 @@ public:
+@@ -178,33 +453,127 @@ public:
     * \param error_msg A pointer to a string which will be filled with why the transform failed, if not nullptr
     * \return True if the transform is possible, false otherwise
     */
@@ -6098,7 +6100,7 @@ index b8eb7fe4..72598b31 100644
  
    using TransformableCallback = std::function<
      void (TransformableRequestHandle request_handle, const std::string & target_frame,
-@@ -212,23 +579,121 @@ public:
+@@ -212,23 +581,121 @@ public:
      TimePoint time, TransformableResult result)>;
  
    /// \brief Internal use only
@@ -6226,7 +6228,7 @@ index b8eb7fe4..72598b31 100644
    bool isUsingDedicatedThread() const {return using_dedicated_thread_;}
  
  
-@@ -237,33 +702,59 @@ public:
+@@ -237,33 +704,59 @@ public:
  
    /**@brief Check if a frame exists in the tree
     * @param frame_id_str The frame id in question  */
@@ -6296,7 +6298,7 @@ index b8eb7fe4..72598b31 100644
    tf2::TF2Error _getLatestCommonTime(
      CompactFrameID target_frame, CompactFrameID source_frame,
      TimePoint & time, std::string * error_string) const
-@@ -271,8 +762,7 @@ public:
+@@ -271,8 +764,7 @@ public:
      std::unique_lock<std::mutex> lock(frame_mutex_);
      return getLatestCommonTime(target_frame, source_frame, time, error_string);
    }
@@ -6306,7 +6308,7 @@ index b8eb7fe4..72598b31 100644
    CompactFrameID _validateFrameId(
      const char * function_name_arg,
      const std::string & frame_id) const
-@@ -281,26 +771,201 @@ public:
+@@ -281,26 +773,201 @@ public:
    }
  
    /**@brief Get the duration over which this transformer will cache */
@@ -6515,7 +6517,7 @@ index b8eb7fe4..72598b31 100644
  
  private:
    /******************** Internal Storage ****************/
-@@ -324,25 +989,11 @@ private:
+@@ -324,25 +991,11 @@ private:
  
    /// How long to cache transform history
    tf2::Duration cache_time_;
@@ -6543,7 +6545,7 @@ index b8eb7fe4..72598b31 100644
    typedef std::vector<TransformableRequest> V_TransformableRequest;
    V_TransformableRequest transformable_requests_;
    std::mutex transformable_requests_mutex_;
-@@ -355,27 +1006,224 @@ private:
+@@ -355,27 +1008,224 @@ private:
    /** \brief A way to see what frames have been cached
     * Useful for debugging. Use this call internally.
     */
@@ -6776,7 +6778,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Validate a frame ID format and look up its CompactFrameID.
      *   For invalid cases, produce an message.
-@@ -389,7 +1237,27 @@ private:
+@@ -389,7 +1239,27 @@ private:
    CompactFrameID validateFrameId(
      const char * function_name_arg,
      const std::string & frame_id,
@@ -6805,7 +6807,7 @@ index b8eb7fe4..72598b31 100644
  
    /** \brief Validate a frame ID format and look it up its compact ID.
      *   Raise an exception for invalid cases.
-@@ -402,26 +1270,237 @@ private:
+@@ -402,26 +1272,237 @@ private:
      */
    CompactFrameID validateFrameId(
      const char * function_name_arg,
@@ -7050,7 +7052,7 @@ index b8eb7fe4..72598b31 100644
  
    /**@brief Traverse the transform tree. If frame_chain is not nullptr, store the traversed frame tree in vector frame_chain.
     * */
-@@ -429,14 +1508,259 @@ private:
+@@ -429,14 +1510,259 @@ private:
    tf2::TF2Error walkToTopParent(
      F & f, TimePoint time, CompactFrameID target_id,
      CompactFrameID source_id, std::string * error_string,
@@ -9879,7 +9881,7 @@ index 14466691..e3d29cc4 100644
    rclcpp_action::Server<LookupTransformAction>::SharedPtr server_;
    std::list<GoalInfo> active_goals_;
 diff --git a/tf2_ros/include/tf2_ros/static_transform_broadcaster.h b/tf2_ros/include/tf2_ros/static_transform_broadcaster.h
-index 2637ab70..4f43c9e7 100644
+index 2637ab70..f136237c 100644
 --- a/tf2_ros/include/tf2_ros/static_transform_broadcaster.h
 +++ b/tf2_ros/include/tf2_ros/static_transform_broadcaster.h
 @@ -43,6 +43,30 @@
@@ -9923,7 +9925,7 @@ index 2637ab70..4f43c9e7 100644
  public:
    /** \brief Node interface constructor */
 -  template<class NodeT, class AllocatorT = std::allocator<void>>
-+  template<class NodeT, class AllocatorT = std::pmr::polymorphic_allocator<void>>
++  template<class NodeT>
    StaticTransformBroadcaster(
      NodeT && node,
      const rclcpp::QoS & qos = StaticBroadcasterQoS(),

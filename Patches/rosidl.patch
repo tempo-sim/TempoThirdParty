@@ -290,7 +290,7 @@ index 713aa66..57ac3e0 100644
    size_t index = 0;
    while (index < value.size()) {
 diff --git a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em b/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
-index 60cc226..5cc0359 100644
+index 60cc226..d713a34 100644
 --- a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
 +++ b/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
 @@ -40,6 +40,11 @@ header_files = [
@@ -305,6 +305,18 @@ index 60cc226..5cc0359 100644
  @[for ns in message.structure.namespaced_type.namespaces]@
  
  namespace @(ns)
+@@ -74,9 +79,9 @@ from rosidl_generator_cpp import  MSG_TYPE_TO_CPP
+ if isinstance(member.type.value_type, BasicType):
+     type_ = MSG_TYPE_TO_CPP[member.type.value_type.typename]
+ elif isinstance(member.type.value_type, AbstractString):
+-    type_ = 'std::string'
++    type_ = 'std::pmr::string'
+ elif isinstance(member.type.value_type, AbstractWString):
+-    type_ = 'std::u16string'
++    type_ = 'std::pmr::u16string'
+ elif isinstance(member.type.value_type, NamespacedType):
+     type_ = '::'.join(member.type.value_type.namespaced_name())
+ }@
 @@ -86,7 +91,7 @@ size_t size_function__@(message.structure.namespaced_type.name)__@(member.name)(
    (void)untyped_member;
    return @(member.type.size);

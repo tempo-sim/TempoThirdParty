@@ -1,8 +1,39 @@
+diff --git a/cmake/common/check_configuration.cmake b/cmake/common/check_configuration.cmake
+index 25c8055..975d988 100644
+--- a/cmake/common/check_configuration.cmake
++++ b/cmake/common/check_configuration.cmake
+@@ -19,11 +19,20 @@ macro(check_stdcxx)
+         CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+         CMAKE_CXX_COMPILER_ID MATCHES "QCC")
+         check_cxx_compiler_flag(-std=c++14 SUPPORTS_CXX14)
++	check_cxx_compiler_flag(-std=c++17 SUPPORTS_CXX17)
++        set(HAVE_CXX17 0)
+         set(HAVE_CXX14 0)
+         set(HAVE_CXX1Y 0)
+         set(HAVE_CXX11 0)
+         set(HAVE_CXX0X 0)
+-        if(SUPPORTS_CXX14)
++        if(SUPPORTS_CXX17)
++            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=c++17>)
++            set(HAVE_CXX17 1)
++            set(HAVE_CXX14 1)
++            set(HAVE_CXX1Y 1)
++            set(HAVE_CXX11 1)
++            set(HAVE_CXX0X 1)
++        elseif(SUPPORTS_CXX14)
+             add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=c++14>)
+             set(HAVE_CXX14 1)
+             set(HAVE_CXX1Y 1)
 diff --git a/include/fastcdr/Cdr.h b/include/fastcdr/Cdr.h
-index 6e7bae1..1a96d98 100644
+index 6e7bae1..da38a46 100644
 --- a/include/fastcdr/Cdr.h
 +++ b/include/fastcdr/Cdr.h
-@@ -22,13 +22,14 @@
+@@ -18,17 +18,19 @@
+ #include "fastcdr_dll.h"
+ #include "FastBuffer.h"
+ #include "exceptions/NotEnoughMemoryException.h"
++#include <fastcdr/exceptions/BadParamException.h>
+ #include <stdint.h>
  #include <string>
  #include <vector>
  #include <map>
@@ -19,59 +50,81 @@ index 6e7bae1..1a96d98 100644
  
  #if HAVE_CXX0X
  #include <array>
-@@ -470,8 +471,9 @@ public:
+@@ -470,8 +472,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline Cdr& operator <<(
 -            const std::string& string_t)
-+            const std::basic_string<T, Traits, Allocator>& string_t)
++            const std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t)
      {
          return serialize(string_t);
      }
-@@ -510,11 +512,11 @@ public:
+@@ -482,8 +485,9 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
+     inline Cdr& operator <<(
+-            const std::wstring& string_t)
++            const std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>& string_t)
+     {
+         return serialize(string_t);
+     }
+@@ -510,11 +514,11 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      inline Cdr& operator <<(
 -            const std::vector<_T>& vector_t)
-+            const std::vector<_T, Allocator>& vector_t)
++            const std::vector<_T, AllocatorT>& vector_t)
      {
 -        return serialize<_T>(vector_t);
-+        return serialize<_T, Allocator>(vector_t);
++        return serialize<_T, AllocatorT>(vector_t);
      }
  
      /*!
-@@ -735,8 +737,9 @@ public:
+@@ -735,8 +739,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline Cdr& operator >>(
 -            std::string& string_t)
-+            std::basic_string<T, Traits, Allocator>& string_t)
++            std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t)
      {
          return deserialize(string_t);
      }
-@@ -775,11 +778,11 @@ public:
+@@ -747,8 +752,9 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
+     inline Cdr& operator >>(
+-            std::wstring& string_t)
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>& string_t)
+     {
+         return deserialize(string_t);
+     }
+@@ -775,11 +781,11 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      inline Cdr& operator >>(
 -            std::vector<_T>& vector_t)
-+            std::vector<_T, Allocator>& vector_t)
++            std::vector<_T, AllocatorT>& vector_t)
      {
 -        return deserialize<_T>(vector_t);
-+        return deserialize<_T, Allocator>(vector_t);
++        return deserialize<_T, AllocatorT>(vector_t);
      }
  
      /*!
-@@ -1203,14 +1206,15 @@ public:
+@@ -1203,14 +1209,15 @@ public:
              Endianness endianness);
  
      /*!
@@ -81,81 +134,84 @@ index 6e7bae1..1a96d98 100644
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline
      Cdr& serialize(
 -            const std::string& string_t)
-+            const std::basic_string<T, Traits, Allocator>& string_t)
++            const std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t)
      {
          return serialize(string_t.c_str());
      }
-@@ -1235,9 +1239,10 @@ public:
+@@ -1221,9 +1228,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
+     inline
+     Cdr& serialize(
+-            const std::wstring& string_t)
++            const std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>& string_t)
+     {
+         return serialize(string_t.c_str());
+     }
+@@ -1235,9 +1243,10 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
      inline
      Cdr& serialize(
 -            const std::string& string_t,
-+            const std::basic_string<T, Traits, Allocator>& string_t,
++            const std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t,
              Endianness endianness)
      {
          return serialize(string_t.c_str(), endianness);
-@@ -1281,9 +1286,9 @@ public:
+@@ -1281,9 +1290,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<class _T = bool>
-+    template<class _T = bool, class Allocator>
++    template<class _T = bool, class AllocatorT>
      Cdr& serialize(
 -            const std::vector<bool>& vector_t)
-+            const std::vector<bool, Allocator>& vector_t)
++            const std::vector<bool, AllocatorT>& vector_t)
      {
          return serializeBoolSequence(vector_t);
      }
-@@ -1296,9 +1301,9 @@ public:
+@@ -1296,9 +1305,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& serialize(
 -            const std::vector<_T>& vector_t)
-+            const std::vector<_T, Allocator>& vector_t)
++            const std::vector<_T, AllocatorT>& vector_t)
      {
          state state_before_error(*this);
  
-@@ -1356,13 +1361,20 @@ public:
+@@ -1356,9 +1365,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<>
 +    template <>
++    template<class AllocatorT>
      Cdr& serialize<bool>(
-             const std::vector<bool>& vector_t)
+-            const std::vector<bool>& vector_t)
++            const std::vector<bool, AllocatorT>& vector_t)
      {
          return serializeBoolSequence(vector_t);
      }
- 
-+    template <>
-+    Cdr& serialize<bool, std::pmr::polymorphic_allocator<bool>>(
-+            const std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
-+    {
-+        return serializeBoolSequence(vector_t);
-+    }
-+
- #endif // ifdef _MSC_VER
- 
-     /*!
-@@ -1372,13 +1384,14 @@ public:
+@@ -1372,13 +1382,14 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& serialize(
 -            const std::vector<_T>& vector_t,
-+            const std::vector<_T, Allocator>& vector_t,
++            const std::vector<_T, AllocatorT>& vector_t,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -165,27 +221,39 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -1803,9 +1816,10 @@ public:
+@@ -1803,9 +1814,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline
      Cdr& serializeArray(
 -            const std::string* string_t,
-+            const std::basic_string<T, Traits, Allocator>* string_t,
++            const std::basic_string<char, std::char_traits<char>, AllocatorT>* string_t,
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -1842,14 +1856,16 @@ public:
+@@ -1822,9 +1834,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
+     inline
+     Cdr& serializeArray(
+-            const std::wstring* string_t,
++            const std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>* string_t,
+             size_t numElements)
+     {
+         for (size_t count = 0; count < numElements; ++count)
+@@ -1842,14 +1855,16 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
      inline
      Cdr& serializeArray(
 -            const std::string* string_t,
-+            const std::basic_string<T, Traits, Allocator>* string_t,
++            const std::basic_string<char, std::char_traits<char>, AllocatorT>* string_t,
              size_t numElements,
              Endianness endianness)
      {
@@ -196,7 +264,16 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -1880,7 +1896,8 @@ public:
+@@ -1873,14 +1888,16 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
+     inline
+     Cdr& serializeArray(
+-            const std::wstring* string_t,
++            const std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>* string_t,
+             size_t numElements,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -211,10 +288,10 @@ index 6e7bae1..1a96d98 100644
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& serializeArray(
 -            const std::vector<_T>* vector_t,
-+            const std::vector<_T, Allocator>* vector_t,
++            const std::vector<_T, AllocatorT>* vector_t,
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
@@ -248,11 +325,11 @@ index 6e7bae1..1a96d98 100644
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline
      Cdr& deserialize(
 -            std::string& string_t)
-+            std::basic_string<T, Traits, Allocator>& string_t)
++            std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t)
      {
          uint32_t length = 0;
          const char* str = readString(length);
@@ -261,15 +338,31 @@ index 6e7bae1..1a96d98 100644
          return *this;
      }
  
-@@ -2463,13 +2483,15 @@ public:
+@@ -2447,12 +2467,13 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
+     inline
+     Cdr& deserialize(
+-            std::wstring& string_t)
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>& string_t)
+     {
+         uint32_t length = 0;
+-        string_t = readWString(length);
++        string_t = readWString<AllocatorT>(length);
+         return *this;
+     }
+ 
+@@ -2463,13 +2484,15 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
      inline
      Cdr& deserialize(
 -            std::string& string_t,
-+            std::basic_string<T, Traits, Allocator>& string_t,
++            std::basic_string<char, std::char_traits<char>, AllocatorT>& string_t,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -279,7 +372,15 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -2498,7 +2520,8 @@ public:
+@@ -2492,13 +2515,15 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
+     inline
+     Cdr& deserialize(
+-            std::wstring& string_t,
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>& string_t,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -289,61 +390,52 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -2552,9 +2575,9 @@ public:
+@@ -2552,9 +2577,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<class _T = bool>
-+    template<class _T = bool, class Allocator>
++    template<class _T = bool, class AllocatorT>
      Cdr& deserialize(
 -            std::vector<bool>& vector_t)
-+            std::vector<bool, Allocator>& vector_t)
++            std::vector<bool, AllocatorT>& vector_t)
      {
          return deserializeBoolSequence(vector_t);
      }
-@@ -2567,9 +2590,9 @@ public:
+@@ -2567,9 +2592,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& deserialize(
 -            std::vector<_T>& vector_t)
-+            std::vector<_T, Allocator>& vector_t)
++            std::vector<_T, AllocatorT>& vector_t)
      {
          uint32_t seqLength = 0;
          state state_before_error(*this);
-@@ -2645,13 +2668,20 @@ public:
+@@ -2645,9 +2670,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<>
 +    template <>
++    template<class AllocatorT>
      Cdr& deserialize<bool>(
-             std::vector<bool>& vector_t)
+-            std::vector<bool>& vector_t)
++            std::vector<bool, AllocatorT>& vector_t)
      {
          return deserializeBoolSequence(vector_t);
      }
- 
-+    template <>
-+    Cdr& deserialize<bool, std::pmr::polymorphic_allocator<bool>>(
-+            std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
-+    {
-+        return deserializeBoolSequence(vector_t);
-+    }
-+
- #endif // ifdef _MSC_VER
- 
-     /*!
-@@ -2661,13 +2691,14 @@ public:
+@@ -2661,13 +2687,14 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& deserialize(
 -            std::vector<_T>& vector_t,
-+            std::vector<_T, Allocator>& vector_t,
++            std::vector<_T, AllocatorT>& vector_t,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -353,27 +445,39 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -3090,9 +3121,10 @@ public:
+@@ -3090,9 +3117,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
      inline
      Cdr& deserializeArray(
 -            std::string* string_t,
-+            std::basic_string<T, Traits, Allocator>* string_t,
++            std::basic_string<char, std::char_traits<char>, AllocatorT>* string_t,
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -3129,14 +3161,16 @@ public:
+@@ -3109,9 +3137,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template<class AllocatorT>
+     inline
+     Cdr& deserializeArray(
+-            std::wstring* string_t,
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>* string_t,
+             size_t numElements)
+     {
+         for (size_t count = 0; count < numElements; ++count)
+@@ -3129,14 +3158,16 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
      inline
      Cdr& deserializeArray(
 -            std::string* string_t,
-+            std::basic_string<T, Traits, Allocator>* string_t,
++            std::basic_string<char, std::char_traits<char>, AllocatorT>* string_t,
              size_t numElements,
              Endianness endianness)
      {
@@ -384,7 +488,16 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -3167,7 +3201,8 @@ public:
+@@ -3160,14 +3191,16 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
++    template<class AllocatorT>
+     inline
+     Cdr& deserializeArray(
+-            std::wstring* string_t,
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>* string_t,
+             size_t numElements,
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -394,19 +507,19 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -3190,9 +3225,9 @@ public:
+@@ -3190,9 +3223,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<class _T>
-+    template<class _T, class Allocator>
++    template<class _T, class AllocatorT>
      Cdr& deserializeArray(
 -            std::vector<_T>* vector_t,
-+            std::vector<_T, Allocator>* vector_t,
++            std::vector<_T, AllocatorT>* vector_t,
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -3236,7 +3271,8 @@ public:
+@@ -3236,7 +3269,8 @@ public:
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -416,6 +529,54 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
+@@ -3262,9 +3296,9 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
+-    template<class _T = std::string>
++    template<class _T = std::string, class AllocatorT>
+     Cdr& deserializeSequence(
+-            std::string*& sequence_t,
++            std::basic_string<char, std::char_traits<char>, AllocatorT>*& sequence_t,
+             size_t& numElements)
+     {
+         return deserializeStringSequence(sequence_t, numElements);
+@@ -3279,9 +3313,9 @@ public:
+      * @return Reference to the eprosima::fastcdr::Cdr object.
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
+-    template<class _T = std::wstring>
++    template<class _T = std::wstring, class AllocatorT>
+     Cdr& deserializeSequence(
+-            std::wstring*& sequence_t,
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>*& sequence_t,
+             size_t& numElements)
+     {
+         return deserializeWStringSequence(sequence_t, numElements);
+@@ -3336,8 +3370,9 @@ public:
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
+     template<>
+-    Cdr& deserializeSequence<std::string>(
+-            std::string*& sequence_t,
++    template<class AllocatorT>
++    Cdr& deserializeSequence<std::basic_string<char, std::char_traits<char>, AllocatorT>>(
++            std::basic_string<char, std::char_traits<char>, AllocatorT>*& sequence_t,
+             size_t& numElements)
+     {
+         return deserializeStringSequence(sequence_t, numElements);
+@@ -3353,8 +3388,9 @@ public:
+      * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
+      */
+     template<>
+-    Cdr& deserializeSequence<std::wstring>(
+-            std::wstring*& sequence_t,
++    template<class AllocatorT>
++    Cdr& deserializeSequence<std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>>(
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>*& sequence_t,
+             size_t& numElements)
+     {
+         return deserializeWStringSequence(sequence_t, numElements);
 @@ -3379,7 +3415,8 @@ public:
              Endianness endianness)
      {
@@ -426,22 +587,199 @@ index 6e7bae1..1a96d98 100644
  
          try
          {
-@@ -3406,9 +3443,15 @@ private:
+@@ -3403,19 +3440,143 @@ private:
+     Cdr& operator =(
+             const Cdr&) = delete;
+ 
++    template<class AllocatorT>
      Cdr& serializeBoolSequence(
-             const std::vector<bool>& vector_t);
- 
-+    Cdr& serializeBoolSequence(
-+            const std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t);
+-            const std::vector<bool>& vector_t);
++            const std::vector<bool, AllocatorT>& vector_t)
++    {
++      state state_before_error(*this);
 +
++      *this << static_cast<int32_t>(vector_t.size());
+ 
++      size_t totalSize = vector_t.size() * sizeof(bool);
++
++      if (((m_lastPosition - m_currentPosition) >= totalSize) || resize(totalSize))
++      {
++        // Save last datasize.
++        m_lastDataSize = sizeof(bool);
++
++        for (size_t count = 0; count < vector_t.size(); ++count)
++        {
++          uint8_t value = 0;
++          typename std::vector<bool, AllocatorT>::const_reference ref = vector_t[count];
++
++          if (ref)
++          {
++            value = 1;
++          }
++          m_currentPosition++ << value;
++        }
++      }
++      else
++      {
++        setState(state_before_error);
++        throw eprosima::fastcdr::exception::NotEnoughMemoryException(
++          eprosima::fastcdr::exception::NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
++      }
++
++      return *this;
++    }
++
++    template<class AllocatorT>
      Cdr& deserializeBoolSequence(
-             std::vector<bool>& vector_t);
- 
-+    Cdr& deserializeBoolSequence(
-+            std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t);
+-            std::vector<bool>& vector_t);
++            std::vector<bool, AllocatorT>& vector_t)
++    {
++      uint32_t seqLength = 0;
++      state state_before_error(*this);
 +
++      *this >> seqLength;
++
++      size_t totalSize = seqLength * sizeof(bool);
+ 
++      if ((m_lastPosition - m_currentPosition) >= totalSize)
++      {
++        vector_t.resize(seqLength);
++        // Save last datasize.
++        m_lastDataSize = sizeof(bool);
++
++        for (uint32_t count = 0; count < seqLength; ++count)
++        {
++          uint8_t value = 0;
++          m_currentPosition++ >> value;
++
++          if (value == 1)
++          {
++            vector_t[count] = true;
++          }
++          else if (value == 0)
++          {
++            vector_t[count] = false;
++          }
++          else
++          {
++            throw eprosima::fastcdr::exception::BadParamException(
++              "Unexpected byte value in Cdr::deserializeBoolSequence, expected 0 or 1");
++          }
++        }
++      }
++      else
++      {
++        setState(state_before_error);
++        throw eprosima::fastcdr::exception::NotEnoughMemoryException(
++          eprosima::fastcdr::exception::NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
++      }
++
++      return *this;
++    }
++
++    template<class AllocatorT>
      Cdr& deserializeStringSequence(
-             std::string*& sequence_t,
-             size_t& numElements);
+-            std::string*& sequence_t,
+-            size_t& numElements);
++            std::basic_string<char, std::char_traits<char>, AllocatorT>*& sequence_t,
++            size_t& numElements)
++    {
++      uint32_t seqLength = 0;
++      state state_before_error(*this);
++
++      deserialize(seqLength);
++
++      try
++      {
++        sequence_t = new std::basic_string<char, std::char_traits<char>, AllocatorT>[seqLength];
++        deserializeArray(sequence_t, seqLength);
++      }
++      catch (eprosima::fastcdr::exception::Exception& ex)
++      {
++        delete [] sequence_t;
++        sequence_t = NULL;
++        setState(state_before_error);
++        ex.raise();
++      }
+ 
++      numElements = seqLength;
++      return *this;
++    }
++
++    template<class AllocatorT>
+     Cdr& deserializeWStringSequence(
+-            std::wstring*& sequence_t,
+-            size_t& numElements);
++            std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>*& sequence_t,
++            size_t& numElements)
++    {
++      uint32_t seqLength = 0;
++      state state_before_error(*this);
++
++      deserialize(seqLength);
++
++      try
++      {
++        sequence_t = new std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT>[seqLength];
++        deserializeArray(sequence_t, seqLength);
++      }
++      catch (eprosima::fastcdr::exception::Exception& ex)
++      {
++        delete [] sequence_t;
++        sequence_t = NULL;
++        setState(state_before_error);
++        ex.raise();
++      }
++
++      numElements = seqLength;
++      return *this;
++    }
+ 
+ #if HAVE_CXX0X
+     /*!
+@@ -3518,8 +3679,40 @@ private:
+     //TODO
+     const char* readString(
+             uint32_t& length);
+-    const std::wstring readWString(
+-            uint32_t& length);
++
++    template<class AllocatorT>
++    const std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT> readWString(
++            uint32_t& length)
++    {
++      std::basic_string<wchar_t, std::char_traits<wchar_t>, AllocatorT> returnedValue = L"";
++      state state_(*this);
++
++      *this >> length;
++      uint32_t bytesLength = length * 4;
++
++      if (bytesLength == 0)
++      {
++        return returnedValue;
++      }
++      else if ((m_lastPosition - m_currentPosition) >= bytesLength)
++      {
++        // Save last datasize.
++        m_lastDataSize = sizeof(uint32_t);
++
++        returnedValue.resize(length);
++        deserializeArray(const_cast<wchar_t*>(returnedValue.c_str()), length);
++        if (returnedValue[length - 1] == L'\0')
++        {
++          --length;
++          returnedValue.erase(length);
++        }
++        return returnedValue;
++      }
++
++      setState(state_);
++      throw eprosima::fastcdr::exception::NotEnoughMemoryException(
++                eprosima::fastcdr::exception::NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
++    }
+ 
+     //! @brief Reference to the buffer that will be serialized/deserialized.
+     FastBuffer& m_cdrBuffer;
 diff --git a/include/fastcdr/config.h.in b/include/fastcdr/config.h.in
 index 26a6320..0d6fc59 100644
 --- a/include/fastcdr/config.h.in
@@ -457,99 +795,181 @@ index 26a6320..0d6fc59 100644
  #define CONSTEXPR const
  #endif
 diff --git a/src/cpp/Cdr.cpp b/src/cpp/Cdr.cpp
-index 4a8bb25..6eee261 100644
+index 4a8bb25..6b40a92 100644
 --- a/src/cpp/Cdr.cpp
 +++ b/src/cpp/Cdr.cpp
-@@ -2649,6 +2649,41 @@ Cdr& Cdr::serializeBoolSequence(
-     return *this;
+@@ -1992,39 +1992,6 @@ const char* Cdr::readString(
+               eprosima::fastcdr::exception::NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
  }
  
-+Cdr& Cdr::serializeBoolSequence(
-+        const std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
-+{
-+    state state_before_error(*this);
-+
-+    *this << static_cast<int32_t>(vector_t.size());
-+
-+    size_t totalSize = vector_t.size() * sizeof(bool);
-+
-+    if (((m_lastPosition - m_currentPosition) >= totalSize) || resize(totalSize))
-+    {
-+        // Save last datasize.
-+        m_lastDataSize = sizeof(bool);
-+
-+        for (size_t count = 0; count < vector_t.size(); ++count)
-+        {
-+            uint8_t value = 0;
-+            std::vector<bool, std::pmr::polymorphic_allocator<bool>>::const_reference ref = vector_t[count];
-+
-+            if (ref)
-+            {
-+                value = 1;
-+            }
-+            m_currentPosition++ << value;
-+        }
-+    }
-+    else
-+    {
-+        setState(state_before_error);
-+        throw NotEnoughMemoryException(NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
-+    }
-+
-+    return *this;
-+}
-+
- Cdr& Cdr::deserializeBoolSequence(
-         std::vector<bool>& vector_t)
- {
-@@ -2693,6 +2728,50 @@ Cdr& Cdr::deserializeBoolSequence(
+-const std::wstring Cdr::readWString(
+-        uint32_t& length)
+-{
+-    std::wstring returnedValue = L"";
+-    state state_(*this);
+-
+-    *this >> length;
+-    uint32_t bytesLength = length * 4;
+-
+-    if (bytesLength == 0)
+-    {
+-        return returnedValue;
+-    }
+-    else if ((m_lastPosition - m_currentPosition) >= bytesLength)
+-    {
+-        // Save last datasize.
+-        m_lastDataSize = sizeof(uint32_t);
+-
+-        returnedValue.resize(length);
+-        deserializeArray(const_cast<wchar_t*>(returnedValue.c_str()), length);
+-        if (returnedValue[length - 1] == L'\0')
+-        {
+-            --length;
+-            returnedValue.erase(length);
+-        }
+-        return returnedValue;
+-    }
+-
+-    setState(state_);
+-    throw eprosima::fastcdr::exception::NotEnoughMemoryException(
+-              eprosima::fastcdr::exception::NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
+-}
+-
+ Cdr& Cdr::deserializeArray(
+         bool* bool_t,
+         size_t numElements)
+@@ -2613,134 +2580,3 @@ Cdr& Cdr::deserializeArray(
+ 
      return *this;
  }
- 
-+Cdr& Cdr::deserializeBoolSequence(
-+            std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
-+{
-+    uint32_t seqLength = 0;
-+    state state_before_error(*this);
-+
-+    *this >> seqLength;
-+
-+    size_t totalSize = seqLength * sizeof(bool);
-+
-+    if ((m_lastPosition - m_currentPosition) >= totalSize)
-+    {
-+        vector_t.resize(seqLength);
-+        // Save last datasize.
-+        m_lastDataSize = sizeof(bool);
-+
-+        for (uint32_t count = 0; count < seqLength; ++count)
-+        {
-+            uint8_t value = 0;
-+            m_currentPosition++ >> value;
-+
-+            if (value == 1)
-+            {
-+                vector_t[count] = true;
-+            }
-+            else if (value == 0)
-+            {
-+                vector_t[count] = false;
-+            }
-+            else
-+            {
-+                throw BadParamException("Unexpected byte value in Cdr::deserializeBoolSequence, expected 0 or 1");
-+            }
-+        }
-+    }
-+    else
-+    {
-+        setState(state_before_error);
-+        throw NotEnoughMemoryException(NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
-+    }
-+
-+    return *this;
-+}
-+
- Cdr& Cdr::deserializeStringSequence(
-         std::string*& sequence_t,
-         size_t& numElements)
+-
+-Cdr& Cdr::serializeBoolSequence(
+-        const std::vector<bool>& vector_t)
+-{
+-    state state_before_error(*this);
+-
+-    *this << static_cast<int32_t>(vector_t.size());
+-
+-    size_t totalSize = vector_t.size() * sizeof(bool);
+-
+-    if (((m_lastPosition - m_currentPosition) >= totalSize) || resize(totalSize))
+-    {
+-        // Save last datasize.
+-        m_lastDataSize = sizeof(bool);
+-
+-        for (size_t count = 0; count < vector_t.size(); ++count)
+-        {
+-            uint8_t value = 0;
+-            std::vector<bool>::const_reference ref = vector_t[count];
+-
+-            if (ref)
+-            {
+-                value = 1;
+-            }
+-            m_currentPosition++ << value;
+-        }
+-    }
+-    else
+-    {
+-        setState(state_before_error);
+-        throw NotEnoughMemoryException(NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
+-    }
+-
+-    return *this;
+-}
+-
+-Cdr& Cdr::deserializeBoolSequence(
+-        std::vector<bool>& vector_t)
+-{
+-    uint32_t seqLength = 0;
+-    state state_before_error(*this);
+-
+-    *this >> seqLength;
+-
+-    size_t totalSize = seqLength * sizeof(bool);
+-
+-    if ((m_lastPosition - m_currentPosition) >= totalSize)
+-    {
+-        vector_t.resize(seqLength);
+-        // Save last datasize.
+-        m_lastDataSize = sizeof(bool);
+-
+-        for (uint32_t count = 0; count < seqLength; ++count)
+-        {
+-            uint8_t value = 0;
+-            m_currentPosition++ >> value;
+-
+-            if (value == 1)
+-            {
+-                vector_t[count] = true;
+-            }
+-            else if (value == 0)
+-            {
+-                vector_t[count] = false;
+-            }
+-            else
+-            {
+-                throw BadParamException("Unexpected byte value in Cdr::deserializeBoolSequence, expected 0 or 1");
+-            }
+-        }
+-    }
+-    else
+-    {
+-        setState(state_before_error);
+-        throw NotEnoughMemoryException(NotEnoughMemoryException::NOT_ENOUGH_MEMORY_MESSAGE_DEFAULT);
+-    }
+-
+-    return *this;
+-}
+-
+-Cdr& Cdr::deserializeStringSequence(
+-        std::string*& sequence_t,
+-        size_t& numElements)
+-{
+-    uint32_t seqLength = 0;
+-    state state_before_error(*this);
+-
+-    deserialize(seqLength);
+-
+-    try
+-    {
+-        sequence_t = new std::string[seqLength];
+-        deserializeArray(sequence_t, seqLength);
+-    }
+-    catch (eprosima::fastcdr::exception::Exception& ex)
+-    {
+-        delete [] sequence_t;
+-        sequence_t = NULL;
+-        setState(state_before_error);
+-        ex.raise();
+-    }
+-
+-    numElements = seqLength;
+-    return *this;
+-}
+-
+-Cdr& Cdr::deserializeWStringSequence(
+-        std::wstring*& sequence_t,
+-        size_t& numElements)
+-{
+-    uint32_t seqLength = 0;
+-    state state_before_error(*this);
+-
+-    deserialize(seqLength);
+-
+-    try
+-    {
+-        sequence_t = new std::wstring[seqLength];
+-        deserializeArray(sequence_t, seqLength);
+-    }
+-    catch (eprosima::fastcdr::exception::Exception& ex)
+-    {
+-        delete [] sequence_t;
+-        sequence_t = NULL;
+-        setState(state_before_error);
+-        ex.raise();
+-    }
+-
+-    numElements = seqLength;
+-    return *this;
+-}

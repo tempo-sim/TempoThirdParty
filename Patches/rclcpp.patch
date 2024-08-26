@@ -1,28 +1,3 @@
-diff --git a/rclcpp/CMakeLists.txt b/rclcpp/CMakeLists.txt
-index 9572f422..311151e2 100644
---- a/rclcpp/CMakeLists.txt
-+++ b/rclcpp/CMakeLists.txt
-@@ -179,6 +179,20 @@ foreach(interface_file ${interface_files})
- endforeach()
- 
- add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS})
-+
-+set_target_properties(${PROJECT_NAME} PROPERTIES 
-+    COMPILE_PDB_NAME ${PROJECT_NAME}
-+    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-+    COMPILE_FLAGS "/Zi"
-+    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
-+)
-+
-+target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
-+target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
-+
-+target_compile_options(${PROJECT_NAME} PRIVATE /Zi)
-+target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
-+
- target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
- # TODO(wjwwood): address all deprecation warnings and then remove this
- if(WIN32)
 diff --git a/rclcpp/include/rclcpp/client.hpp b/rclcpp/include/rclcpp/client.hpp
 index d1751ae1..a1eb73fc 100644
 --- a/rclcpp/include/rclcpp/client.hpp
