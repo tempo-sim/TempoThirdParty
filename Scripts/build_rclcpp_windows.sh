@@ -30,6 +30,12 @@ if ! which pip; then
   exit 1
 fi
 
+# Check for cl
+if ! which cl; then
+  echo "Couldn't find cl. Please add C:\Program Files\Microsoft Visual Studio\<YOUR_RELEASE>\Community\VC\Tools\MSVC\<YOUR_VERSION>\bin\Hostx64\x64 to your PATH"
+  exit 1
+fi
+
 # Check for tag
 TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
 if [ "$TAG" = "undefined" ]; then
@@ -79,6 +85,8 @@ cd "$ROOT_DIR/Source/rclcpp/rcpputils"
 git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
 cd "$ROOT_DIR/Source/rclcpp/rclcpp"
 git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
+cd "$ROOT_DIR/Source/rclcpp/rcl"
+git reset --hard && git apply "$ROOT_DIR/Patches/rcl.patch"
 cd "$ROOT_DIR/Source/rclcpp/rmw"
 git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
 cd "$ROOT_DIR/Source/rclcpp/rosidl"
@@ -145,8 +153,13 @@ cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rcl
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
+# You must run bootstrap separately with VS command prompt
+if [ ! -f b2.exe ]; then
+  echo "Please run ./bootstrap.bat --prefix=$ROOT_DIR/Source/rclcpp/install from a VS command prompt"
+  exit 1
+fi
+#./bootstrap.bat --prefix="$ROOT_DIR/Source/rclcpp/install"
 rm -rf bin.v2
-./bootstrap.bat --prefix="$ROOT_DIR/Source/rclcpp/install"
 ./b2.exe install address-model=64 link=shared runtime-link=shared threading=multi --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-windows.jam" --prefix="$ROOT_DIR/Source/rclcpp/install"
 
 echo -e "Building ogg"
@@ -227,6 +240,13 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # To inspect compiler/linker commands
 #export VERBOSE=1
 # --event-handlers console_direct+ \
+#  --parallel-workers "$NUM_JOBS" \
+# " -DPython3_EXECUTABLE='$NATIVE_PYTHON_PATH'" \
+# " -DCMAKE_POLICY_DEFAULT_CMP0025=NEW" \
+# " -DCMAKE_CXX_FLAGS_DEBUG='/permissive- /volatile:iso /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew'" \
+# " -DCMAKE_CXX_STANDARD_REQUIRED=ON" \
+# " -DCMAKE_CXX_EXTENSIONS=OFF" \
+#  " -DBoost_NO_BOOST_CMAKE=ON" \
 export CMAKE_PREFIX_PATH="$ROOT_DIR/Source/rclcpp/cmake"
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig-windows:$PKG_CONFIG_PATH"
 NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
@@ -263,6 +283,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DOpenCV_DIR='$BUILD_DIR/opencv'" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
+ " -DBoost_USE_STATIC_LIBS=OFF" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
@@ -270,7 +291,6 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Windows'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DTRACETOOLS_DISABLED=ON" \
- " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
