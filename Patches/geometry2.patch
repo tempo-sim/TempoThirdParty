@@ -801,6 +801,18 @@ index 7696f705..c508698e 100644
  
    if (rostime_converter(stamp, &time) != 1) {
      goto cleanup;
+diff --git a/tf2_ros/CMakeLists.txt b/tf2_ros/CMakeLists.txt
+index 7f15ed83..961d7d34 100644
+--- a/tf2_ros/CMakeLists.txt
++++ b/tf2_ros/CMakeLists.txt
+@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(tf2_ros)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/tf2_ros/include/tf2_ros/static_transform_broadcaster.h b/tf2_ros/include/tf2_ros/static_transform_broadcaster.h
 index 2637ab70..cdb9d0e3 100644
 --- a/tf2_ros/include/tf2_ros/static_transform_broadcaster.h
@@ -828,18 +840,36 @@ index b84af48e..e66f3efa 100644
      NodeT && node,
      const rclcpp::QoS & qos = DynamicBroadcasterQoS(),
 diff --git a/tf2_ros/include/tf2_ros/transform_listener.h b/tf2_ros/include/tf2_ros/transform_listener.h
-index 01620a8f..ce1143bd 100644
+index 01620a8f..a8c55781 100644
 --- a/tf2_ros/include/tf2_ros/transform_listener.h
 +++ b/tf2_ros/include/tf2_ros/transform_listener.h
-@@ -34,6 +34,7 @@
- 
- #include <functional>
+@@ -36,6 +36,25 @@
  #include <memory>
-+#include <memory_resource>
  #include <thread>
  #include <utility>
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++}
++#endif
  
-@@ -51,7 +52,7 @@ namespace tf2_ros
+ #include "tf2/buffer_core.h"
+ #include "tf2/time.h"
+@@ -51,7 +70,7 @@ namespace tf2_ros
  
  namespace detail
  {
@@ -848,7 +878,7 @@ index 01620a8f..ce1143bd 100644
  rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>
  get_default_transform_listener_sub_options()
  {
-@@ -64,7 +65,7 @@ get_default_transform_listener_sub_options()
+@@ -64,7 +83,7 @@ get_default_transform_listener_sub_options()
    return options;
  }
  
@@ -857,7 +887,7 @@ index 01620a8f..ce1143bd 100644
  rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>
  get_default_transform_listener_static_sub_options()
  {
-@@ -86,7 +87,7 @@ public:
+@@ -86,7 +105,7 @@ public:
    TF2_ROS_PUBLIC
    explicit TransformListener(tf2::BufferCore & buffer, bool spin_thread = true);
  
@@ -866,7 +896,7 @@ index 01620a8f..ce1143bd 100644
    TransformListener(
      tf2::BufferCore & buffer,
      NodeT && node,
-@@ -106,7 +107,7 @@ public:
+@@ -106,7 +125,7 @@ public:
    virtual ~TransformListener();
  
  private:

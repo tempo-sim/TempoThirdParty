@@ -24,17 +24,39 @@ index 9e8f9f5..201cf4f 100644
  # That way if a package that generates interfaces also has a target depending
  # on those generated interfaces, that target will wait for this generator's
 diff --git a/rosidl_generator_cpp/resource/idl__struct.hpp.em b/rosidl_generator_cpp/resource/idl__struct.hpp.em
-index 602d47d..088b0b6 100644
+index 602d47d..45ae890 100644
 --- a/rosidl_generator_cpp/resource/idl__struct.hpp.em
 +++ b/rosidl_generator_cpp/resource/idl__struct.hpp.em
-@@ -26,6 +26,7 @@ include_directives = set()
+@@ -26,8 +26,28 @@ include_directives = set()
  #include <algorithm>
  #include <array>
  #include <memory>
+-#include <string>
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
 +#include <memory_resource>
- #include <string>
  #include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  template <class T>
++  using polymorphic_allocator = std::experimental::pmr::polymorphic_allocator<T>;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using string = std::experimental::pmr::string;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
  
+ #include "rosidl_runtime_cpp/bounded_vector.hpp"
+ #include "rosidl_runtime_cpp/message_initialization.hpp"
 diff --git a/rosidl_generator_cpp/resource/msg__struct.hpp.em b/rosidl_generator_cpp/resource/msg__struct.hpp.em
 index 7d5ace5..34c0333 100644
 --- a/rosidl_generator_cpp/resource/msg__struct.hpp.em
@@ -210,11 +232,77 @@ index c37b821..759f2d7 100644
          return "" == i;
        }));
  }
+diff --git a/rosidl_runtime_cpp/CMakeLists.txt b/rosidl_runtime_cpp/CMakeLists.txt
+index a588ddd..b1dc284 100644
+--- a/rosidl_runtime_cpp/CMakeLists.txt
++++ b/rosidl_runtime_cpp/CMakeLists.txt
+@@ -5,12 +5,16 @@ project(rosidl_runtime_cpp)
+ find_package(ament_cmake REQUIRED)
+ find_package(rosidl_runtime_c REQUIRED)
+ 
++add_library(experimental_memory_resource STATIC src/experimental_memory_resource.cpp)
++#target_include_directories(experimental_memory_resource PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
++
+ add_library(${PROJECT_NAME} INTERFACE)
+ target_include_directories(${PROJECT_NAME} INTERFACE
+   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+ target_link_libraries(${PROJECT_NAME} INTERFACE
+-  rosidl_runtime_c::rosidl_runtime_c)
++  rosidl_runtime_c::rosidl_runtime_c
++  experimental_memory_resource)
+ 
+ if(MSVC)
+   target_compile_definitions(${PROJECT_NAME} INTERFACE
+@@ -22,6 +26,7 @@ ament_export_include_directories("include/${PROJECT_NAME}")
+ 
+ # Export modern CMake targets
+ ament_export_targets(${PROJECT_NAME})
++#ament_export_targets(experimental_memory_resource)
+ 
+ ament_index_register_resource("rosidl_runtime_packages")
+ 
+@@ -62,6 +67,9 @@ install(
+   DIRECTORY include/
+   DESTINATION include/${PROJECT_NAME}
+ )
++install(
++  TARGETS experimental_memory_resource EXPORT ${PROJECT_NAME}
++)
+ install(
+   TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+ )
 diff --git a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
-index 713aa66..57ac3e0 100644
+index 713aa66..2690770 100644
 --- a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
 +++ b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
-@@ -123,11 +123,69 @@ inline void value_to_yaml(const std::string & value, std::ostream & out)
+@@ -20,6 +20,25 @@
+ #include <string>
+ #include <type_traits>
+ 
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++using string = std::experimental::pmr::string;
++using wstring = std::experimental::pmr::wstring;
++using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ namespace rosidl_generator_traits
+ {
+ 
+@@ -123,11 +142,69 @@ inline void value_to_yaml(const std::string & value, std::ostream & out)
    }
    out << "\"";
  }
@@ -251,7 +339,7 @@ index 713aa66..57ac3e0 100644
 +  out << "\"";
 +}
 +
-+inline void value_to_yaml(const std::basic_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>> & value, std::ostream & out)
++inline void value_to_yaml(const std::pmr::string & value, std::ostream & out)
 +{
 +  out << "\"";
 +  size_t index = 0;
@@ -270,7 +358,7 @@ index 713aa66..57ac3e0 100644
 +  out << "\"";
 +}
 +
-+inline void value_to_yaml(const std::basic_string<char16_t, std::char_traits<char16_t>, std::pmr::polymorphic_allocator<char16_t>> & value, std::ostream & out)
++inline void value_to_yaml(const std::pmr::u16string & value, std::ostream & out)
 +{
 +  out << "\"";
 +#if defined(__clang__)
@@ -285,6 +373,56 @@ index 713aa66..57ac3e0 100644
    auto flags = out.flags();
    size_t index = 0;
    while (index < value.size()) {
+diff --git a/rosidl_runtime_cpp/src/experimental_memory_resource.cpp b/rosidl_runtime_cpp/src/experimental_memory_resource.cpp
+new file mode 100644
+index 0000000..53b6b41
+--- /dev/null
++++ b/rosidl_runtime_cpp/src/experimental_memory_resource.cpp
+@@ -0,0 +1,44 @@
++#include <cstddef>
++#include <cstdlib>
++#include <new>
++
++#if __linux__
++
++namespace std {
++namespace experimental {
++namespace fundamentals_v1 {
++namespace pmr {
++
++class memory_resource {
++public:
++    virtual ~memory_resource() = default;
++    
++protected:
++    virtual void* do_allocate(size_t bytes, size_t alignment) = 0;
++    virtual void do_deallocate(void* p, size_t bytes, size_t alignment) = 0;
++    virtual bool do_is_equal(const memory_resource& other) const noexcept = 0;
++};
++
++class default_resource_impl : public memory_resource {
++protected:
++    void* do_allocate(size_t bytes, size_t alignment) override {
++        return ::operator new(bytes, std::align_val_t(alignment));
++    }
++
++    void do_deallocate(void* p, size_t bytes, size_t alignment) override {
++        ::operator delete(p, bytes, std::align_val_t(alignment));
++    }
++
++    bool do_is_equal(const memory_resource& other) const noexcept override {
++        return this == &other;
++    }
++};
++
++memory_resource* get_default_resource() noexcept {
++    static default_resource_impl default_resource;
++    return &default_resource;
++}
++
++}}}} // namespaces
++
++#endif
 diff --git a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em b/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
 index 60cc226..1efe365 100644
 --- a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em

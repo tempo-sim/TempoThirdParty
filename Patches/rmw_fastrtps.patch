@@ -11,10 +11,38 @@ index c30caa0..0b75973 100644
    fastcdr fastrtps)
  
 diff --git a/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport.hpp b/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport.hpp
-index 2708392..88e324b 100644
+index 2708392..4fe5ce6 100644
 --- a/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport.hpp
 +++ b/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport.hpp
-@@ -48,7 +48,7 @@ namespace rmw_fastrtps_dynamic_cpp
+@@ -18,6 +18,27 @@
+ #include <cassert>
+ #include <string>
+ 
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ #include "rosidl_runtime_c/string.h"
+ #include "rosidl_runtime_c/string_functions.h"
+ 
+@@ -48,7 +69,7 @@ namespace rmw_fastrtps_dynamic_cpp
  template<typename MembersType>
  struct StringHelper;
  
@@ -23,7 +51,7 @@ index 2708392..88e324b 100644
  // eprosima::fastcdr::Cdr can handle the string properly.
  template<>
  struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
-@@ -76,7 +76,7 @@ struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
+@@ -76,7 +97,7 @@ struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
      return current_alignment + strlen(c_string->data) + 1;
    }
  
@@ -32,7 +60,7 @@ index 2708392..88e324b 100644
    {
      auto c_string = static_cast<rosidl_runtime_c__String *>(data);
      if (!c_string) {
-@@ -91,37 +91,37 @@ struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
+@@ -91,37 +112,37 @@ struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
          "rosidl_generator_c_String had invalid data");
        return "";
      }
@@ -80,18 +108,38 @@ index 2708392..88e324b 100644
    }
  };
 diff --git a/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport_impl.hpp b/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport_impl.hpp
-index 899119f..cccf468 100644
+index 899119f..e07548e 100644
 --- a/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport_impl.hpp
 +++ b/rmw_fastrtps_dynamic_cpp/include/rmw_fastrtps_dynamic_cpp/TypeSupport_impl.hpp
-@@ -16,6 +16,7 @@
- #define RMW_FASTRTPS_DYNAMIC_CPP__TYPESUPPORT_IMPL_HPP_
- 
- #include <cassert>
-+#include <memory_resource>
+@@ -19,6 +19,27 @@
  #include <string>
  #include <vector>
  
-@@ -81,21 +82,21 @@ void serialize_field(
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ #include "fastcdr/Cdr.h"
+ #include "fastcdr/FastBuffer.h"
+ #include "fastcdr/exceptions/Exception.h"
+@@ -81,21 +102,21 @@ void serialize_field(
    } else if (member->array_size_ && !member->is_upper_bound_) {
      ser.serializeArray(static_cast<T *>(field), member->array_size_);
    } else {
@@ -117,7 +165,7 @@ index 899119f..cccf468 100644
      rosidl_typesupport_fastrtps_cpp::u16string_to_wstring(*u16str, wstr);
      ser << wstr;
    } else {
-@@ -108,7 +109,7 @@ void serialize_field<std::wstring>(
+@@ -108,7 +129,7 @@ void serialize_field<std::wstring>(
      }
      for (size_t i = 0; i < size; ++i) {
        const void * element = member->get_const_function(field, i);
@@ -126,7 +174,7 @@ index 899119f..cccf468 100644
        rosidl_typesupport_fastrtps_cpp::u16string_to_wstring(*u16str, wstr);
        ser << wstr;
      }
-@@ -134,7 +135,7 @@ void serialize_field(
+@@ -134,7 +155,7 @@ void serialize_field(
  
  template<>
  inline
@@ -135,7 +183,7 @@ index 899119f..cccf468 100644
    const rosidl_typesupport_introspection_c__MessageMember * member,
    void * field,
    eprosima::fastcdr::Cdr & ser)
-@@ -149,11 +150,11 @@ void serialize_field<std::string>(
+@@ -149,11 +170,11 @@ void serialize_field<std::string>(
      ser << str;
    } else {
      // First, cast field to rosidl_generator_c
@@ -149,7 +197,7 @@ index 899119f..cccf468 100644
        auto string_field = static_cast<rosidl_runtime_c__String *>(field);
        for (size_t i = 0; i < member->array_size_; ++i) {
          tmpstring = string_field[i].data;
-@@ -162,7 +163,7 @@ void serialize_field<std::string>(
+@@ -162,7 +183,7 @@ void serialize_field<std::string>(
      } else {
        auto & string_sequence_field =
          *reinterpret_cast<rosidl_runtime_c__String__Sequence *>(field);
@@ -158,7 +206,7 @@ index 899119f..cccf468 100644
        for (size_t i = 0; i < string_sequence_field.size; ++i) {
          cpp_string_vector.push_back(
            CStringHelper::convert_to_std_string(string_sequence_field.data[i]));
-@@ -174,12 +175,12 @@ void serialize_field<std::string>(
+@@ -174,12 +195,12 @@ void serialize_field<std::string>(
  
  template<>
  inline
@@ -173,7 +221,7 @@ index 899119f..cccf468 100644
    if (!member->is_array_) {
      auto u16str = static_cast<rosidl_runtime_c__U16String *>(field);
      rosidl_typesupport_fastrtps_c::u16string_to_wstring(*u16str, wstr);
-@@ -255,10 +256,10 @@ bool TypeSupport<MembersType>::serializeROSmessage(
+@@ -255,10 +276,10 @@ bool TypeSupport<MembersType>::serializeROSmessage(
          serialize_field<uint64_t>(member, field, ser);
          break;
        case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:
@@ -186,7 +234,7 @@ index 899119f..cccf468 100644
          break;
        case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE:
          {
-@@ -315,7 +316,7 @@ size_t next_field_align(
+@@ -315,7 +336,7 @@ size_t next_field_align(
      current_alignment += eprosima::fastcdr::Cdr::alignment(current_alignment, item_size);
      current_alignment += item_size * member->array_size_;
    } else {
@@ -195,7 +243,7 @@ index 899119f..cccf468 100644
      current_alignment += eprosima::fastcdr::Cdr::alignment(current_alignment, padding);
      current_alignment += padding;
      if (!data.empty()) {
-@@ -348,7 +349,7 @@ size_t next_field_align_string(
+@@ -348,7 +369,7 @@ size_t next_field_align_string(
        current_alignment += character_size * (str_arr[index].size() + 1);
      }
    } else {
@@ -204,7 +252,7 @@ index 899119f..cccf468 100644
      current_alignment += eprosima::fastcdr::Cdr::alignment(current_alignment, padding);
      current_alignment += padding;
      for (auto & it : data) {
-@@ -394,7 +395,7 @@ size_t next_field_align_string(
+@@ -394,7 +415,7 @@ size_t next_field_align_string(
  
  template<>
  inline
@@ -213,7 +261,7 @@ index 899119f..cccf468 100644
    const rosidl_typesupport_introspection_c__MessageMember * member,
    void * field,
    size_t current_alignment)
-@@ -427,7 +428,7 @@ size_t next_field_align_string<std::string>(
+@@ -427,7 +448,7 @@ size_t next_field_align_string<std::string>(
  
  template<>
  inline
@@ -222,7 +270,7 @@ index 899119f..cccf468 100644
    const rosidl_typesupport_introspection_c__MessageMember * member,
    void * field,
    size_t current_alignment)
-@@ -512,10 +513,10 @@ size_t TypeSupport<MembersType>::getEstimatedSerializedSize(
+@@ -512,10 +533,10 @@ size_t TypeSupport<MembersType>::getEstimatedSerializedSize(
          current_alignment = next_field_align<uint64_t>(member, field, current_alignment);
          break;
        case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:
@@ -235,7 +283,7 @@ index 899119f..cccf468 100644
          break;
        case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE:
          {
-@@ -570,39 +571,39 @@ void deserialize_field(
+@@ -570,39 +591,39 @@ void deserialize_field(
    } else if (member->array_size_ && !member->is_upper_bound_) {
      deser.deserializeArray(static_cast<T *>(field), member->array_size_);
    } else {
@@ -283,7 +331,7 @@ index 899119f..cccf468 100644
    } else {
      uint32_t size;
      if (member->array_size_ && !member->is_upper_bound_) {
-@@ -613,7 +614,7 @@ inline void deserialize_field<std::wstring>(
+@@ -613,7 +634,7 @@ inline void deserialize_field<std::wstring>(
      }
      for (size_t i = 0; i < size; ++i) {
        void * element = member->get_function(field, i);
@@ -292,7 +340,7 @@ index 899119f..cccf468 100644
        deser >> wstr;
        rosidl_typesupport_fastrtps_cpp::wstring_to_u16string(wstr, *u16str);
      }
-@@ -640,7 +641,7 @@ void deserialize_field(
+@@ -640,7 +661,7 @@ void deserialize_field(
  }
  
  template<>
@@ -301,7 +349,7 @@ index 899119f..cccf468 100644
    const rosidl_typesupport_introspection_c__MessageMember * member,
    void * field,
    eprosima::fastcdr::Cdr & deser)
-@@ -653,7 +654,7 @@ inline void deserialize_field<std::string>(
+@@ -653,7 +674,7 @@ inline void deserialize_field<std::string>(
        auto deser_field = static_cast<rosidl_runtime_c__String *>(field);
        // tmpstring is defined here and not below to avoid
        // memory allocation in every iteration of the for loop
@@ -310,7 +358,7 @@ index 899119f..cccf468 100644
        for (size_t i = 0; i < member->array_size_; ++i) {
          deser.deserialize(tmpstring);
          if (!rosidl_runtime_c__String__assign(&deser_field[i], tmpstring.c_str())) {
-@@ -661,7 +662,7 @@ inline void deserialize_field<std::string>(
+@@ -661,7 +682,7 @@ inline void deserialize_field<std::string>(
          }
        }
      } else {
@@ -319,7 +367,7 @@ index 899119f..cccf468 100644
        deser >> cpp_string_vector;
  
        auto & string_sequence_field =
-@@ -686,12 +687,12 @@ inline void deserialize_field<std::string>(
+@@ -686,12 +707,12 @@ inline void deserialize_field<std::string>(
  }
  
  template<>
@@ -334,7 +382,7 @@ index 899119f..cccf468 100644
    if (!member->is_array_) {
      deser >> wstr;
      rosidl_typesupport_fastrtps_c::wstring_to_u16string(
-@@ -765,10 +766,10 @@ bool TypeSupport<MembersType>::deserializeROSmessage(
+@@ -765,10 +786,10 @@ bool TypeSupport<MembersType>::deserializeROSmessage(
          deserialize_field<uint64_t>(member, field, deser);
          break;
        case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:

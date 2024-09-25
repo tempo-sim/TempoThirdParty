@@ -11,6 +11,12 @@ index 6f66a18dd..ddab62a5d 100644
      message(STATUS "Framework's shared_mutex is ${SM_RUN_OUTPUT}")
  endif()
  
+diff --git a/thirdparty/fastcdr b/thirdparty/fastcdr
+--- a/thirdparty/fastcdr
++++ b/thirdparty/fastcdr
+@@ -1 +1 @@
+-Subproject commit 7ebc45e03e1dd010681f5594135edbdcf3556c50
++Subproject commit 7ebc45e03e1dd010681f5594135edbdcf3556c50-dirty
 diff --git a/thirdparty/filewatch/FileWatch.hpp b/thirdparty/filewatch/FileWatch.hpp
 index 1ed0c669d..5105ddae1 100644
 --- a/thirdparty/filewatch/FileWatch.hpp

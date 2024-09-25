@@ -1,8 +1,16 @@
 diff --git a/rclcpp/CMakeLists.txt b/rclcpp/CMakeLists.txt
-index 9572f422..c0dbd195 100644
+index 9572f422..a8203ed8 100644
 --- a/rclcpp/CMakeLists.txt
 +++ b/rclcpp/CMakeLists.txt
-@@ -179,6 +179,7 @@ foreach(interface_file ${interface_files})
+@@ -23,6 +23,7 @@ find_package(tracetools REQUIRED)
+ 
+ # TODO(wjwwood): remove this when gtest can build on its own, when using target_compile_features()
+ # Default to C++17
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 17)
+ endif()
+@@ -179,6 +180,7 @@ foreach(interface_file ${interface_files})
  endforeach()
  
  add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS})
@@ -10,18 +18,6 @@ index 9572f422..c0dbd195 100644
  target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
  # TODO(wjwwood): address all deprecation warnings and then remove this
  if(WIN32)
-diff --git a/rclcpp/include/rclcpp/client.hpp b/rclcpp/include/rclcpp/client.hpp
-index d1751ae1..a1eb73fc 100644
---- a/rclcpp/include/rclcpp/client.hpp
-+++ b/rclcpp/include/rclcpp/client.hpp
-@@ -19,6 +19,7 @@
- #include <future>
- #include <unordered_map>
- #include <memory>
-+#include <memory_resource>
- #include <mutex>
- #include <optional>  // NOLINT, cpplint doesn't think this is a cpp std header
- #include <sstream>
 diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
 index 1251e58b..0c1dfde3 100644
 --- a/rclcpp/include/rclcpp/context.hpp
@@ -1011,7 +1007,7 @@ index 5e509bbf..4c6cfc0a 100644
    on_parameter_event(
      NodeT && node,
 diff --git a/rclcpp/include/rclcpp/parameter_value.hpp b/rclcpp/include/rclcpp/parameter_value.hpp
-index f74c36a8..3efe1264 100644
+index f74c36a8..ab67632f 100644
 --- a/rclcpp/include/rclcpp/parameter_value.hpp
 +++ b/rclcpp/include/rclcpp/parameter_value.hpp
 @@ -177,73 +177,79 @@ public:
@@ -1100,7 +1096,7 @@ index f74c36a8..3efe1264 100644
 +    out.reserve(value_.string_array_value.size());
 +    for (const auto& string_value : value_.string_array_value)
 +    {
-+      out.push_back(std::string(string_value.begin(), string_value.end()));
++      out.emplace_back(string_value.begin(), string_value.end());
 +    }
 +    return out;
    }
@@ -2221,6 +2217,18 @@ index 45d916b0..c0548033 100644
    explicit SubscriptionIntraProcessBase(
      rclcpp::Context::SharedPtr context,
      const std::string & topic = "topic",
+diff --git a/rclcpp_components/CMakeLists.txt b/rclcpp_components/CMakeLists.txt
+index 0b9cda78..0259ac14 100644
+--- a/rclcpp_components/CMakeLists.txt
++++ b/rclcpp_components/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(rclcpp_components)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/rclcpp_components/src/component_manager.cpp b/rclcpp_components/src/component_manager.cpp
 index 16329a42..f8528c5c 100644
 --- a/rclcpp_components/src/component_manager.cpp
@@ -2262,6 +2270,18 @@ index 16329a42..f8528c5c 100644
          continue;
        }
        auto factory = create_component_factory(resource);
+diff --git a/rclcpp_lifecycle/CMakeLists.txt b/rclcpp_lifecycle/CMakeLists.txt
+index 1f852ade..2ad2df7e 100644
+--- a/rclcpp_lifecycle/CMakeLists.txt
++++ b/rclcpp_lifecycle/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(rclcpp_lifecycle)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp b/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp
 index 22fd7f9c..667d4ec7 100644
 --- a/rclcpp_lifecycle/include/rclcpp_lifecycle/lifecycle_node_impl.hpp

@@ -1,0 +1,12 @@
+diff --git a/ros2lifecycle_test_fixtures/CMakeLists.txt b/ros2lifecycle_test_fixtures/CMakeLists.txt
+index 5ed4fd1..b20a3d5 100644
+--- a/ros2lifecycle_test_fixtures/CMakeLists.txt
++++ b/ros2lifecycle_test_fixtures/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(ros2lifecycle_test_fixtures)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()

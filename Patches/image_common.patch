@@ -1,3 +1,15 @@
+diff --git a/camera_calibration_parsers/CMakeLists.txt b/camera_calibration_parsers/CMakeLists.txt
+index 0fed1d3..92f0b53 100644
+--- a/camera_calibration_parsers/CMakeLists.txt
++++ b/camera_calibration_parsers/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(camera_calibration_parsers)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/camera_calibration_parsers/src/parse_ini.cpp b/camera_calibration_parsers/src/parse_ini.cpp
 index dfc0965..0bcfe65 100644
 --- a/camera_calibration_parsers/src/parse_ini.cpp
@@ -39,6 +51,30 @@ index 82743b1..c0b2f9f 100644
      } else {
        // Assume plumb bob for backwards compatibility
        cam_info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+diff --git a/camera_info_manager/CMakeLists.txt b/camera_info_manager/CMakeLists.txt
+index 724ba49..5061bfc 100644
+--- a/camera_info_manager/CMakeLists.txt
++++ b/camera_info_manager/CMakeLists.txt
+@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
+ 
+ project(camera_info_manager)
+ 
++set(CMAKE_CXX_STANDARD 20)
+ # Default to C++14
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+diff --git a/image_transport/CMakeLists.txt b/image_transport/CMakeLists.txt
+index 54d5b0d..e2081d9 100644
+--- a/image_transport/CMakeLists.txt
++++ b/image_transport/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(image_transport)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/image_transport/include/image_transport/publisher_plugin.hpp b/image_transport/include/image_transport/publisher_plugin.hpp
 index aa04e9a..fa7637f 100644
 --- a/image_transport/include/image_transport/publisher_plugin.hpp
