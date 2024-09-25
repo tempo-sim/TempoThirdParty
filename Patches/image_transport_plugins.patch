@@ -1,3 +1,125 @@
+diff --git a/compressed_depth_image_transport/src/codec.cpp b/compressed_depth_image_transport/src/codec.cpp
+index 9536d81..09b6358 100644
+--- a/compressed_depth_image_transport/src/codec.cpp
++++ b/compressed_depth_image_transport/src/codec.cpp
+@@ -68,7 +68,7 @@ sensor_msgs::msg::Image::SharedPtr decodeCompressedDepthImage(
+   cv_ptr->header = message.header;
+ 
+   // Assign image encoding
+-  std::string image_encoding = message.format.substr(0, message.format.find(';'));
++  std::string image_encoding = std::string(message.format.substr(0, message.format.find(';')).c_str());
+   cv_ptr->encoding = image_encoding;
+ 
+   // Decode message data
+@@ -177,8 +177,8 @@ sensor_msgs::msg::CompressedImage::SharedPtr encodeCompressedDepthImage(
+   params.resize(3, 0);
+ 
+   // Bit depth of image encoding
+-  int bitDepth = enc::bitDepth(message.encoding);
+-  int numChannels = enc::numChannels(message.encoding);
++  int bitDepth = enc::bitDepth(std::string(message.encoding.c_str()));
++  int numChannels = enc::numChannels(std::string(message.encoding.c_str()));
+ 
+   // Image compression configuration
+   ConfigHeader compressionConfig;
+diff --git a/compressed_image_transport/src/compressed_publisher.cpp b/compressed_image_transport/src/compressed_publisher.cpp
+index ff9d38e..94d2b90 100644
+--- a/compressed_image_transport/src/compressed_publisher.cpp
++++ b/compressed_image_transport/src/compressed_publisher.cpp
+@@ -182,7 +182,7 @@ void CompressedPublisher::publish(
+   }
+ 
+   // Bit depth of image encoding
+-  int bitDepth = enc::bitDepth(message.encoding);
++  int bitDepth = enc::bitDepth(std::string(message.encoding.c_str()));
+ 
+   switch (encodingFormat)
+   {
+@@ -201,7 +201,7 @@ void CompressedPublisher::publish(
+       {
+         // Target image format
+         std::string targetFormat;
+-        if (enc::isColor(message.encoding))
++        if (enc::isColor(std::string(message.encoding.c_str())))
+         {
+           // convert color images to BGR8 format
+           targetFormat = "bgr8";
+@@ -219,9 +219,10 @@ void CompressedPublisher::publish(
+           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, tracked_object, targetFormat);
+ 
+           // Compress image
+-          if (cv::imencode(".jpg", cv_ptr->image, compressed.data, params))
++          std::vector<uchar> compressed_data;
++          if (cv::imencode(".jpg", cv_ptr->image, compressed_data, params))
+           {
+-
++            std::move(compressed_data.begin(), compressed_data.end(), compressed.data.begin());
+             float cRatio = (float)(cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize())
+                 / (float)compressed.data.size();
+             RCLCPP_DEBUG(logger_, "Compressed Image Transport - Codec: jpg, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
+@@ -263,7 +264,7 @@ void CompressedPublisher::publish(
+ 
+         // Target image format
+         stringstream targetFormat;
+-        if (enc::isColor(message.encoding))
++        if (enc::isColor(std::string(message.encoding.c_str())))
+         {
+           // convert color images to RGB domain
+           targetFormat << "bgr" << bitDepth;
+@@ -277,9 +278,10 @@ void CompressedPublisher::publish(
+           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, tracked_object, targetFormat.str());
+ 
+           // Compress image
+-          if (cv::imencode(".png", cv_ptr->image, compressed.data, params))
++          std::vector<uchar> compressed_data;
++          if (cv::imencode(".png", cv_ptr->image, compressed_data, params))
+           {
+-
++            std::move(compressed_data.begin(), compressed_data.end(), compressed.data.begin());
+             float cRatio = (float)(cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize())
+                 / (float)compressed.data.size();
+             RCUTILS_LOG_DEBUG("Compressed Image Transport - Codec: png, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
+@@ -345,8 +347,10 @@ void CompressedPublisher::publish(
+           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, nullptr, "");
+ 
+           // Compress image
+-          if (cv::imencode(".tiff", cv_ptr->image, compressed.data, params))
++          std::vector<uchar> compressed_data;
++          if (cv::imencode(".tiff", cv_ptr->image, compressed_data, params))
+           {
++            std::move(compressed_data.begin(), compressed_data.end(), compressed.data.begin());
+             float cRatio = static_cast<float>((cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize()))
+                 / static_cast<float>((float)compressed.data.size());
+             RCUTILS_LOG_DEBUG("Compressed Image Transport - Codec: tiff, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
+diff --git a/compressed_image_transport/src/compressed_subscriber.cpp b/compressed_image_transport/src/compressed_subscriber.cpp
+index 335bda8..eb545dd 100644
+--- a/compressed_image_transport/src/compressed_subscriber.cpp
++++ b/compressed_image_transport/src/compressed_subscriber.cpp
+@@ -118,7 +118,7 @@ void CompressedSubscriber::internalCallback(const CompressedImage::ConstSharedPt
+   // Decode color/mono image
+   try
+   {
+-    cv_ptr->image = cv::imdecode(cv::Mat(message->data), config_.imdecode_flag);
++    cv_ptr->image = cv::imdecode(cv::Mat(1, message->data.size(), CV_8UC1, (void*)message->data.data()), config_.imdecode_flag);
+ 
+     // Assign image encoding string
+     const size_t split_pos = message->format.find(';');
+@@ -139,13 +139,13 @@ void CompressedSubscriber::internalCallback(const CompressedImage::ConstSharedPt
+       }
+     } else
+     {
+-      std::string image_encoding = message->format.substr(0, split_pos);
++      std::string image_encoding = std::string(message->format.substr(0, split_pos).c_str());
+ 
+       cv_ptr->encoding = image_encoding;
+ 
+       if ( enc::isColor(image_encoding))
+       {
+-        std::string compressed_encoding = message->format.substr(split_pos);
++        std::string compressed_encoding = std::string(message->format.substr(split_pos).c_str());
+         bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") != std::string::npos);
+ 
+         // Revert color transformation
 diff --git a/theora_image_transport/CMakeLists.txt b/theora_image_transport/CMakeLists.txt
 index 67612f0..b780f97 100644
 --- a/theora_image_transport/CMakeLists.txt
@@ -28,3 +150,17 @@ index 67612f0..b780f97 100644
  
  ament_export_dependencies(
    rosidl_default_runtime
+diff --git a/theora_image_transport/package.xml b/theora_image_transport/package.xml
+index fdfdde2..344e756 100644
+--- a/theora_image_transport/package.xml
++++ b/theora_image_transport/package.xml
+@@ -23,9 +23,6 @@
+ 
+   <depend>cv_bridge</depend>
+   <depend>image_transport</depend>
+-  <depend>libogg</depend>
+-  <depend>libopencv-imgproc-dev</depend>
+-  <depend>libtheora</depend>
+   <depend>pluginlib</depend>
+   <depend>rclcpp</depend>
+   <depend>rcutils</depend>

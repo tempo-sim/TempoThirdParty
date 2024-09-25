@@ -1,0 +1,170 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 310f818..25e7789 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -37,7 +37,6 @@ find_package(statistics_msgs REQUIRED)
+ 
+ add_library(${PROJECT_NAME}
+   src/libstatistics_collector/collector/collector.cpp
+-  src/libstatistics_collector/collector/generate_statistics_message.cpp
+   src/libstatistics_collector/moving_average_statistics/moving_average.cpp
+   src/libstatistics_collector/moving_average_statistics/types.cpp)
+ 
+diff --git a/include/libstatistics_collector/collector/generate_statistics_message.hpp b/include/libstatistics_collector/collector/generate_statistics_message.hpp
+index fe1d0b8..2452fe4 100644
+--- a/include/libstatistics_collector/collector/generate_statistics_message.hpp
++++ b/include/libstatistics_collector/collector/generate_statistics_message.hpp
+@@ -19,6 +19,7 @@
+ 
+ #include "builtin_interfaces/msg/time.hpp"
+ #include "statistics_msgs/msg/metrics_message.hpp"
++#include "statistics_msgs/msg/statistic_data_type.hpp"
+ 
+ #include "libstatistics_collector/visibility_control.hpp"
+ #include "libstatistics_collector/moving_average_statistics/types.hpp"
+@@ -39,15 +40,48 @@ namespace collector
+  * @param data statistics derived from the measurements made in the window
+  * @return a MetricsMessage containing the statistics in the data parameter
+  */
+-LIBSTATISTICS_COLLECTOR_PUBLIC
+-statistics_msgs::msg::MetricsMessage GenerateStatisticMessage(
++template <typename AllocatorT>
++statistics_msgs::msg::MetricsMessage_<AllocatorT> GenerateStatisticMessage(
+   const std::string & node_name,
+   const std::string & metric_name,
+   const std::string & unit,
+-  const builtin_interfaces::msg::Time window_start,
+-  const builtin_interfaces::msg::Time window_stop,
++  const builtin_interfaces::msg::Time_<AllocatorT> window_start,
++  const builtin_interfaces::msg::Time_<AllocatorT> window_stop,
+   const libstatistics_collector::moving_average_statistics::StatisticData & data
+-);
++)
++{
++  statistics_msgs::msg::MetricsMessage_<AllocatorT> msg;
++
++  msg.measurement_source_name = node_name;
++  msg.metrics_source = metric_name;
++  msg.unit = unit;
++  msg.window_start = window_start;
++  msg.window_stop = window_stop;
++
++  msg.statistics.reserve(5);
++
++  msg.statistics.emplace_back();
++  msg.statistics.back().data_type = statistics_msgs::msg::StatisticDataType_<AllocatorT>::STATISTICS_DATA_TYPE_AVERAGE;
++  msg.statistics.back().data = data.average;
++
++  msg.statistics.emplace_back();
++  msg.statistics.back().data_type = statistics_msgs::msg::StatisticDataType_<AllocatorT>::STATISTICS_DATA_TYPE_MAXIMUM;
++  msg.statistics.back().data = data.max;
++
++  msg.statistics.emplace_back();
++  msg.statistics.back().data_type = statistics_msgs::msg::StatisticDataType_<AllocatorT>::STATISTICS_DATA_TYPE_MINIMUM;
++  msg.statistics.back().data = data.min;
++
++  msg.statistics.emplace_back();
++  msg.statistics.back().data_type = statistics_msgs::msg::StatisticDataType_<AllocatorT>::STATISTICS_DATA_TYPE_SAMPLE_COUNT;
++  msg.statistics.back().data = static_cast<double>(data.sample_count);
++
++  msg.statistics.emplace_back();
++  msg.statistics.back().data_type = statistics_msgs::msg::StatisticDataType_<AllocatorT>::STATISTICS_DATA_TYPE_STDDEV;
++  msg.statistics.back().data = data.standard_deviation;
++
++  return msg;
++}
+ 
+ }  // namespace collector
+ }  // namespace libstatistics_collector
+diff --git a/include/libstatistics_collector/moving_average_statistics/moving_average.hpp b/include/libstatistics_collector/moving_average_statistics/moving_average.hpp
+index abcb900..9dd23aa 100644
+--- a/include/libstatistics_collector/moving_average_statistics/moving_average.hpp
++++ b/include/libstatistics_collector/moving_average_statistics/moving_average.hpp
+@@ -53,7 +53,7 @@ public:
+   MovingAverageStatistics() = default;
+ 
+   LIBSTATISTICS_COLLECTOR_PUBLIC
+-  ~MovingAverageStatistics() = default;
++  virtual ~MovingAverageStatistics() = default;
+ 
+   /**
+    *  Returns the arithmetic mean of all data recorded. If no observations have been made, returns NaN.
+diff --git a/src/libstatistics_collector/collector/generate_statistics_message.cpp b/src/libstatistics_collector/collector/generate_statistics_message.cpp
+deleted file mode 100644
+index 6281681..0000000
+--- a/src/libstatistics_collector/collector/generate_statistics_message.cpp
++++ /dev/null
+@@ -1,73 +0,0 @@
+-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#include "libstatistics_collector/collector/generate_statistics_message.hpp"
+-
+-#include <string>
+-#include <utility>
+-
+-#include "statistics_msgs/msg/statistic_data_type.hpp"
+-
+-namespace libstatistics_collector
+-{
+-namespace collector
+-{
+-
+-using statistics_msgs::msg::MetricsMessage;
+-using statistics_msgs::msg::StatisticDataPoint;
+-using statistics_msgs::msg::StatisticDataType;
+-
+-MetricsMessage GenerateStatisticMessage(
+-  const std::string & node_name,
+-  const std::string & metric_name,
+-  const std::string & unit,
+-  const builtin_interfaces::msg::Time window_start,
+-  const builtin_interfaces::msg::Time window_stop,
+-  const libstatistics_collector::moving_average_statistics::StatisticData & data)
+-{
+-  MetricsMessage msg;
+-
+-  msg.measurement_source_name = node_name;
+-  msg.metrics_source = metric_name;
+-  msg.unit = unit;
+-  msg.window_start = window_start;
+-  msg.window_stop = window_stop;
+-
+-  msg.statistics.reserve(5);
+-
+-  msg.statistics.emplace_back();
+-  msg.statistics.back().data_type = StatisticDataType::STATISTICS_DATA_TYPE_AVERAGE;
+-  msg.statistics.back().data = data.average;
+-
+-  msg.statistics.emplace_back();
+-  msg.statistics.back().data_type = StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM;
+-  msg.statistics.back().data = data.max;
+-
+-  msg.statistics.emplace_back();
+-  msg.statistics.back().data_type = StatisticDataType::STATISTICS_DATA_TYPE_MINIMUM;
+-  msg.statistics.back().data = data.min;
+-
+-  msg.statistics.emplace_back();
+-  msg.statistics.back().data_type = StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT;
+-  msg.statistics.back().data = static_cast<double>(data.sample_count);
+-
+-  msg.statistics.emplace_back();
+-  msg.statistics.back().data_type = StatisticDataType::STATISTICS_DATA_TYPE_STDDEV;
+-  msg.statistics.back().data = data.standard_deviation;
+-
+-  return msg;
+-}
+-
+-}  // namespace collector
+-}  // namespace libstatistics_collector

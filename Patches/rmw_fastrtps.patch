@@ -1,0 +1,49 @@
+diff --git a/rmw_fastrtps_cpp/CMakeLists.txt b/rmw_fastrtps_cpp/CMakeLists.txt
+index c30caa0..31d3a51 100644
+--- a/rmw_fastrtps_cpp/CMakeLists.txt
++++ b/rmw_fastrtps_cpp/CMakeLists.txt
+@@ -93,6 +93,20 @@ add_library(rmw_fastrtps_cpp
+   src/type_support_common.cpp
+   src/rmw_get_endpoint_network_flow.cpp
+ )
++
++set_target_properties(rmw_fastrtps_cpp PROPERTIES 
++    COMPILE_PDB_NAME rmw_fastrtps_cpp
++    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
++    COMPILE_FLAGS "/Zi"
++    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
++)
++
++target_compile_options(rmw_fastrtps_cpp PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
++target_link_options(rmw_fastrtps_cpp PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
++
++target_compile_options(rmw_fastrtps_cpp PRIVATE /Zi)
++target_link_options(rmw_fastrtps_cpp PRIVATE /DEBUG)
++
+ target_link_libraries(rmw_fastrtps_cpp
+   fastcdr fastrtps)
+ 
+diff --git a/rmw_fastrtps_dynamic_cpp/CMakeLists.txt b/rmw_fastrtps_dynamic_cpp/CMakeLists.txt
+index 802e405..c0c0886 100644
+--- a/rmw_fastrtps_dynamic_cpp/CMakeLists.txt
++++ b/rmw_fastrtps_dynamic_cpp/CMakeLists.txt
+@@ -100,6 +100,19 @@ add_library(rmw_fastrtps_dynamic_cpp
+ target_link_libraries(rmw_fastrtps_dynamic_cpp
+   fastcdr fastrtps)
+ 
++set_target_properties(rmw_fastrtps_dynamic_cpp PROPERTIES
++    COMPILE_PDB_NAME rmw_fastrtps_dynamic_cpp
++    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
++    COMPILE_FLAGS "/Zi"
++    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
++)
++
++target_compile_options(rmw_fastrtps_dynamic_cpp PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
++target_link_options(rmw_fastrtps_dynamic_cpp PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
++
++target_compile_options(rmw_fastrtps_dynamic_cpp PRIVATE /Zi)
++target_link_options(rmw_fastrtps_dynamic_cpp PRIVATE /DEBUG)
++
+ # specific order: dependents before dependencies
+ ament_target_dependencies(rmw_fastrtps_dynamic_cpp
+   "rcpputils"

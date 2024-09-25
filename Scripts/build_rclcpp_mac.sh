@@ -127,8 +127,36 @@ cd "$ROOT_DIR/Source/rclcpp/class_loader"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
 cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
+cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
 cd "$ROOT_DIR/Source/rclcpp/geometry2"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
+cd "$ROOT_DIR/Source/rclcpp/theora"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
+cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
+cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
+cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
+cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
+cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
+cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
+cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
+cd "$ROOT_DIR/Source/rclcpp/vorbis"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -147,17 +175,10 @@ cd "$ROOT_DIR/Source/rclcpp/ogg"
 make clean
 make install
 
-echo -e "Building vorbis"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-./autogen.sh
-./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
-make clean
-make install
-
 echo -e "Building theora"
 cd "$ROOT_DIR/Source/rclcpp/theora"
 ./autogen.sh
-./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --with-vorbis="$ROOT_DIR/Source/rclcpp/install" --disable-examples
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
 make clean
 make install
 
@@ -211,16 +232,20 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
 # To inspect compiler/linker commands
-#export VERBOSE=1
+export VERBOSE=1
+# --cmake-clean-cache \
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV  \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
- --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
+ --event-handlers console_direct+ \
  --cmake-args \
+ " -DCMAKE_CXX_STANDARD=20" \
+ " -DBUILD_TESTS=OFF" \
+ " -DBUILD_TESTING=OFF" \
  " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
  " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
  " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.2.13/include'" \
@@ -272,7 +297,7 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Mac"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Libraries/Mac"
 
 # Copy the includes
-INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -type d -maxdepth 1 -mindepth 1)
+INCLUDE_DIRS=$(find "$ROOT_DIR/Source/rclcpp/install/include" -maxdepth 1 -mindepth 1 -type d)
 for INCLUDE_DIR in $INCLUDE_DIRS; do
   LIBRARY_NAME=$(basename "$INCLUDE_DIR")
   if [ -e "$INCLUDE_DIR/$LIBRARY_NAME" ]; then
