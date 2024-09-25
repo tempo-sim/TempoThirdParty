@@ -1,27 +1,3 @@
-diff --git a/rmw_cyclonedds_cpp/CMakeLists.txt b/rmw_cyclonedds_cpp/CMakeLists.txt
-index a2a8a02..3f93156 100644
---- a/rmw_cyclonedds_cpp/CMakeLists.txt
-+++ b/rmw_cyclonedds_cpp/CMakeLists.txt
-@@ -80,6 +80,19 @@ add_library(rmw_cyclonedds_cpp
-   src/TypeSupport2.cpp
-   src/TypeSupport.cpp)
- 
-+set_target_properties(rmw_cyclonedds_cpp PROPERTIES
-+    COMPILE_PDB_NAME rmw_cyclonedds_cpp
-+    COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-+    COMPILE_FLAGS "/Zi"
-+    LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF"
-+)
-+
-+target_compile_options(rmw_cyclonedds_cpp PRIVATE $<$<CONFIG:Release>:/Od /Zi>)
-+target_link_options(rmw_cyclonedds_cpp PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
-+
-+target_compile_options(rmw_cyclonedds_cpp PRIVATE /Zi)
-+target_link_options(rmw_cyclonedds_cpp PRIVATE /DEBUG)
-+
- target_link_libraries(rmw_cyclonedds_cpp PRIVATE
-   CycloneDDS::ddsc)
- 
 diff --git a/rmw_cyclonedds_cpp/src/TypeSupport.hpp b/rmw_cyclonedds_cpp/src/TypeSupport.hpp
 index be07c9e..1370b95 100644
 --- a/rmw_cyclonedds_cpp/src/TypeSupport.hpp
