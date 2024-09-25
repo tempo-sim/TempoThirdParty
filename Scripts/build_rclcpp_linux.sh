@@ -260,6 +260,9 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Linux"
 # Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.so*" -exec cp -P {} "$DEST/Libraries/Linux" \;
 
+# Copy the Python deps from the virtual environment
+cp -r -P "$ROOT_DIR/Builds/rclcpp/venv/lib/python"* "$DEST/Libraries/Linux"
+
 # Copy the Python deps
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Linux"
 
