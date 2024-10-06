@@ -102,9 +102,9 @@ git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
 cd "$ROOT_DIR/Source/rclcpp/rmw"
 git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
 cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git apply "$ROOT_DIR/Patches/rosidl.patch"
+git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
 cd "$ROOT_DIR/Source/rclcpp/rcutils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
+git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rcutils.patch"
 cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
 git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
 cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
@@ -157,6 +157,11 @@ cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
 cd "$ROOT_DIR/Source/rclcpp/vorbis"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+
+echo -e "Copying asio"
+mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -215,7 +220,7 @@ cd "$UNREAL_ENGINE_PATH"
 ./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
-pip install empy
+pip install empy==3.3.4
 pip install lark==1.1.1
 pip install numpy
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
@@ -244,6 +249,9 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --event-handlers console_direct+ \
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=20" \
+ " -DCMAKE_BUILD_TYPE=DEBUG" \
+ " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
+ " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
  " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \

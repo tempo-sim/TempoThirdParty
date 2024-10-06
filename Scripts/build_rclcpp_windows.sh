@@ -219,7 +219,7 @@ cd "$UNREAL_ENGINE_PATH"
 ./Engine/Binaries/ThirdParty/Python3/Win64/python.exe -m venv "$BUILD_DIR/venv"
 source "$BUILD_DIR/venv/Scripts/activate"
 pip install colcon-common-extensions
-pip install empy
+pip install empy==3.3.4
 pip install lark==1.1.1
 pip install numpy
 ## 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
@@ -260,6 +260,8 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-args \
  " -G Visual Studio 17 2022" \
  " -DCMAKE_CXX_STANDARD=17" \
+ " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
+ " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_SHARED_LIBS=ON" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \

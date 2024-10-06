@@ -189,7 +189,7 @@ cd "$UNREAL_ENGINE_PATH"
 ./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
-pip install empy
+pip install empy==3.3.4
 pip install lark==1.1.1
 pip install numpy
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
@@ -216,6 +216,8 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
+ " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
+ " -DTHIRDPARTY_Asio=FORCE" \
  " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
  " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
  " -DPNG_FOUND=ON" \
