@@ -139,6 +139,11 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.p
 cd "$ROOT_DIR/Source/rclcpp/vorbis"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
 
+echo -e "Copying asio"
+mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
+
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
@@ -216,6 +221,9 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
+ " -DCMAKE_CXX_STANDARD=17" \
+ " -DBUILD_TESTS=OFF" \
+ " -DBUILD_TESTING=OFF" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
  " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
