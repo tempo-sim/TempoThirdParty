@@ -237,7 +237,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
 # To inspect compiler/linker commands
-export VERBOSE=1
+# export VERBOSE=1
 # --cmake-clean-cache \
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
@@ -249,7 +249,6 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --event-handlers console_direct+ \
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=20" \
- " -DCMAKE_BUILD_TYPE=DEBUG" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_TESTS=OFF" \
