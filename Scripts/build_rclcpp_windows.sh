@@ -152,7 +152,7 @@ cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rcl
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 # You must run bootstrap separately with VS command prompt
-if [ ! -f b2.exe ]; then
+if [ ! -f ./b2.exe ]; then
   echo "Please run ./bootstrap.bat --prefix=$ROOT_DIR/Source/rclcpp/install from a VS command prompt"
   exit 1
 fi
@@ -244,7 +244,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # " -DCMAKE_CXX_FLAGS_DEBUG='/permissive- /volatile:iso /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew'" \
 # " -DCMAKE_CXX_STANDARD_REQUIRED=ON" \
 # " -DCMAKE_CXX_EXTENSIONS=OFF" \
-#  " -DBoost_NO_BOOST_CMAKE=ON" \
+# " -DBoost_NO_BOOST_CMAKE=ON" \
 export CMAKE_PREFIX_PATH="$ROOT_DIR/Source/rclcpp/cmake"
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig-windows:$PKG_CONFIG_PATH"
 NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
@@ -260,8 +260,6 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-args \
  " -G Visual Studio 17 2022" \
  " -DCMAKE_CXX_STANDARD=17" \
- " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
- " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_SHARED_LIBS=ON" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
@@ -304,8 +302,7 @@ DEST="$ROOT_DIR/Outputs/rclcpp"
 # Copy the binaries
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/theora.dll" "$DEST/Binaries/Windows/libtheora.dll"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/tf2_eigen_kdl.dll" "$DEST/Binaries/Windows"
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-vc143-mt-1_85.dll" "$DEST/Binaries/Windows"
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-vc143-mt-gd-1_85.dll" "$DEST/Binaries/Windows"
+cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-"*".dll" "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/x64/vc17/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/Scripts"/* "$DEST/Binaries/Windows"

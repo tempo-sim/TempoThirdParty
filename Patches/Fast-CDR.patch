@@ -65,7 +65,7 @@ index 25c8055..2bc69f7 100644
                  endif()
              endif()
 diff --git a/include/fastcdr/Cdr.h b/include/fastcdr/Cdr.h
-index 6e7bae1..85621f4 100644
+index 6e7bae1..53c42c7 100644
 --- a/include/fastcdr/Cdr.h
 +++ b/include/fastcdr/Cdr.h
 @@ -23,12 +23,31 @@
@@ -246,31 +246,27 @@ index 6e7bae1..85621f4 100644
      {
          state state_before_error(*this);
  
-@@ -1356,13 +1382,22 @@ public:
+@@ -1356,9 +1382,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
 -    template<>
+-    Cdr& serialize<bool>(
+-            const std::vector<bool>& vector_t)
 +    template <>
-     Cdr& serialize<bool>(
-             const std::vector<bool>& vector_t)
-     {
-         return serializeBoolSequence(vector_t);
-     }
- 
-+#if _LIBCPP_STD_VER >= 17
-+    template <>
-+    Cdr& serialize<bool>(
-+            const std::pmr::vector<bool>& vector_t)
++    Cdr& serialize<bool, std::allocator<bool>>(
++            const std::vector<bool, std::allocator<bool>>& vector_t)
 +    {
 +        return serializeBoolSequence(vector_t);
 +    }
-+#endif
 +
- #endif // ifdef _MSC_VER
- 
-     /*!
-@@ -1372,13 +1407,14 @@ public:
++    template <>
++    Cdr& serialize<bool, std::pmr::polymorphic_allocator<bool>>(
++            const std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
+     {
+         return serializeBoolSequence(vector_t);
+     }
+@@ -1372,13 +1405,14 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -288,7 +284,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -1803,9 +1839,10 @@ public:
+@@ -1803,9 +1837,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -300,7 +296,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -1822,9 +1859,10 @@ public:
+@@ -1822,9 +1857,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -312,7 +308,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -1842,14 +1880,16 @@ public:
+@@ -1842,14 +1878,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -331,7 +327,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -1873,14 +1913,16 @@ public:
+@@ -1873,14 +1911,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -350,7 +346,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -1903,9 +1945,9 @@ public:
+@@ -1903,9 +1943,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to serialize a position that exceeds the internal memory size.
       */
@@ -362,7 +358,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -1949,7 +1991,8 @@ public:
+@@ -1949,7 +1989,8 @@ public:
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -372,7 +368,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -2009,7 +2052,8 @@ public:
+@@ -2009,7 +2050,8 @@ public:
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -382,7 +378,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -2426,18 +2470,19 @@ public:
+@@ -2426,18 +2468,19 @@ public:
              Endianness endianness);
  
      /*!
@@ -405,7 +401,7 @@ index 6e7bae1..85621f4 100644
          return *this;
      }
  
-@@ -2447,12 +2492,14 @@ public:
+@@ -2447,12 +2490,14 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -422,7 +418,7 @@ index 6e7bae1..85621f4 100644
          return *this;
      }
  
-@@ -2463,13 +2510,15 @@ public:
+@@ -2463,13 +2508,15 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -440,7 +436,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -2492,13 +2541,15 @@ public:
+@@ -2492,13 +2539,15 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -458,7 +454,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -2552,9 +2603,9 @@ public:
+@@ -2552,9 +2601,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -470,7 +466,7 @@ index 6e7bae1..85621f4 100644
      {
          return deserializeBoolSequence(vector_t);
      }
-@@ -2567,9 +2618,9 @@ public:
+@@ -2567,9 +2616,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -482,31 +478,27 @@ index 6e7bae1..85621f4 100644
      {
          uint32_t seqLength = 0;
          state state_before_error(*this);
-@@ -2645,13 +2696,22 @@ public:
+@@ -2645,9 +2694,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
 -    template<>
+-    Cdr& deserialize<bool>(
+-            std::vector<bool>& vector_t)
 +    template <>
-     Cdr& deserialize<bool>(
-             std::vector<bool>& vector_t)
-     {
-         return deserializeBoolSequence(vector_t);
-     }
- 
-+#if _LIBCPP_STD_VER >= 17
-+    template <>
-+    Cdr& deserialize<bool(
-+            std::pmr::vector<bool>& vector_t)
++    Cdr& deserialize<bool, std::allocator<bool>>(
++            std::vector<bool, std::allocator<bool>>& vector_t)
 +    {
 +        return deserializeBoolSequence(vector_t);
 +    }
-+#endif
 +
- #endif // ifdef _MSC_VER
- 
-     /*!
-@@ -2661,13 +2721,14 @@ public:
++    template <>
++    Cdr& deserialize<bool, std::pmr::polymorphic_allocator<bool>>(
++            std::vector<bool, std::pmr::polymorphic_allocator<bool>>& vector_t)
+     {
+         return deserializeBoolSequence(vector_t);
+     }
+@@ -2661,13 +2717,14 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -524,7 +516,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -3090,9 +3151,10 @@ public:
+@@ -3090,9 +3147,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -536,7 +528,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -3109,9 +3171,10 @@ public:
+@@ -3109,9 +3167,10 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -548,7 +540,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -3129,14 +3192,16 @@ public:
+@@ -3129,14 +3188,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -567,7 +559,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -3160,14 +3225,16 @@ public:
+@@ -3160,14 +3221,16 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -586,7 +578,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -3190,9 +3257,9 @@ public:
+@@ -3190,9 +3253,9 @@ public:
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
@@ -598,7 +590,7 @@ index 6e7bae1..85621f4 100644
              size_t numElements)
      {
          for (size_t count = 0; count < numElements; ++count)
-@@ -3236,7 +3303,8 @@ public:
+@@ -3236,7 +3299,8 @@ public:
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -608,7 +600,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -3379,7 +3447,8 @@ public:
+@@ -3379,7 +3443,8 @@ public:
              Endianness endianness)
      {
          bool auxSwap = m_swapBytes;
@@ -618,7 +610,7 @@ index 6e7bae1..85621f4 100644
  
          try
          {
-@@ -3408,15 +3477,31 @@ private:
+@@ -3408,15 +3473,31 @@ private:
  
      Cdr& deserializeBoolSequence(
              std::vector<bool>& vector_t);
@@ -633,7 +625,7 @@ index 6e7bae1..85621f4 100644
              std::wstring*& sequence_t,
              size_t& numElements);
  
-+#if _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +    Cdr& serializeBoolSequence(
 +            const std::pmr::vector<bool>& vector_t);
 +  
@@ -647,7 +639,7 @@ index 6e7bae1..85621f4 100644
 +    Cdr& deserializeWStringSequence(
 +            std::pmr::wstring*& sequence_t,
 +            size_t& numElements);
-+#endif
++#endif // defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +
  #if HAVE_CXX0X
      /*!
@@ -667,14 +659,14 @@ index 26a6320..0d6fc59 100644
  #define CONSTEXPR const
  #endif
 diff --git a/src/cpp/Cdr.cpp b/src/cpp/Cdr.cpp
-index 4a8bb25..93aa2d1 100644
+index 4a8bb25..745a6f7 100644
 --- a/src/cpp/Cdr.cpp
 +++ b/src/cpp/Cdr.cpp
 @@ -2649,6 +2649,43 @@ Cdr& Cdr::serializeBoolSequence(
      return *this;
  }
  
-+#if _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +Cdr& Cdr::serializeBoolSequence(
 +        const std::pmr::vector<bool>& vector_t)
 +{
@@ -718,7 +710,7 @@ index 4a8bb25..93aa2d1 100644
      return *this;
  }
  
-+#if _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +Cdr& Cdr::deserializeBoolSequence(
 +            std::pmr::vector<bool>& vector_t)
 +{
@@ -771,7 +763,7 @@ index 4a8bb25..93aa2d1 100644
      return *this;
  }
  
-+#if _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +Cdr& Cdr::deserializeStringSequence(
 +        std::pmr::string*& sequence_t,
 +        size_t& numElements)
@@ -807,7 +799,7 @@ index 4a8bb25..93aa2d1 100644
      return *this;
  }
 +
-+#if _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
 +Cdr& Cdr::deserializeWStringSequence(
 +        std::pmr::wstring*& sequence_t,
 +        size_t& numElements)
