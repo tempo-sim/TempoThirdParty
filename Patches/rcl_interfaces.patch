@@ -1,0 +1,29 @@
+diff --git a/builtin_interfaces/CMakeLists.txt b/builtin_interfaces/CMakeLists.txt
+index 23741d5..f8a7ae9 100644
+--- a/builtin_interfaces/CMakeLists.txt
++++ b/builtin_interfaces/CMakeLists.txt
+@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.5)
+ 
+ project(builtin_interfaces)
+ 
+-# Default to C++14
+-if(NOT CMAKE_CXX_STANDARD)
+-  set(CMAKE_CXX_STANDARD 14)
+-endif()
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   add_compile_options(-Wall -Wextra -Wpedantic)
+ endif()
+@@ -19,6 +15,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
+   ADD_LINTER_TESTS
+ )
+ 
++# Default to C++17
++if(NOT CMAKE_CXX_STANDARD)
++  set(CMAKE_CXX_STANDARD 17)
++  set(CMAKE_CXX_STANDARD_REQUIRED ON)
++  set(CMAKE_CXX_EXTENSIONS OFF)
++endif()
++
+ ament_export_dependencies(rosidl_default_runtime)
+ 
+ ament_package()

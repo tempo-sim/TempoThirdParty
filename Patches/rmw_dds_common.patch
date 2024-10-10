@@ -1,0 +1,59 @@
+diff --git a/rmw_dds_common/src/graph_cache.cpp b/rmw_dds_common/src/graph_cache.cpp
+index 551bb1b..e061f40 100644
+--- a/rmw_dds_common/src/graph_cache.cpp
++++ b/rmw_dds_common/src/graph_cache.cpp
+@@ -243,7 +243,7 @@ GraphCache::remove_node(
+     it->second.node_entities_info_seq.begin(),
+     it->second.node_entities_info_seq.end(),
+     [&node_name, &node_namespace](const rmw_dds_common::msg::NodeEntitiesInfo & node_info) {
+-      return node_info.node_name == node_name && node_info.node_namespace == node_namespace;
++      return (strcmp(node_info.node_name.c_str(), node_name.c_str()) == 0) && (strcmp(node_info.node_namespace.c_str(), node_namespace.c_str()) == 0);
+     });
+ 
+   assert(to_remove != it->second.node_entities_info_seq.end());
+@@ -270,7 +270,7 @@ __modify_node_info(
+     participant_info->second.node_entities_info_seq.end(),
+     [&](const rmw_dds_common::msg::NodeEntitiesInfo & node_info)
+     {
+-      return node_info.node_name == node_name && node_info.node_namespace == node_namespace;
++      return (strcmp(node_info.node_name.c_str(), node_name.c_str()) == 0) && (strcmp(node_info.node_namespace.c_str(), node_namespace.c_str()) == 0);
+     });
+   assert(node_info != participant_info->second.node_entities_info_seq.end());
+ 
+@@ -452,7 +452,9 @@ __find_name_and_namespace_from_entity_gid(
+       }
+     );
+     if (gid_seq.end() != it) {
+-      return {node_info.node_name, node_info.node_namespace, EndpointCreator::ROS_NODE};
++      const std::string node_name(node_info.node_name.c_str());
++      const std::string node_namespace(node_info.node_namespace.c_str());
++      return {node_name, node_namespace, EndpointCreator::ROS_NODE};
+     }
+   }
+   return {"", "", EndpointCreator::UNDISCOVERED_ROS_NODE};
+@@ -763,8 +765,8 @@ __find_node(
+   for (const auto & participant : participant_map) {
+     for (const auto & node : participant.second.node_entities_info_seq) {
+       if (
+-        node.node_name == node_name &&
+-        node.node_namespace == node_namespace)
++        (strcmp(node.node_name.c_str(), node_name.c_str()) == 0) &&
++        (strcmp(node.node_namespace.c_str(), node_namespace.c_str()) == 0))
+       {
+         return &node;
+       }
+diff --git a/rmw_dds_common/test/test_graph_cache.cpp b/rmw_dds_common/test/test_graph_cache.cpp
+index ed5b7e4..b4371a3 100644
+--- a/rmw_dds_common/test/test_graph_cache.cpp
++++ b/rmw_dds_common/test/test_graph_cache.cpp
+@@ -537,8 +537,8 @@ check_participant_entities_msg(
+   for (size_t i = 0; i < expected.node_entities_info_seq.size(); i++) {
+     const auto & node_info = msg.node_entities_info_seq[i];
+     const auto & node_info_expected = expected.node_entities_info_seq[i];
+-    EXPECT_EQ(node_info.node_namespace, node_info_expected.namespace_);
+-    EXPECT_EQ(node_info.node_name, node_info_expected.name);
++    EXPECT_EQ(strcmp(node_info.node_namespace.c_str(), node_info_expected.namespace_.c_str()), 0);
++    EXPECT_EQ(strcmp(node_info.node_name.c_str(), node_info_expected.name.c_str()), 0);
+     auto & readers_gids = node_info.reader_gid_seq;
+     auto & expected_readers_gids = node_info_expected.reader_gids;
+     ASSERT_EQ(readers_gids.size(), expected_readers_gids.size());

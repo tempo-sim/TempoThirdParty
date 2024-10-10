@@ -1,0 +1,100 @@
+diff --git a/cv_bridge/src/cv_bridge.cpp b/cv_bridge/src/cv_bridge.cpp
+index 0a2e4f5..fe74cf8 100644
+--- a/cv_bridge/src/cv_bridge.cpp
++++ b/cv_bridge/src/cv_bridge.cpp
+@@ -276,9 +276,9 @@ const std::vector<int> getConversionCode(std::string src_encoding, std::string d
+ // Converts a ROS Image to a cv::Mat by sharing the data or changing its endianness if needed
+ cv::Mat matFromImage(const sensor_msgs::msg::Image & source)
+ {
+-  int source_type = getCvType(source.encoding);
+-  int byte_depth = enc::bitDepth(source.encoding) / 8;
+-  int num_channels = enc::numChannels(source.encoding);
++  int source_type = getCvType(std::string(source.encoding.c_str()));
++  int byte_depth = enc::bitDepth(std::string(source.encoding.c_str())) / 8;
++  int num_channels = enc::numChannels(std::string(source.encoding.c_str()));
+ 
+   if (source.step < source.width * byte_depth * num_channels) {
+     std::stringstream ss;
+@@ -424,7 +424,7 @@ CvImagePtr toCvCopy(
+   const std::string & encoding)
+ {
+   // Construct matrix pointing to source data
+-  return toCvCopyImpl(matFromImage(source), source.header, source.encoding, encoding);
++  return toCvCopyImpl(matFromImage(source), source.header, std::string(source.encoding.c_str()), encoding);
+ }
+ 
+ // Share const data, returnee is immutable
+@@ -441,7 +441,7 @@ CvImageConstPtr toCvShare(
+   const std::string & encoding)
+ {
+   // If the encoding different or the endianness different, you have to copy
+-  if ((!encoding.empty() && source.encoding != encoding) || (!source.is_bigendian !=
++  if ((!encoding.empty() && strcmp(source.encoding.c_str(), encoding.c_str()) != 0) || (!source.is_bigendian !=
+     (rcpputils::endian::native != rcpputils::endian::big)))
+   {
+     return toCvCopy(source, encoding);
+@@ -459,7 +459,7 @@ CvImagePtr cvtColor(
+   const CvImageConstPtr & source,
+   const std::string & encoding)
+ {
+-  return toCvCopyImpl(source->image, source->header, source->encoding, encoding);
++  return toCvCopyImpl(source->image, source->header, std::string(source->encoding.c_str()), encoding);
+ }
+ 
+ /////////////////////////////////////// CompressedImage ///////////////////////////////////////////
+@@ -531,7 +531,10 @@ void CvImage::toCompressedImageMsg(
+ 
+   std::string format = getFormat(dst_format);
+   ros_image.format = format;
+-  cv::imencode("." + format, image, ros_image.data);
++  std::vector<uchar> buf;
++  cv::imencode("." + format, image, buf);
++  ros_image.data.clear();
++  std::move(buf.begin(), buf.end(), std::back_inserter(ros_image.data));
+ }
+ 
+ // Deep copy data, returnee is mutable
+diff --git a/cv_bridge/test/utest.cpp b/cv_bridge/test/utest.cpp
+index 3d2a35a..1f6ff78 100644
+--- a/cv_bridge/test/utest.cpp
++++ b/cv_bridge/test/utest.cpp
+@@ -16,7 +16,7 @@ TEST(CvBridgeTest, NonContinuous)
+   sensor_msgs::msg::Image::SharedPtr msg = cvi.toImageMsg();
+   EXPECT_EQ(static_cast<int>(msg->height), 8);
+   EXPECT_EQ(static_cast<int>(msg->width), 3);
+-  EXPECT_EQ(msg->encoding, cvi.encoding);
++  EXPECT_EQ(strcmp(msg->encoding.c_str(), cvi.encoding.c_str()), 0);
+   EXPECT_EQ(static_cast<int>(msg->step), 6);
+ }
+ 
+@@ -117,7 +117,7 @@ TEST(CvBridgeTest, imageMessageConversion)
+   imgmsg.encoding = "32FC1";
+   imgmsg.step = imgmsg.width * 32 / 8 * 1;
+   imgmsg.data.resize(imgmsg.height * imgmsg.step);
+-  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, imgmsg.encoding));
++  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, std::string(imgmsg.encoding.c_str())));
+   ASSERT_EQ(static_cast<int>(imgmsg.height), cv_ptr->image.rows);
+   ASSERT_EQ(static_cast<int>(imgmsg.width), cv_ptr->image.cols);
+   ASSERT_EQ(1, cv_ptr->image.channels());
+@@ -127,7 +127,7 @@ TEST(CvBridgeTest, imageMessageConversion)
+   imgmsg.encoding = "32FC10";
+   imgmsg.step = imgmsg.width * 32 / 8 * 10;
+   imgmsg.data.resize(imgmsg.height * imgmsg.step);
+-  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, imgmsg.encoding));
++  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, std::string(imgmsg.encoding.c_str())));
+   ASSERT_EQ(static_cast<int>(imgmsg.height), cv_ptr->image.rows);
+   ASSERT_EQ(static_cast<int>(imgmsg.width), cv_ptr->image.cols);
+   ASSERT_EQ(10, cv_ptr->image.channels());
+diff --git a/image_geometry/include/image_geometry/pinhole_camera_model.h b/image_geometry/include/image_geometry/pinhole_camera_model.h
+index fdbecd7..2a82080 100644
+--- a/image_geometry/include/image_geometry/pinhole_camera_model.h
++++ b/image_geometry/include/image_geometry/pinhole_camera_model.h
+@@ -333,7 +333,7 @@ IMAGE_GEOMETRY_PUBLIC
+ inline std::string PinholeCameraModel::tfFrame() const
+ {
+   assert( initialized() );
+-  return cam_info_.header.frame_id;
++  return std::string(cam_info_.header.frame_id.c_str());
+ }
+ 
+ IMAGE_GEOMETRY_PUBLIC

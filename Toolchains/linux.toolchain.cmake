@@ -46,7 +46,8 @@ set(COMPILER_FLAGS " -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-len
                      -fvisibility-inlines-hidden -fPIC --target=${LINUX_ARCH_NAME} -O3 -DNDEBUG \
                      --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc \
                      -funwind-tables -gdwarf-3 -pthread -Wno-unused-command-line-argument \
-                     -Wno-error=deprecated-declarations -Wno-strict-prototypes -Wno-deprecated-copy")
+                     -Wno-error=deprecated-declarations -Wno-strict-prototypes -Wno-deprecated-copy \
+                     -Wl,--allow-shlib-undefined")
 
 string(CONCAT CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_INIT} ${COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 string(CONCAT CMAKE_C_FLAGS   "${CMAKE_C_FLAGS_INIT}   ${COMPILER_FLAGS}")

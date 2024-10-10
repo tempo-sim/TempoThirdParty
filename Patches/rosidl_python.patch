@@ -1,0 +1,22 @@
+diff --git a/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake b/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake
+index a6d8263..2334d83 100644
+--- a/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake
++++ b/rosidl_generator_py/cmake/rosidl_generator_py_generate_interfaces.cmake
+@@ -172,6 +172,8 @@ add_dependencies(
+   ${rosidl_generate_interfaces_TARGET}__rosidl_typesupport_c
+ )
+ 
++target_compile_features(${_target_name_lib} PUBLIC cxx_std_17)
++
+ target_link_libraries(
+   ${_target_name_lib}
+   ${PythonExtra_LIBRARIES}
+@@ -250,6 +252,8 @@ foreach(_typesupport_impl ${_typesupport_impls})
+     ${rosidl_generate_interfaces_TARGET}__${_typesupport_impl}
+   )
+ 
++  target_compile_features(${_target_name} PUBLIC cxx_std_17)
++
+   target_include_directories(${_target_name}
+     PUBLIC
+     ${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_c

@@ -1,8 +1,243 @@
+diff --git a/camera_calibration_parsers/CMakeLists.txt b/camera_calibration_parsers/CMakeLists.txt
+index 0fed1d3..92f0b53 100644
+--- a/camera_calibration_parsers/CMakeLists.txt
++++ b/camera_calibration_parsers/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(camera_calibration_parsers)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
+diff --git a/camera_calibration_parsers/src/parse_ini.cpp b/camera_calibration_parsers/src/parse_ini.cpp
+index dfc0965..0bcfe65 100644
+--- a/camera_calibration_parsers/src/parse_ini.cpp
++++ b/camera_calibration_parsers/src/parse_ini.cpp
+@@ -214,10 +214,10 @@ bool parse_camera_section(
+ 
+   auto d = parse_matrix<1, 8>(++distortion);
+   if (std::isnan(d[5])) {
+-    cam_info.d = std::vector<double>(d.begin(), d.begin() + 5);
++    cam_info.d.assign(d.begin(), d.begin() + 5);
+     cam_info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+   } else {
+-    cam_info.d = std::vector<double>(d.begin(), d.end());
++    cam_info.d.assign(d.begin(), d.end());
+     cam_info.distortion_model = sensor_msgs::distortion_models::RATIONAL_POLYNOMIAL;
+   }
+ 
+diff --git a/camera_calibration_parsers/src/parse_yml.cpp b/camera_calibration_parsers/src/parse_yml.cpp
+index 82743b1..c0b2f9f 100644
+--- a/camera_calibration_parsers/src/parse_yml.cpp
++++ b/camera_calibration_parsers/src/parse_yml.cpp
+@@ -146,7 +146,7 @@ bool writeCalibrationYml(
+   emitter << YAML::Key << CAM_YML_NAME << YAML::Value << camera_name;
+   emitter << YAML::Key << K_YML_NAME << YAML::Value <<
+     SimpleMatrix(3, 3, const_cast<double *>(&cam_info.k[0]));
+-  emitter << YAML::Key << DMODEL_YML_NAME << YAML::Value << cam_info.distortion_model;
++  emitter << YAML::Key << DMODEL_YML_NAME << YAML::Value << std::string(cam_info.distortion_model.c_str());
+   emitter << YAML::Key << D_YML_NAME << YAML::Value << SimpleMatrix(
+     1,
+     static_cast<int>(cam_info.d.size()),
+@@ -210,7 +210,9 @@ bool readCalibrationYml(
+ 
+     // Different distortion models may have different numbers of parameters
+     if (doc[DMODEL_YML_NAME]) {
+-      doc[DMODEL_YML_NAME] >> cam_info.distortion_model;
++      std::string distortion_model;
++      doc[DMODEL_YML_NAME] >> distortion_model;
++      cam_info.distortion_model.assign(distortion_model.begin(), distortion_model.end());
+     } else {
+       // Assume plumb bob for backwards compatibility
+       cam_info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+diff --git a/camera_info_manager/CMakeLists.txt b/camera_info_manager/CMakeLists.txt
+index 724ba49..5061bfc 100644
+--- a/camera_info_manager/CMakeLists.txt
++++ b/camera_info_manager/CMakeLists.txt
+@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
+ 
+ project(camera_info_manager)
+ 
++set(CMAKE_CXX_STANDARD 20)
+ # Default to C++14
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+diff --git a/image_transport/CMakeLists.txt b/image_transport/CMakeLists.txt
+index 54d5b0d..e2081d9 100644
+--- a/image_transport/CMakeLists.txt
++++ b/image_transport/CMakeLists.txt
+@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(image_transport)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
+diff --git a/image_transport/include/image_transport/camera_publisher.hpp b/image_transport/include/image_transport/camera_publisher.hpp
+index 9945ea5..5db8d85 100644
+--- a/image_transport/include/image_transport/camera_publisher.hpp
++++ b/image_transport/include/image_transport/camera_publisher.hpp
+@@ -71,7 +71,8 @@ public:
+   CameraPublisher(
+     rclcpp::Node * node,
+     const std::string & base_topic,
+-    rmw_qos_profile_t custom_qos = rmw_qos_profile_default);
++    rmw_qos_profile_t custom_qos = rmw_qos_profile_default,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>());
+ 
+   // TODO(ros2) Restore support for SubscriberStatusCallbacks when available.
+ 
+diff --git a/image_transport/include/image_transport/image_transport.hpp b/image_transport/include/image_transport/image_transport.hpp
+index c1f9785..2253ba1 100644
+--- a/image_transport/include/image_transport/image_transport.hpp
++++ b/image_transport/include/image_transport/image_transport.hpp
+@@ -53,7 +53,8 @@ IMAGE_TRANSPORT_PUBLIC
+ Publisher create_publisher(
+   rclcpp::Node * node,
+   const std::string & base_topic,
+-  rmw_qos_profile_t custom_qos = rmw_qos_profile_default);
++  rmw_qos_profile_t custom_qos = rmw_qos_profile_default,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>());
+ 
+ /**
+  * \brief Subscribe to an image topic, free function version.
+@@ -74,7 +75,8 @@ IMAGE_TRANSPORT_PUBLIC
+ CameraPublisher create_camera_publisher(
+   rclcpp::Node * node,
+   const std::string & base_topic,
+-  rmw_qos_profile_t custom_qos = rmw_qos_profile_default);
++  rmw_qos_profile_t custom_qos = rmw_qos_profile_default,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>());
+ 
+ /*!
+  * \brief Subscribe to a camera, free function version.
+@@ -117,7 +119,11 @@ public:
+    * \brief Advertise an image topic, simple version.
+    */
+   IMAGE_TRANSPORT_PUBLIC
+-  Publisher advertise(const std::string & base_topic, uint32_t queue_size, bool latch = false);
++  Publisher advertise(
++    const std::string & base_topic,
++    uint32_t queue_size,
++    bool latch = false,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>());
+ 
+   /*!
+    * \brief Advertise an image topic with subcriber status callbacks.
+@@ -247,7 +253,8 @@ public:
+   IMAGE_TRANSPORT_PUBLIC
+   CameraPublisher advertiseCamera(
+     const std::string & base_topic, uint32_t queue_size,
+-    bool latch = false);
++    bool latch = false,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>());
+ 
+   /*!
+    * \brief Advertise a synchronized camera raw image + info topic pair with subscriber status
+diff --git a/image_transport/include/image_transport/publisher.hpp b/image_transport/include/image_transport/publisher.hpp
+index 755c5df..130afc7 100644
+--- a/image_transport/include/image_transport/publisher.hpp
++++ b/image_transport/include/image_transport/publisher.hpp
+@@ -73,7 +73,8 @@ public:
+     rclcpp::Node * nh,
+     const std::string & base_topic,
+     PubLoaderPtr loader,
+-    rmw_qos_profile_t custom_qos);
++    rmw_qos_profile_t custom_qos,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options);
+ 
+   /*!
+    * \brief Returns the number of subscribers that are currently connected to
+diff --git a/image_transport/include/image_transport/publisher_plugin.hpp b/image_transport/include/image_transport/publisher_plugin.hpp
+index aa04e9a..36e002b 100644
+--- a/image_transport/include/image_transport/publisher_plugin.hpp
++++ b/image_transport/include/image_transport/publisher_plugin.hpp
+@@ -65,9 +65,10 @@ public:
+   void advertise(
+     rclcpp::Node * nh,
+     const std::string & base_topic,
+-    rmw_qos_profile_t custom_qos = rmw_qos_profile_default)
++    rmw_qos_profile_t custom_qos = rmw_qos_profile_default,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options = rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>>())
+   {
+-    advertiseImpl(nh, base_topic, custom_qos);
++    advertiseImpl(nh, base_topic, custom_qos, options);
+   }
+ 
+   /**
+@@ -110,7 +111,7 @@ public:
+     msg.encoding = message.encoding;
+     msg.is_bigendian = message.is_bigendian;
+     msg.step = message.step;
+-    msg.data = std::vector<uint8_t>(data, data + msg.step * msg.height);
++    msg.data.assign(data, data + msg.step * msg.height);
+ 
+     publish(msg);
+   }
+@@ -135,7 +136,8 @@ protected:
+    */
+   virtual void advertiseImpl(
+     rclcpp::Node * nh, const std::string & base_topic,
+-    rmw_qos_profile_t custom_qos) = 0;
++    rmw_qos_profile_t custom_qos,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options) = 0;
+ };
+ 
+ }  // namespace image_transport
+diff --git a/image_transport/include/image_transport/simple_publisher_plugin.hpp b/image_transport/include/image_transport/simple_publisher_plugin.hpp
+index e385dd6..511fc3a 100644
+--- a/image_transport/include/image_transport/simple_publisher_plugin.hpp
++++ b/image_transport/include/image_transport/simple_publisher_plugin.hpp
+@@ -100,14 +100,15 @@ public:
+ protected:
+   virtual void advertiseImpl(
+     rclcpp::Node * node, const std::string & base_topic,
+-    rmw_qos_profile_t custom_qos)
++    rmw_qos_profile_t custom_qos,
++    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+   {
+     std::string transport_topic = getTopicToAdvertise(base_topic);
+     simple_impl_ = std::make_unique<SimplePublisherPluginImpl>(node);
+ 
+     RCLCPP_DEBUG(simple_impl_->logger_, "getTopicToAdvertise: %s", transport_topic.c_str());
+     auto qos = rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(custom_qos), custom_qos);
+-    simple_impl_->pub_ = node->create_publisher<M>(transport_topic, qos);
++    simple_impl_->pub_ = node->create_publisher<M>(transport_topic, qos, options);
+   }
+ 
+   //! Generic function for publishing the internal message type.
+diff --git a/image_transport/src/camera_publisher.cpp b/image_transport/src/camera_publisher.cpp
+index 809d14d..01a8a2b 100644
+--- a/image_transport/src/camera_publisher.cpp
++++ b/image_transport/src/camera_publisher.cpp
+@@ -78,7 +78,8 @@ struct CameraPublisher::Impl
+ CameraPublisher::CameraPublisher(
+   rclcpp::Node * node,
+   const std::string & base_topic,
+-  rmw_qos_profile_t custom_qos)
++  rmw_qos_profile_t custom_qos,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+ : impl_(std::make_shared<Impl>(node))
+ {
+   // Explicitly resolve name here so we compute the correct CameraInfo topic when the
+@@ -89,8 +90,8 @@ CameraPublisher::CameraPublisher(
+   std::string info_topic = getCameraInfoTopic(image_topic);
+ 
+   auto qos = rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(custom_qos), custom_qos);
+-  impl_->image_pub_ = image_transport::create_publisher(node, image_topic, custom_qos);
+-  impl_->info_pub_ = node->create_publisher<sensor_msgs::msg::CameraInfo>(info_topic, qos);
++  impl_->image_pub_ = image_transport::create_publisher(node, image_topic, custom_qos, options);
++  impl_->info_pub_ = node->create_publisher<sensor_msgs::msg::CameraInfo>(info_topic, qos, options);
+ }
+ 
+ size_t CameraPublisher::getNumSubscribers() const
 diff --git a/image_transport/src/image_transport.cpp b/image_transport/src/image_transport.cpp
-index 0afadaf..605e7f9 100644
+index 0afadaf..2692f07 100644
 --- a/image_transport/src/image_transport.cpp
 +++ b/image_transport/src/image_transport.cpp
-@@ -54,14 +54,20 @@ struct Impl
+@@ -54,14 +54,21 @@ struct Impl
    }
  };
  
@@ -18,14 +253,16 @@ index 0afadaf..605e7f9 100644
  Publisher create_publisher(
    rclcpp::Node * node,
    const std::string & base_topic,
-   rmw_qos_profile_t custom_qos)
+-  rmw_qos_profile_t custom_qos)
++  rmw_qos_profile_t custom_qos,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
  {
 -  return Publisher(node, base_topic, kImpl->pub_loader_, custom_qos);
-+  return Publisher(node, base_topic, get_impl()->pub_loader_, custom_qos);
++  return Publisher(node, base_topic, get_impl()->pub_loader_, custom_qos, options);
  }
  
  Subscriber create_subscription(
-@@ -72,7 +78,7 @@ Subscriber create_subscription(
+@@ -72,15 +79,16 @@ Subscriber create_subscription(
    rmw_qos_profile_t custom_qos,
    rclcpp::SubscriptionOptions options)
  {
@@ -34,7 +271,18 @@ index 0afadaf..605e7f9 100644
  }
  
  CameraPublisher create_camera_publisher(
-@@ -95,7 +101,7 @@ CameraSubscriber create_camera_subscription(
+   rclcpp::Node * node,
+   const std::string & base_topic,
+-  rmw_qos_profile_t custom_qos)
++  rmw_qos_profile_t custom_qos,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+ {
+-  return CameraPublisher(node, base_topic, custom_qos);
++  return CameraPublisher(node, base_topic, custom_qos, options);
+ }
+ 
+ CameraSubscriber create_camera_subscription(
+@@ -95,7 +103,7 @@ CameraSubscriber create_camera_subscription(
  
  std::vector<std::string> getDeclaredTransports()
  {
@@ -43,7 +291,7 @@ index 0afadaf..605e7f9 100644
    // Remove the "_sub" at the end of each class name.
    for (std::string & transport : transports) {
      transport = erase_last_copy(transport, "_sub");
-@@ -107,13 +113,13 @@ std::vector<std::string> getLoadableTransports()
+@@ -107,13 +115,13 @@ std::vector<std::string> getLoadableTransports()
  {
    std::vector<std::string> loadableTransports;
  
@@ -59,8 +307,45 @@ index 0afadaf..605e7f9 100644
        // Remove the "_sub" at the end of each class name.
        loadableTransports.push_back(erase_last_copy(transportPlugin, "_sub"));
      } catch (const pluginlib::LibraryLoadException & e) {
+@@ -139,13 +147,17 @@ ImageTransport::ImageTransport(rclcpp::Node::SharedPtr node)
+ 
+ ImageTransport::~ImageTransport() = default;
+ 
+-Publisher ImageTransport::advertise(const std::string & base_topic, uint32_t queue_size, bool latch)
++Publisher ImageTransport::advertise(
++  const std::string & base_topic,
++  uint32_t queue_size,
++  bool latch,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+ {
+   // TODO(ros2) implement when resolved: https://github.com/ros2/ros2/issues/464
+   (void) latch;
+   rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
+   custom_qos.depth = queue_size;
+-  return create_publisher(impl_->node_.get(), base_topic, custom_qos);
++  return create_publisher(impl_->node_.get(), base_topic, custom_qos, options);
+ }
+ 
+ Subscriber ImageTransport::subscribe(
+@@ -180,13 +192,14 @@ Subscriber ImageTransport::subscribe(
+ 
+ CameraPublisher ImageTransport::advertiseCamera(
+   const std::string & base_topic, uint32_t queue_size,
+-  bool latch)
++  bool latch,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+ {
+   // TODO(ros2) implement when resolved: https://github.com/ros2/ros2/issues/464
+   (void) latch;
+   rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
+   custom_qos.depth = queue_size;
+-  return create_camera_publisher(impl_->node_.get(), base_topic, custom_qos);
++  return create_camera_publisher(impl_->node_.get(), base_topic, custom_qos, options);
+ }
+ 
+ CameraSubscriber ImageTransport::subscribeCamera(
 diff --git a/image_transport/src/publisher.cpp b/image_transport/src/publisher.cpp
-index b554125..bf87541 100644
+index b554125..3534d27 100644
 --- a/image_transport/src/publisher.cpp
 +++ b/image_transport/src/publisher.cpp
 @@ -33,6 +33,7 @@
@@ -71,7 +356,26 @@ index b554125..bf87541 100644
  
  #include "rclcpp/expand_topic_or_service_name.hpp"
  #include "rclcpp/logging.hpp"
-@@ -151,6 +152,20 @@ Publisher::Publisher(
+@@ -98,7 +99,8 @@ struct Publisher::Impl
+ 
+ Publisher::Publisher(
+   rclcpp::Node * node, const std::string & base_topic,
+-  PubLoaderPtr loader, rmw_qos_profile_t custom_qos)
++  PubLoaderPtr loader, rmw_qos_profile_t custom_qos,
++  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+ : impl_(std::make_shared<Impl>(node))
+ {
+   // Resolve the name explicitly because otherwise the compressed topics don't remap
+@@ -141,7 +143,7 @@ Publisher::Publisher(
+     const auto & lookup_name = transport_name + "_pub";
+     try {
+       auto pub = loader->createUniqueInstance(lookup_name);
+-      pub->advertise(node, image_topic, custom_qos);
++      pub->advertise(node, image_topic, custom_qos, options);
+       impl_->publishers_.push_back(std::move(pub));
+     } catch (const std::runtime_error & e) {
+       RCLCPP_ERROR(
+@@ -151,6 +153,20 @@ Publisher::Publisher(
    }
  
    if (impl_->publishers_.empty()) {

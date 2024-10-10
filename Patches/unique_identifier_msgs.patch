@@ -1,0 +1,29 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f2250bc..e2ad97e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,10 +1,6 @@
+ cmake_minimum_required(VERSION 3.5)
+ project(unique_identifier_msgs)
+ 
+-# Default to C++14
+-if(NOT CMAKE_CXX_STANDARD)
+-  set(CMAKE_CXX_STANDARD 14)
+-endif()
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   # we dont use add_compile_options with pedantic in message packages
+   # because the Python C extensions dont comply with it
+@@ -20,6 +16,13 @@ set(msg_files
+ 
+ rosidl_generate_interfaces(${PROJECT_NAME} ${msg_files})
+ 
++# Default to C++17
++if(NOT CMAKE_CXX_STANDARD)
++  set(CMAKE_CXX_STANDARD 17)
++  set(CMAKE_CXX_STANDARD_REQUIRED ON)
++  set(CMAKE_CXX_EXTENSIONS OFF)
++endif()
++
+ ament_export_dependencies(rosidl_default_runtime)
+ 
+ if(BUILD_TESTING)

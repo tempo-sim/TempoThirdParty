@@ -1,0 +1,486 @@
+diff --git a/rmw_cyclonedds_cpp/src/TypeSupport.hpp b/rmw_cyclonedds_cpp/src/TypeSupport.hpp
+index be07c9e..596c57f 100644
+--- a/rmw_cyclonedds_cpp/src/TypeSupport.hpp
++++ b/rmw_cyclonedds_cpp/src/TypeSupport.hpp
+@@ -20,6 +20,27 @@
+ #include <string>
+ #include <functional>
+ 
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ #include "rcutils/logging_macros.h"
+ 
+ #include "rosidl_runtime_c/string.h"
+@@ -89,16 +110,16 @@ struct StringHelper<rosidl_typesupport_introspection_c__MessageMembers>
+ template<>
+ struct StringHelper<rosidl_typesupport_introspection_cpp::MessageMembers>
+ {
+-  using type = std::string;
++  using type = std::pmr::string;
+ 
+-  static std::string & convert_to_std_string(void * data)
++  static type & convert_to_std_string(void * data)
+   {
+-    return *(static_cast<std::string *>(data));
++    return *(static_cast<type *>(data));
+   }
+ 
+   static void assign(cycdeser & deser, void * field)
+   {
+-    std::string & str = *(std::string *)field;
++    type & str = *(type *)field;
+     deser >> str;
+   }
+ };
+diff --git a/rmw_cyclonedds_cpp/src/TypeSupport2.hpp b/rmw_cyclonedds_cpp/src/TypeSupport2.hpp
+index b4b890d..ff33e4b 100644
+--- a/rmw_cyclonedds_cpp/src/TypeSupport2.hpp
++++ b/rmw_cyclonedds_cpp/src/TypeSupport2.hpp
+@@ -18,9 +18,26 @@
+ #include <functional>
+ #include <memory>
+ #include <regex>
+-#include <string>
+ #include <utility>
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
+ #include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++}
++#endif
+ 
+ #include "bytewise.hpp"
+ #include "exception.hpp"
+@@ -437,7 +454,7 @@ public:
+ class ROSIDLCPP_StringValueType : public U8StringValueType
+ {
+ public:
+-  using type = std::string;
++  using type = std::pmr::string;
+ 
+   TypedSpan<const char_traits::char_type> data(const void * ptr) const override
+   {
+diff --git a/rmw_cyclonedds_cpp/src/TypeSupport_impl.hpp b/rmw_cyclonedds_cpp/src/TypeSupport_impl.hpp
+index 736e088..b5a2bd6 100644
+--- a/rmw_cyclonedds_cpp/src/TypeSupport_impl.hpp
++++ b/rmw_cyclonedds_cpp/src/TypeSupport_impl.hpp
+@@ -18,8 +18,26 @@
+ 
+ #include <cassert>
+ #include <functional>
+-#include <string>
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
+ #include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
+ 
+ #include "TypeSupport.hpp"
+ #include "macros.hpp"
+@@ -113,39 +131,39 @@ void deserialize_field(
+   } else if (member->array_size_ && !member->is_upper_bound_) {
+     deser.deserializeA(static_cast<T *>(field), member->array_size_);
+   } else {
+-    auto & vector = *reinterpret_cast<std::vector<T> *>(field);
++    auto & vector = *reinterpret_cast<std::pmr::vector<T> *>(field);
+     deser >> vector;
+   }
+ }
+ 
+ template<>
+-inline void deserialize_field<std::string>(
++inline void deserialize_field<std::pmr::string>(
+   const rosidl_typesupport_introspection_cpp::MessageMember * member,
+   void * field,
+   cycdeser & deser)
+ {
+   if (!member->is_array_) {
+-    deser >> *static_cast<std::string *>(field);
++    deser >> *static_cast<std::pmr::string *>(field);
+   } else if (member->array_size_ && !member->is_upper_bound_) {
+-    std::string * array = static_cast<std::string *>(field);
++    std::pmr::string * array = static_cast<std::pmr::string *>(field);
+     deser.deserializeA(array, member->array_size_);
+   } else {
+-    auto & vector = *reinterpret_cast<std::vector<std::string> *>(field);
++    auto & vector = *reinterpret_cast<std::pmr::vector<std::pmr::string> *>(field);
+     deser >> vector;
+   }
+ }
+ 
+ template<>
+-inline void deserialize_field<std::wstring>(
++inline void deserialize_field<std::pmr::wstring>(
+   const rosidl_typesupport_introspection_cpp::MessageMember * member,
+   void * field,
+   cycdeser & deser)
+ {
+-  std::wstring wstr;
++  std::pmr::wstring wstr;
+   if (!member->is_array_) {
+     deser >> wstr;
+     wstring_to_u16string(
+-      wstr, *static_cast<std::u16string *>(field));
++      wstr, *static_cast<std::pmr::u16string *>(field));
+   } else {
+     uint32_t size;
+     if (member->array_size_ && !member->is_upper_bound_) {
+@@ -156,7 +174,7 @@ inline void deserialize_field<std::wstring>(
+     }
+     for (size_t i = 0; i < size; ++i) {
+       void * element = member->get_function(field, i);
+-      auto u16str = static_cast<std::u16string *>(element);
++      auto u16str = static_cast<std::pmr::u16string *>(element);
+       deser >> wstr;
+       wstring_to_u16string(wstr, *u16str);
+     }
+@@ -185,7 +203,7 @@ void deserialize_field(
+ }
+ 
+ template<>
+-inline void deserialize_field<std::string>(
++inline void deserialize_field<std::pmr::string>(
+   const rosidl_typesupport_introspection_c__MessageMember * member,
+   void * field,
+   cycdeser & deser)
+@@ -198,7 +216,7 @@ inline void deserialize_field<std::string>(
+       auto deser_field = static_cast<rosidl_runtime_c__String *>(field);
+       // tmpstring is defined here and not below to avoid
+       // memory allocation in every iteration of the for loop
+-      std::string tmpstring;
++      std::pmr::string tmpstring;
+       for (size_t i = 0; i < member->array_size_; ++i) {
+         deser.deserialize(tmpstring);
+         if (!rosidl_runtime_c__String__assign(&deser_field[i], tmpstring.c_str())) {
+@@ -206,7 +224,7 @@ inline void deserialize_field<std::string>(
+         }
+       }
+     } else {
+-      std::vector<std::string> cpp_string_vector;
++      std::pmr::vector<std::pmr::string> cpp_string_vector;
+       deser >> cpp_string_vector;
+ 
+       auto & string_array_field = *reinterpret_cast<rosidl_runtime_c__String__Sequence *>(field);
+@@ -230,12 +248,12 @@ inline void deserialize_field<std::string>(
+ }
+ 
+ template<>
+-inline void deserialize_field<std::wstring>(
++inline void deserialize_field<std::pmr::wstring>(
+   const rosidl_typesupport_introspection_c__MessageMember * member,
+   void * field,
+   cycdeser & deser)
+ {
+-  std::wstring wstr;
++  std::pmr::wstring wstr;
+   if (!member->is_array_) {
+     deser >> wstr;
+     wstring_to_u16string(
+@@ -307,10 +325,10 @@ bool TypeSupport<MembersType>::deserializeROSmessage(
+         deserialize_field<uint64_t>(member, field, deser);
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:
+-        deserialize_field<std::string>(member, field, deser);
++        deserialize_field<std::pmr::string>(member, field, deser);
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING:
+-        deserialize_field<std::wstring>(member, field, deser);
++        deserialize_field<std::pmr::wstring>(member, field, deser);
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE:
+         {
+@@ -412,10 +430,10 @@ bool TypeSupport<MembersType>::printROSmessage(
+         {uint64_t dummy; print_field(member, deser, dummy);}
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_STRING:
+-        {std::string dummy; print_field(member, deser, dummy);}
++        {std::pmr::string dummy; print_field(member, deser, dummy);}
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_WSTRING:
+-        {std::wstring dummy; print_field(member, deser, dummy);}
++        {std::pmr::wstring dummy; print_field(member, deser, dummy);}
+         break;
+       case ::rosidl_typesupport_introspection_cpp::ROS_TYPE_MESSAGE:
+         {
+diff --git a/rmw_cyclonedds_cpp/src/serdes.hpp b/rmw_cyclonedds_cpp/src/serdes.hpp
+index 9973572..8c7a80e 100644
+--- a/rmw_cyclonedds_cpp/src/serdes.hpp
++++ b/rmw_cyclonedds_cpp/src/serdes.hpp
+@@ -110,10 +110,12 @@ public:
+   inline cycdeser & operator>>(uint64_t & x) {deserialize(x); return *this;}
+   inline cycdeser & operator>>(float & x) {deserialize(x); return *this;}
+   inline cycdeser & operator>>(double & x) {deserialize(x); return *this;}
+-  inline cycdeser & operator>>(std::string & x) {deserialize(x); return *this;}
+-  inline cycdeser & operator>>(std::wstring & x) {deserialize(x); return *this;}
+-  template<class T>
+-  inline cycdeser & operator>>(std::vector<T> & x) {deserialize(x); return *this;}
++  template<typename Allocator>
++  inline cycdeser & operator>>(std::basic_string<char, std::char_traits<char>, Allocator> & x) {deserialize(x); return *this;}
++  template<typename Allocator>
++  inline cycdeser & operator>>(std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & x) {deserialize(x); return *this;}
++  template<typename T, typename Allocator>
++  inline cycdeser & operator>>(std::vector<T, Allocator> & x) {deserialize(x); return *this;}
+   template<class T, size_t S>
+   inline cycdeser & operator>>(std::array<T, S> & x) {deserialize(x); return *this;}
+ 
+@@ -155,22 +157,24 @@ public:
+     validate_size(sz, el_sz);
+     return sz;
+   }
+-  inline void deserialize(std::string & x)
++  template<typename Allocator>
++  inline void deserialize(std::basic_string<char, std::char_traits<char>, Allocator> & x)
+   {
+     const uint32_t sz = deserialize_len(sizeof(char));
+     if (sz == 0) {
+-      x = std::string("");
++      x = std::basic_string<char, std::char_traits<char>, Allocator>("");
+     } else {
+       validate_str(sz);
+-      x = std::string(data + pos, sz - 1);
++      x = std::basic_string<char, std::char_traits<char>, Allocator>(data + pos, sz - 1);
+     }
+     pos += sz;
+   }
+-  inline void deserialize(std::wstring & x)
++  template<typename Allocator>
++  inline void deserialize(std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & x)
+   {
+     const uint32_t sz = deserialize_len(sizeof(wchar_t));
+     // wstring is not null-terminated in cdr
+-    x = std::wstring(reinterpret_cast<const wchar_t *>(data + pos), sz);
++    x = std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator>(reinterpret_cast<const wchar_t *>(data + pos), sz);
+     pos += sz * sizeof(wchar_t);
+   }
+ 
+@@ -218,14 +222,15 @@ public:
+     for (size_t i = 0; i < cnt; i++) {deserialize(x[i]);}
+   }
+ 
+-  template<class T>
+-  inline void deserialize(std::vector<T> & x)
++  template<typename T, typename Allocator>
++  inline void deserialize(std::vector<T, Allocator> & x)
+   {
+     const uint32_t sz = deserialize_len(1);
+     x.resize(sz);
+     deserializeA(x.data(), sz);
+   }
+-  inline void deserialize(std::vector<bool> & x)
++  template<typename Allocator>
++  inline void deserialize(std::vector<bool, Allocator> & x)
+   {
+     const uint32_t sz = deserialize_len(sizeof(unsigned char));
+     x.resize(sz);
+@@ -264,10 +269,12 @@ public:
+   inline cycprint & operator>>(uint64_t & x) {print(x); return *this;}
+   inline cycprint & operator>>(float & x) {print(x); return *this;}
+   inline cycprint & operator>>(double & x) {print(x); return *this;}
+-  inline cycprint & operator>>(std::string & x) {print(x); return *this;}
+-  inline cycprint & operator>>(std::wstring & x) {print(x); return *this;}
+-  template<class T>
+-  inline cycprint & operator>>(std::vector<T> & x) {print(x); return *this;}
++  template<typename Allocator>
++  inline cycprint & operator>>(std::basic_string<char, std::char_traits<char>, Allocator> & x) {print(x); return *this;}
++  template<typename Allocator>
++  inline cycprint & operator>>(std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & x) {print(x); return *this;}
++  template<class T, class Allocator>
++  inline cycprint & operator>>(std::vector<T, Allocator> & x) {print(x); return *this;}
+   template<class T, size_t S>
+   inline cycprint & operator>>(std::array<T, S> & x) {print(x); return *this;}
+ 
+@@ -329,7 +336,8 @@ public:
+     validate_size(sz, el_sz);
+     return sz;
+   }
+-  inline void print(std::string & x)
++  template<typename Allocator>
++  inline void print(std::basic_string<char, std::char_traits<char>, Allocator> & x)
+   {
+     const uint32_t sz = get_len(sizeof(char));
+     validate_str(sz);
+@@ -338,11 +346,12 @@ public:
+     prtf(&buf, &bufsize, "\"%*.*s\"", len, len, static_cast<const char *>(data + pos));
+     pos += sz;
+   }
+-  inline void print(std::wstring & x)
++  template<typename Allocator>
++  inline void print(std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & x)
+   {
+     const uint32_t sz = get_len(sizeof(wchar_t));
+     // wstring is not null-terminated in cdr
+-    x = std::wstring(reinterpret_cast<const wchar_t *>(data + pos), sz);
++    x = std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator>(reinterpret_cast<const wchar_t *>(data + pos), sz);
+     prtf(&buf, &bufsize, "\"%ls\"", x.c_str());
+     pos += sz * sizeof(wchar_t);
+   }
+@@ -358,8 +367,8 @@ public:
+     prtf(&buf, &bufsize, "}");
+   }
+ 
+-  template<class T>
+-  inline void print(std::vector<T> & x)
++  template<class T, class Allocator>
++  inline void print(std::vector<T, Allocator> & x)
+   {
+     const uint32_t sz = get_len(1);
+     printA(x.data(), sz);
+diff --git a/rmw_cyclonedds_cpp/src/u16string.cpp b/rmw_cyclonedds_cpp/src/u16string.cpp
+index 562041a..e0565bc 100644
+--- a/rmw_cyclonedds_cpp/src/u16string.cpp
++++ b/rmw_cyclonedds_cpp/src/u16string.cpp
+@@ -15,10 +15,31 @@
+ #include <string>
+ #include "rosidl_runtime_c/u16string_functions.h"
+ 
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ namespace rmw_cyclonedds_cpp
+ {
+ 
+-void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr)
++void u16string_to_wstring(const std::pmr::u16string & u16str, std::pmr::wstring & wstr)
+ {
+   wstr.resize(u16str.size());
+   for (size_t i = 0; i < u16str.size(); ++i) {
+@@ -26,7 +47,7 @@ void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr)
+   }
+ }
+ 
+-bool wstring_to_u16string(const std::wstring & wstr, std::u16string & u16str)
++bool wstring_to_u16string(const std::pmr::wstring & wstr, std::pmr::u16string & u16str)
+ {
+   try {
+     u16str.resize(wstr.size());
+@@ -39,7 +60,7 @@ bool wstring_to_u16string(const std::wstring & wstr, std::u16string & u16str)
+   return true;
+ }
+ 
+-void u16string_to_wstring(const rosidl_runtime_c__U16String & u16str, std::wstring & wstr)
++void u16string_to_wstring(const rosidl_runtime_c__U16String & u16str, std::pmr::wstring & wstr)
+ {
+   wstr.resize(u16str.size);
+   for (size_t i = 0; i < u16str.size; ++i) {
+@@ -47,7 +68,7 @@ void u16string_to_wstring(const rosidl_runtime_c__U16String & u16str, std::wstri
+   }
+ }
+ 
+-bool wstring_to_u16string(const std::wstring & wstr, rosidl_runtime_c__U16String & u16str)
++bool wstring_to_u16string(const std::pmr::wstring & wstr, rosidl_runtime_c__U16String & u16str)
+ {
+   bool succeeded = rosidl_runtime_c__U16String__resize(&u16str, wstr.size());
+   if (!succeeded) {
+diff --git a/rmw_cyclonedds_cpp/src/u16string.hpp b/rmw_cyclonedds_cpp/src/u16string.hpp
+index 4019aa8..27f167d 100644
+--- a/rmw_cyclonedds_cpp/src/u16string.hpp
++++ b/rmw_cyclonedds_cpp/src/u16string.hpp
+@@ -18,18 +18,39 @@
+ #include <string>
+ #include "rosidl_runtime_c/u16string_functions.h"
+ 
++#ifdef __linux__
++#include <experimental/memory_resource>
++#include <experimental/vector>
++#include <experimental/string>
++#else
++#include <memory_resource>
++#include <vector>
++#include <string>
++#endif
++
++#ifdef __linux__
++namespace std::pmr
++{
++  using string = std::experimental::pmr::string;
++  template <class _ValueT>
++  using vector = std::experimental::pmr::vector<_ValueT>;
++  using wstring = std::experimental::pmr::wstring;
++  using u16string = std::experimental::pmr::u16string;
++}
++#endif
++
+ namespace rmw_cyclonedds_cpp
+ {
+ 
+ void u16string_to_wstring(
+-  const rosidl_runtime_c__U16String & u16str, std::wstring & wstr);
++  const rosidl_runtime_c__U16String & u16str, std::pmr::wstring & wstr);
+ 
+ bool wstring_to_u16string(
+-  const std::wstring & wstr, rosidl_runtime_c__U16String & u16str);
++  const std::pmr::wstring & wstr, rosidl_runtime_c__U16String & u16str);
+ 
+-void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr);
++void u16string_to_wstring(const std::pmr::u16string & u16str, std::pmr::wstring & wstr);
+ 
+-bool wstring_to_u16string(const std::wstring & wstr, std::u16string & u16str);
++bool wstring_to_u16string(const std::pmr::wstring & wstr, std::pmr::u16string & u16str);
+ 
+ }  // namespace rmw_cyclonedds_cpp
+ 

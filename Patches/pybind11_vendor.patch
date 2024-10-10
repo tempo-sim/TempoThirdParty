@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 309a628..c8e73b6 100644
+index 309a628..4df419a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -73,8 +73,12 @@ macro(build_pybind11)
@@ -37,15 +37,15 @@ index 0000000..63ba8bd
 +   elseif("${_Python}" STREQUAL "Python3")
 diff --git a/pybind11-python3.11-compatibility.patch b/pybind11-python3.11-compatibility.patch
 new file mode 100644
-index 0000000..052df4c
+index 0000000..c42bf35
 --- /dev/null
 +++ b/pybind11-python3.11-compatibility.patch
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,65 @@
 +diff --git a/include/pybind11/detail/type_caster_base.h b/include/pybind11/detail/type_caster_base.h
-+index 48e218b2..4070f4c0 100644
++index 48e218b2..bdc850c3 100644
 +--- a/include/pybind11/detail/type_caster_base.h
 ++++ b/include/pybind11/detail/type_caster_base.h
-+@@ -466,21 +466,28 @@ PYBIND11_NOINLINE std::string error_string() {
++@@ -466,9 +466,10 @@ PYBIND11_NOINLINE std::string error_string() {
 +             trace = trace->tb_next;
 + 
 +         PyFrameObject *frame = trace->tb_frame;
@@ -53,21 +53,15 @@ index 0000000..052df4c
 +         errorString += "\n\nAt:\n";
 +         while (frame) {
 +-#if PY_VERSION_HEX >= 0x03090000
-++#    if PY_VERSION_HEX >= 0x030900B1
+++#if PY_VERSION_HEX >= 0x030900B1
 +             PyCodeObject *f_code = PyFrame_GetCode(frame);
 + #else
 +             PyCodeObject *f_code = frame->f_code;
-+             Py_INCREF(f_code);
-+ #endif
-+             int lineno = PyFrame_GetLineNumber(frame);
-+-            errorString +=
-+-                "  " + handle(f_code->co_filename).cast<std::string>() +
-+-                "(" + std::to_string(lineno) + "): " +
-+-                handle(f_code->co_name).cast<std::string>() + "\n";
++@@ -479,8 +480,15 @@ PYBIND11_NOINLINE std::string error_string() {
++                 "  " + handle(f_code->co_filename).cast<std::string>() +
++                 "(" + std::to_string(lineno) + "): " +
++                 handle(f_code->co_name).cast<std::string>() + "\n";
 +-            frame = frame->f_back;
-++            errorString += "  " + handle(f_code->co_filename).cast<std::string>() + "("
-++                           + std::to_string(lineno)
-++                           + "): " + handle(f_code->co_name).cast<std::string>() + "\n";
 +             Py_DECREF(f_code);
 ++#    if PY_VERSION_HEX >= 0x030900B1
 ++            auto *b_frame = PyFrame_GetBack(frame);
@@ -81,7 +75,7 @@ index 0000000..052df4c
 +     }
 + #endif
 +diff --git a/include/pybind11/pybind11.h b/include/pybind11/pybind11.h
-+index 7aa93bb5..d6bdda70 100644
++index 7aa93bb5..e7b0686f 100644
 +--- a/include/pybind11/pybind11.h
 ++++ b/include/pybind11/pybind11.h
 +@@ -2384,20 +2384,19 @@ inline function get_type_override(const void *this_ptr, const type_info *this_ty
@@ -91,9 +85,8 @@ index 0000000..052df4c
 +-#if !defined(PYPY_VERSION) && PY_VERSION_HEX < 0x030B0000
 +-    // TODO: Remove PyPy workaround for Python 3.11.
 +-    // Current API fails on 3.11 since co_varnames can be null.
-+-#if PY_VERSION_HEX >= 0x03090000
 ++#if !defined(PYPY_VERSION)
-++#    if PY_VERSION_HEX >= 0x03090000
++ #if PY_VERSION_HEX >= 0x03090000
 +     PyFrameObject *frame = PyThreadState_GetFrame(PyThreadState_Get());
 +     if (frame != nullptr) {
 +         PyCodeObject *f_code = PyFrame_GetCode(frame);

@@ -1,0 +1,196 @@
+diff --git a/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp b/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
+index d766d0d..6d27770 100644
+--- a/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
++++ b/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
+@@ -236,8 +236,9 @@ PointCloud2IteratorBase<T, TT, U, C, V>::PointCloud2IteratorBase()
+  * @param field_name The field to iterate upon
+  */
+ template<typename T, typename TT, typename U, typename C, template<typename> class V>
++template<typename CharType, typename Traits, typename Allocator>
+ PointCloud2IteratorBase<T, TT, U, C, V>::PointCloud2IteratorBase(
+-  C & cloud_msg, const std::string & field_name)
++  C & cloud_msg, const std::basic_string<CharType, Traits, Allocator> & field_name)
+ {
+   int offset = set_field(cloud_msg, field_name);
+ 
+@@ -347,8 +348,9 @@ V<T> PointCloud2IteratorBase<T, TT, U, C, V>::end() const
+   * @return the offset at which the field is found
+   */
+ template<typename T, typename TT, typename U, typename C, template<typename> class V>
++template<typename CharType, typename Traits, typename Allocator>
+ int PointCloud2IteratorBase<T, TT, U, C, V>::set_field(
+-  const sensor_msgs::msg::PointCloud2 & cloud_msg, const std::string & field_name)
++  const sensor_msgs::msg::PointCloud2 & cloud_msg, const std::basic_string<CharType, Traits, Allocator> & field_name)
+ {
+   is_bigendian_ = cloud_msg.is_bigendian;
+   point_step_ = cloud_msg.point_step;
+@@ -356,7 +358,7 @@ int PointCloud2IteratorBase<T, TT, U, C, V>::set_field(
+   std::vector<sensor_msgs::msg::PointField>::const_iterator field_iter = cloud_msg.fields.begin(),
+     field_end =
+     cloud_msg.fields.end();
+-  while ((field_iter != field_end) && (field_iter->name != field_name)) {
++  while ((field_iter != field_end) && (strcmp(field_iter->name.c_str(), field_name.c_str()) != 0)) {
+     ++field_iter;
+   }
+ 
+diff --git a/sensor_msgs/include/sensor_msgs/point_cloud2_iterator.hpp b/sensor_msgs/include/sensor_msgs/point_cloud2_iterator.hpp
+index c691dfe..0b5bbc6 100644
+--- a/sensor_msgs/include/sensor_msgs/point_cloud2_iterator.hpp
++++ b/sensor_msgs/include/sensor_msgs/point_cloud2_iterator.hpp
+@@ -187,7 +187,8 @@ public:
+    * @param cloud_msg The PointCloud2 to iterate upon
+    * @param field_name The field to iterate upon
+    */
+-  PointCloud2IteratorBase(C & cloud_msg, const std::string & field_name);
++  template <typename CharType, typename Traits, typename Allocator>
++  PointCloud2IteratorBase(C & cloud_msg, const std::basic_string<CharType, Traits, Allocator> & field_name);
+ 
+   /** Assignment operator
+    * @param iter the iterator to copy data from
+@@ -239,7 +240,8 @@ private:
+    * @param field_name the name of the field to iterate upon
+    * @return the offset at which the field is found
+    */
+-  int set_field(const sensor_msgs::msg::PointCloud2 & cloud_msg, const std::string & field_name);
++  template<typename CharType, typename Traits, typename Allocator>
++  int set_field(const sensor_msgs::msg::PointCloud2 & cloud_msg, const std::basic_string<CharType, Traits, Allocator> & field_name);
+ 
+   /** The "point_step" of the original cloud */
+   int point_step_;
+@@ -289,9 +291,10 @@ public:
+    * @param cloud_msg the cloud message to use
+    * @param field_name the field to iterate over
+    */
++  template <typename CharType, typename Traits, typename Allocator>
+   PointCloud2Iterator(
+     sensor_msgs::msg::PointCloud2 & cloud_msg,
+-    const std::string & field_name)
++    const std::basic_string<CharType, Traits, Allocator> & field_name)
+   : impl::PointCloud2IteratorBase<
+       T, T, unsigned char,
+       sensor_msgs::msg::PointCloud2,
+@@ -315,9 +318,10 @@ public:
+    * @param cloud_msg the cloud message to use
+    * @param field_name the field to iterate over
+    */
++  template <typename CharType, typename Traits, typename Allocator>
+   PointCloud2ConstIterator(
+     const sensor_msgs::msg::PointCloud2 & cloud_msg,
+-    const std::string & field_name)
++    const std::basic_string<CharType, Traits, Allocator> & field_name)
+   : impl::PointCloud2IteratorBase<
+       T, const T, const unsigned char,
+       const sensor_msgs::msg::PointCloud2,
+diff --git a/sensor_msgs/include/sensor_msgs/point_cloud_conversion.hpp b/sensor_msgs/include/sensor_msgs/point_cloud_conversion.hpp
+index ec55646..a1616e9 100644
+--- a/sensor_msgs/include/sensor_msgs/point_cloud_conversion.hpp
++++ b/sensor_msgs/include/sensor_msgs/point_cloud_conversion.hpp
+@@ -59,13 +59,14 @@ namespace sensor_msgs
+   * \param cloud the the point cloud message
+   * \param field_name the string defining the field name
+   */
++template <class T, class Traits, class Allocator>
+ static inline int getPointCloud2FieldIndex(
+   const sensor_msgs::msg::PointCloud2 & cloud,
+-  const std::string & field_name)
++  const std::basic_string<T, Traits, Allocator> & field_name)
+ {
+   // Get the index we need
+   for (size_t d = 0; d < cloud.fields.size(); ++d) {
+-    if (cloud.fields[d].name == field_name) {
++    if (strcmp(cloud.fields[d].name.c_str(), field_name.c_str()) == 0) {
+       return static_cast<int>(d);
+     }
+   }
+@@ -141,9 +142,9 @@ static inline bool convertPointCloud2ToPointCloud(
+   output.points.resize(input.width * input.height);
+   output.channels.resize(input.fields.size() - 3);
+   // Get the x/y/z field offsets
+-  int x_idx = getPointCloud2FieldIndex(input, "x");
+-  int y_idx = getPointCloud2FieldIndex(input, "y");
+-  int z_idx = getPointCloud2FieldIndex(input, "z");
++  int x_idx = getPointCloud2FieldIndex(input, std::string("x"));
++  int y_idx = getPointCloud2FieldIndex(input, std::string("y"));
++  int z_idx = getPointCloud2FieldIndex(input, std::string("z"));
+   if (x_idx == -1 || y_idx == -1 || z_idx == -1) {
+     return false;
+   }
+diff --git a/sensor_msgs/test/test_pointcloud_iterator.cpp b/sensor_msgs/test/test_pointcloud_iterator.cpp
+index 67ea498..d4115cd 100644
+--- a/sensor_msgs/test/test_pointcloud_iterator.cpp
++++ b/sensor_msgs/test/test_pointcloud_iterator.cpp
+@@ -72,10 +72,10 @@ TEST(sensor_msgs, PointCloud2Iterator)
+   }
+ 
+   // Fill 2 using an iterator
+-  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_msg_2, "x");
+-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_r(cloud_msg_2, "r");
+-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_g(cloud_msg_2, "g");
+-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_b(cloud_msg_2, "b");
++  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_msg_2, std::string("x"));
++  sensor_msgs::PointCloud2Iterator<uint8_t> iter_r(cloud_msg_2, std::string("r"));
++  sensor_msgs::PointCloud2Iterator<uint8_t> iter_g(cloud_msg_2, std::string("g"));
++  sensor_msgs::PointCloud2Iterator<uint8_t> iter_b(cloud_msg_2, std::string("b"));
+   for (size_t i = 0; i < n_points; ++i, ++iter_x, ++iter_r, ++iter_g, ++iter_b) {
+     for (size_t j = 0; j < 3; ++j) {
+       iter_x[j] = point_data[j + 3 * i];
+@@ -87,18 +87,18 @@ TEST(sensor_msgs, PointCloud2Iterator)
+ 
+ 
+   // Check the values using an iterator
+-  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_x(cloud_msg_1, "x"), iter_const_2_x(
+-    cloud_msg_2, "x");
+-  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_y(cloud_msg_1, "y"), iter_const_2_y(
+-    cloud_msg_2, "y");
+-  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_z(cloud_msg_1, "z"), iter_const_2_z(
+-    cloud_msg_2, "z");
+-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_r(cloud_msg_1, "r"), iter_const_2_r(
+-    cloud_msg_2, "r");
+-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_g(cloud_msg_1, "g"), iter_const_2_g(
+-    cloud_msg_2, "g");
+-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_b(cloud_msg_1, "b"), iter_const_2_b(
+-    cloud_msg_2, "b");
++  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_x(cloud_msg_1, std::string("x")), iter_const_2_x(
++    cloud_msg_2, std::string("x"));
++  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_y(cloud_msg_1, std::string("y")), iter_const_2_y(
++    cloud_msg_2, std::string("y"));
++  sensor_msgs::PointCloud2ConstIterator<float> iter_const_1_z(cloud_msg_1, std::string("z")), iter_const_2_z(
++    cloud_msg_2, std::string("z"));
++  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_r(cloud_msg_1, std::string("r")), iter_const_2_r(
++    cloud_msg_2, std::string("r"));
++  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_g(cloud_msg_1, std::string("g")), iter_const_2_g(
++    cloud_msg_2, std::string("g"));
++  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_const_1_b(cloud_msg_1, std::string("b")), iter_const_2_b(
++    cloud_msg_2, std::string("b"));
+ 
+   size_t i = 0;
+   for (; iter_const_1_x != iter_const_1_x.end();
+diff --git a/std_srvs/CMakeLists.txt b/std_srvs/CMakeLists.txt
+index 17e76d2..39e4bb6 100644
+--- a/std_srvs/CMakeLists.txt
++++ b/std_srvs/CMakeLists.txt
+@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.5)
+ 
+ project(std_srvs)
+ 
+-# Default to C++14
+-if(NOT CMAKE_CXX_STANDARD)
+-  set(CMAKE_CXX_STANDARD 14)
+-endif()
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+   add_compile_options(-Wall -Wextra -Wpedantic)
+ endif()
+@@ -23,6 +19,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
+   ADD_LINTER_TESTS
+ )
+ 
++# Default to C++17
++if(NOT CMAKE_CXX_STANDARD)
++  set(CMAKE_CXX_STANDARD 17)
++  set(CMAKE_CXX_STANDARD_REQUIRED ON)
++  set(CMAKE_CXX_EXTENSIONS OFF)
++endif()
++
+ ament_export_dependencies(rosidl_default_runtime)
+ 
+ ament_package()

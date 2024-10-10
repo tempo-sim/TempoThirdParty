@@ -83,7 +83,7 @@ git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
 cd "$ROOT_DIR/Source/rclcpp/rmw"
 git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
 cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git apply "$ROOT_DIR/Patches/rosidl.patch"
+git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
 cd "$ROOT_DIR/Source/rclcpp/rcutils"
 git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
 cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
@@ -112,6 +112,37 @@ cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
 cd "$ROOT_DIR/Source/rclcpp/geometry2"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
+cd "$ROOT_DIR/Source/rclcpp/theora"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
+cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
+cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
+git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
+cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
+cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
+cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
+cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
+cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
+cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
+cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
+cd "$ROOT_DIR/Source/rclcpp/vorbis"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+
+echo -e "Copying asio"
+mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
+cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -122,21 +153,12 @@ echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
 ./autogen.sh
 ./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
-make clean
-make install
-
-echo -e "Building vorbis"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-./autogen.sh
-./configure --prefix="$ROOT_DIR/Source/rclcpp/install"
-make clean
 make install
 
 echo -e "Building theora"
 cd "$ROOT_DIR/Source/rclcpp/theora"
 ./autogen.sh
-./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --with-vorbis="$ROOT_DIR/Source/rclcpp/install" --disable-examples
-make clean
+./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
 make install
 
 echo -e "Building opencv"
@@ -172,7 +194,7 @@ cd "$UNREAL_ENGINE_PATH"
 ./Engine/Binaries/ThirdParty/Python3/Linux/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
-pip install empy
+pip install empy==3.3.4
 pip install lark==1.1.1
 pip install numpy
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
@@ -192,13 +214,18 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # export VERBOSE=1
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
  --cmake-clean-cache \
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
+ " -DCMAKE_CXX_STANDARD=17" \
+ " -DBUILD_TESTS=OFF" \
+ " -DBUILD_TESTING=OFF" \
+ " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
+ " -DTHIRDPARTY_Asio=FORCE" \
  " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
  " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
  " -DPNG_FOUND=ON" \
@@ -242,6 +269,9 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Linux"
 
 # Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.so*" -exec cp -P {} "$DEST/Libraries/Linux" \;
+
+# Copy the Python deps from the virtual environment
+cp -r -P "$ROOT_DIR/Builds/rclcpp/venv/lib/python"* "$DEST/Libraries/Linux"
 
 # Copy the Python deps
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/python"* "$DEST/Libraries/Linux"
