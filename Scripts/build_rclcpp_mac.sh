@@ -243,7 +243,7 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # --cmake-clean-cache \
 # --event-handlers console_direct+ \
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis iceoryx \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \

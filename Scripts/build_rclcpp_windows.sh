@@ -252,7 +252,7 @@ export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig-windows:$PKG_CONFIG_PA
 NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
 NATIVE_PYTHON_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/python.exe")
 export VisualStudioVersion="17.8"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis  \
+colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis iceoryx \
  --build-base "$BUILD_DIR/Windows" \
  --merge-install \
  --catkin-skip-building-tests \

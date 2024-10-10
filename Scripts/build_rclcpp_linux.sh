@@ -141,6 +141,14 @@ git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.p
 cd "$ROOT_DIR/Source/rclcpp/vorbis"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
 
+echo "Building acl"
+# Unreal's Linux image doesn't have acl, but iceoryx needs it. So build it and copy it there.
+cd "$ROOT_DIR/Source/rclcpp/acl"
+autoconf; ./configure
+make
+cp libacl/.libs/libacl.a "$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/usr/lib"
+cp include/acl.h "$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/usr/include/sys"
+
 echo -e "Copying asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
