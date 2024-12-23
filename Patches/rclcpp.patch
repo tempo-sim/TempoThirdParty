@@ -1175,7 +1175,7 @@ index f74c36a8..ab67632f 100644
    {
      return get<ParameterType::PARAMETER_STRING_ARRAY>();
 diff --git a/rclcpp/include/rclcpp/publisher.hpp b/rclcpp/include/rclcpp/publisher.hpp
-index 78b57006..680fbfdc 100644
+index 78b57006..4453b270 100644
 --- a/rclcpp/include/rclcpp/publisher.hpp
 +++ b/rclcpp/include/rclcpp/publisher.hpp
 @@ -73,7 +73,7 @@ class LoanedMessage;
@@ -1187,6 +1187,18 @@ index 78b57006..680fbfdc 100644
  class Publisher : public PublisherBase
  {
  public:
+@@ -207,7 +207,10 @@ public:
+   }
+ 
+   virtual ~Publisher()
+-  {}
++  {
++    publisher_handle_.reset();
++    event_handlers_.clear();
++  }
+ 
+   /// Borrow a loaned ROS message from the middleware.
+   /**
 diff --git a/rclcpp/include/rclcpp/publisher_options.hpp b/rclcpp/include/rclcpp/publisher_options.hpp
 index 3c88ebcc..3971ef1e 100644
 --- a/rclcpp/include/rclcpp/publisher_options.hpp
@@ -1347,7 +1359,7 @@ index 88698179..9b3b7a7c 100644
  {
  public:
 diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
-index 11bf9c6e..302e3f39 100644
+index 11bf9c6e..bc2eee13 100644
 --- a/rclcpp/include/rclcpp/subscription.hpp
 +++ b/rclcpp/include/rclcpp/subscription.hpp
 @@ -61,7 +61,7 @@ class NodeTopicsInterface;
@@ -1375,6 +1387,19 @@ index 11bf9c6e..302e3f39 100644
  
      if (subscription_topic_statistics != nullptr) {
        this->subscription_topic_statistics_ = std::move(subscription_topic_statistics);
+@@ -246,6 +248,12 @@ public:
+ #endif
+   }
+ 
++  virtual ~Subscription()
++  {
++    subscription_handle_.reset();
++    event_handlers_.clear();
++  }
++
+   /// Called after construction to continue setup that requires shared_from_this().
+   void
+   post_init_setup(
 diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
 index a1727eab..0d13aff6 100644
 --- a/rclcpp/include/rclcpp/subscription_factory.hpp
