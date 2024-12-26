@@ -1175,7 +1175,7 @@ index f74c36a8..ab67632f 100644
    {
      return get<ParameterType::PARAMETER_STRING_ARRAY>();
 diff --git a/rclcpp/include/rclcpp/publisher.hpp b/rclcpp/include/rclcpp/publisher.hpp
-index 78b57006..4453b270 100644
+index 78b57006..8c274a9d 100644
 --- a/rclcpp/include/rclcpp/publisher.hpp
 +++ b/rclcpp/include/rclcpp/publisher.hpp
 @@ -73,7 +73,7 @@ class LoanedMessage;
@@ -1187,20 +1187,32 @@ index 78b57006..4453b270 100644
  class Publisher : public PublisherBase
  {
  public:
-@@ -207,7 +207,10 @@ public:
-   }
+@@ -131,7 +131,8 @@ public:
+       node_base,
+       topic,
+       rclcpp::get_message_type_support_handle<MessageT>(),
+-      options.template to_rcl_publisher_options<MessageT>(qos)),
++      options.template to_rcl_publisher_options<MessageT>(qos),
++      options.get_type_erased_plain_allocator()),
+     options_(options),
+     published_type_allocator_(*options.get_allocator()),
+     ros_message_type_allocator_(*options.get_allocator())
+diff --git a/rclcpp/include/rclcpp/publisher_base.hpp b/rclcpp/include/rclcpp/publisher_base.hpp
+index 8416757a..e8820683 100644
+--- a/rclcpp/include/rclcpp/publisher_base.hpp
++++ b/rclcpp/include/rclcpp/publisher_base.hpp
+@@ -78,7 +78,8 @@ public:
+     rclcpp::node_interfaces::NodeBaseInterface * node_base,
+     const std::string & topic,
+     const rosidl_message_type_support_t & type_support,
+-    const rcl_publisher_options_t & publisher_options);
++    const rcl_publisher_options_t & publisher_options,
++    std::shared_ptr<void> plain_allocator);
  
-   virtual ~Publisher()
--  {}
-+  {
-+    publisher_handle_.reset();
-+    event_handlers_.clear();
-+  }
- 
-   /// Borrow a loaned ROS message from the middleware.
-   /**
+   RCLCPP_PUBLIC
+   virtual ~PublisherBase();
 diff --git a/rclcpp/include/rclcpp/publisher_options.hpp b/rclcpp/include/rclcpp/publisher_options.hpp
-index 3c88ebcc..3971ef1e 100644
+index 3c88ebcc..941d2851 100644
 --- a/rclcpp/include/rclcpp/publisher_options.hpp
 +++ b/rclcpp/include/rclcpp/publisher_options.hpp
 @@ -57,8 +57,6 @@ struct PublisherOptionsBase
@@ -1212,16 +1224,22 @@ index 3c88ebcc..3971ef1e 100644
  };
  
  /// Structure containing optional configuration for Publishers.
-@@ -112,6 +110,8 @@ struct PublisherOptionsWithAllocator : public PublisherOptionsBase
+@@ -112,6 +110,14 @@ struct PublisherOptionsWithAllocator : public PublisherOptionsBase
      return this->allocator;
    }
  
++  std::shared_ptr<void>
++  get_type_erased_plain_allocator() const
++  {
++    return plain_allocator_storage_;
++  }
++
 +  QosOverridingOptions<Allocator> qos_overriding_options;
 +
  private:
    using PlainAllocator =
      typename std::allocator_traits<Allocator>::template rebind_alloc<char>;
-@@ -135,7 +135,7 @@ private:
+@@ -135,7 +141,7 @@ private:
    mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
  };
  
@@ -1359,7 +1377,7 @@ index 88698179..9b3b7a7c 100644
  {
  public:
 diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
-index 11bf9c6e..bc2eee13 100644
+index 11bf9c6e..0c2c84f3 100644
 --- a/rclcpp/include/rclcpp/subscription.hpp
 +++ b/rclcpp/include/rclcpp/subscription.hpp
 @@ -61,7 +61,7 @@ class NodeTopicsInterface;
@@ -1371,7 +1389,15 @@ index 11bf9c6e..bc2eee13 100644
    /// MessageT::custom_type if MessageT is a TypeAdapter,
    /// otherwise just MessageT.
    typename SubscribedT = typename rclcpp::TypeAdapter<MessageT>::custom_type,
-@@ -178,6 +178,7 @@ public:
+@@ -141,6 +141,7 @@ public:
+       type_support_handle,
+       topic_name,
+       options.template to_rcl_subscription_options<ROSMessageType>(qos),
++      options.get_type_erased_plain_allocator(),
+       callback.is_serialized_message_callback()),
+     any_callback_(callback),
+     options_(options),
+@@ -178,6 +179,7 @@ public:
          RCL_SUBSCRIPTION_MESSAGE_LOST);
      }
  
@@ -1379,7 +1405,7 @@ index 11bf9c6e..bc2eee13 100644
      // Setup intra process publishing if requested.
      if (rclcpp::detail::resolve_use_intra_process(options_, *node_base)) {
        using rclcpp::detail::resolve_intra_process_buffer_type;
-@@ -225,6 +226,7 @@ public:
+@@ -225,6 +227,7 @@ public:
        uint64_t intra_process_subscription_id = ipm->add_subscription(subscription_intra_process_);
        this->setup_intra_process(intra_process_subscription_id, ipm);
      }
@@ -1387,19 +1413,18 @@ index 11bf9c6e..bc2eee13 100644
  
      if (subscription_topic_statistics != nullptr) {
        this->subscription_topic_statistics_ = std::move(subscription_topic_statistics);
-@@ -246,6 +248,12 @@ public:
- #endif
-   }
+diff --git a/rclcpp/include/rclcpp/subscription_base.hpp b/rclcpp/include/rclcpp/subscription_base.hpp
+index f21f27e8..4fc6fdfd 100644
+--- a/rclcpp/include/rclcpp/subscription_base.hpp
++++ b/rclcpp/include/rclcpp/subscription_base.hpp
+@@ -84,6 +84,7 @@ public:
+     const rosidl_message_type_support_t & type_support_handle,
+     const std::string & topic_name,
+     const rcl_subscription_options_t & subscription_options,
++    std::shared_ptr<void> plain_allocator,
+     bool is_serialized = false);
  
-+  virtual ~Subscription()
-+  {
-+    subscription_handle_.reset();
-+    event_handlers_.clear();
-+  }
-+
-   /// Called after construction to continue setup that requires shared_from_this().
-   void
-   post_init_setup(
+   /// Destructor.
 diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
 index a1727eab..0d13aff6 100644
 --- a/rclcpp/include/rclcpp/subscription_factory.hpp
@@ -1414,7 +1439,7 @@ index a1727eab..0d13aff6 100644
      }
    };
 diff --git a/rclcpp/include/rclcpp/subscription_options.hpp b/rclcpp/include/rclcpp/subscription_options.hpp
-index 2b819da3..2c169d4e 100644
+index 2b819da3..862f4c7f 100644
 --- a/rclcpp/include/rclcpp/subscription_options.hpp
 +++ b/rclcpp/include/rclcpp/subscription_options.hpp
 @@ -81,8 +81,6 @@ struct SubscriptionOptionsBase
@@ -1426,16 +1451,22 @@ index 2b819da3..2c169d4e 100644
    ContentFilterOptions content_filter_options;
  };
  
-@@ -156,6 +154,8 @@ struct SubscriptionOptionsWithAllocator : public SubscriptionOptionsBase
+@@ -156,6 +154,14 @@ struct SubscriptionOptionsWithAllocator : public SubscriptionOptionsBase
      return this->allocator;
    }
  
++  std::shared_ptr<void>
++  get_type_erased_plain_allocator() const
++  {
++    return plain_allocator_storage_;
++  }
++
 +  QosOverridingOptions<Allocator> qos_overriding_options;
 +
  private:
    using PlainAllocator =
      typename std::allocator_traits<Allocator>::template rebind_alloc<char>;
-@@ -179,7 +179,7 @@ private:
+@@ -179,7 +185,7 @@ private:
    mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
  };
  
@@ -2100,6 +2131,27 @@ index e88b2254..48126ccd 100644
    value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
  }
  
+diff --git a/rclcpp/src/rclcpp/publisher_base.cpp b/rclcpp/src/rclcpp/publisher_base.cpp
+index 723d56e0..00a38fd2 100644
+--- a/rclcpp/src/rclcpp/publisher_base.cpp
++++ b/rclcpp/src/rclcpp/publisher_base.cpp
+@@ -45,13 +45,14 @@ PublisherBase::PublisherBase(
+   rclcpp::node_interfaces::NodeBaseInterface * node_base,
+   const std::string & topic,
+   const rosidl_message_type_support_t & type_support,
+-  const rcl_publisher_options_t & publisher_options)
++  const rcl_publisher_options_t & publisher_options,
++  std::shared_ptr<void> plain_allocator_storage)
+ : rcl_node_handle_(node_base->get_shared_rcl_node_handle()),
+   intra_process_is_enabled_(false),
+   intra_process_publisher_id_(0),
+   type_support_(type_support)
+ {
+-  auto custom_deleter = [node_handle = this->rcl_node_handle_](rcl_publisher_t * rcl_pub)
++  auto custom_deleter = [node_handle = this->rcl_node_handle_, plain_allocator_storage](rcl_publisher_t * rcl_pub)
+     {
+       if (rcl_publisher_fini(rcl_pub, node_handle.get()) != RCL_RET_OK) {
+         RCLCPP_ERROR(
 diff --git a/rclcpp/src/rclcpp/qos_overriding_options.cpp b/rclcpp/src/rclcpp/qos_overriding_options.cpp
 index ab5d705b..f6f32ca9 100644
 --- a/rclcpp/src/rclcpp/qos_overriding_options.cpp
@@ -2147,6 +2199,27 @@ index ab5d705b..f6f32ca9 100644
 -}
 -
  }  // namespace rclcpp
+diff --git a/rclcpp/src/rclcpp/subscription_base.cpp b/rclcpp/src/rclcpp/subscription_base.cpp
+index ee2ec11d..97294fde 100644
+--- a/rclcpp/src/rclcpp/subscription_base.cpp
++++ b/rclcpp/src/rclcpp/subscription_base.cpp
+@@ -39,6 +39,7 @@ SubscriptionBase::SubscriptionBase(
+   const rosidl_message_type_support_t & type_support_handle,
+   const std::string & topic_name,
+   const rcl_subscription_options_t & subscription_options,
++  std::shared_ptr<void> plain_allocator_storage,
+   bool is_serialized)
+ : node_base_(node_base),
+   node_handle_(node_base_->get_shared_rcl_node_handle()),
+@@ -48,7 +49,7 @@ SubscriptionBase::SubscriptionBase(
+   type_support_(type_support_handle),
+   is_serialized_(is_serialized)
+ {
+-  auto custom_deletor = [node_handle = this->node_handle_](rcl_subscription_t * rcl_subs)
++  auto custom_deletor = [node_handle = this->node_handle_, plain_allocator_storage](rcl_subscription_t * rcl_subs)
+     {
+       if (rcl_subscription_fini(rcl_subs, node_handle.get()) != RCL_RET_OK) {
+         RCLCPP_ERROR(
 diff --git a/rclcpp/src/rclcpp/time.cpp b/rclcpp/src/rclcpp/time.cpp
 index 556a5e69..bb3379f3 100644
 --- a/rclcpp/src/rclcpp/time.cpp
