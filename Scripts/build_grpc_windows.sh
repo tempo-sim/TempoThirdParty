@@ -66,13 +66,13 @@ rm -rf "$ROOT_DIR/Builds/gRPC"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
-git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/re2"
-git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch" --ignore-whitespace
 echo -e "Successfully applied patches\n"
 
 echo -e "Building gRPC..."
@@ -106,9 +106,9 @@ cmake -G "Visual Studio 17 2022" \
  \
  -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
- -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
- -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Win64/Release/zlibstatic.lib" \
- -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Win64/Debug/zlibstatic.lib" \
+ -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.3/include" \
+ -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib" \
+ -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Debug/zlibstatic.lib" \
  -DgRPC_SSL_PROVIDER=package \
  -DOPENSSL_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Win64/VS2015" \
  -DLIB_EAY_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Debug/libcrypto.lib" \

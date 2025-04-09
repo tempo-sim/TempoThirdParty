@@ -58,13 +58,13 @@ rm -rf "$ROOT_DIR/Builds/gRPC"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
-git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/re2"
-git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch" --ignore-whitespace
 echo -e "Successfully applied patches\n"
 
 echo "Building gRPC..."
