@@ -243,6 +243,21 @@ index c5123edadf..bd63b9caec 100644
      )
    endif()
  endif()
+diff --git a/examples/cpp/generic_api/greeter_client.cc b/examples/cpp/generic_api/greeter_client.cc
+index 8435ad6c2e..7b1f8c667d 100644
+--- a/examples/cpp/generic_api/greeter_client.cc
++++ b/examples/cpp/generic_api/greeter_client.cc
+@@ -41,8 +41,8 @@ using helloworld::HelloReply;
+ using helloworld::HelloRequest;
+ 
+ using ProtoGenericStub =
+-    ::grpc::TemplatedGenericStub<::google::protobuf::Message,
+-                                 ::google::protobuf::Message>;
++    ::grpc::TemplatedGenericStub<::google::protobuf_tempo::Message,
++                                 ::google::protobuf_tempo::Message>;
+ 
+ class GreeterClient {
+  public:
 diff --git a/include/grpc/impl/call.h b/include/grpc/impl/call.h
 index d1f7c2642b..51593b0f07 100644
 --- a/include/grpc/impl/call.h
@@ -305,6 +320,80 @@ index d2ef98e41b..15875eda15 100644
  #endif
  
  #ifndef CENSUSAPI
+diff --git a/include/grpcpp/impl/codegen/config_protobuf.h b/include/grpcpp/impl/codegen/config_protobuf.h
+index aa189215d4..e8fd9a6e47 100644
+--- a/include/grpcpp/impl/codegen/config_protobuf.h
++++ b/include/grpcpp/impl/codegen/config_protobuf.h
+@@ -28,43 +28,43 @@
+ #ifndef GRPC_CUSTOM_MESSAGE
+ #ifdef GRPC_USE_PROTO_LITE
+ #include <google/protobuf/message_lite.h>
+-#define GRPC_CUSTOM_MESSAGE ::google::protobuf::MessageLite
+-#define GRPC_CUSTOM_MESSAGELITE ::google::protobuf::MessageLite
++#define GRPC_CUSTOM_MESSAGE ::google::protobuf_tempo::MessageLite
++#define GRPC_CUSTOM_MESSAGELITE ::google::protobuf_tempo::MessageLite
+ #else
+ #include <google/protobuf/message.h>
+-#define GRPC_CUSTOM_MESSAGE ::google::protobuf::Message
+-#define GRPC_CUSTOM_MESSAGELITE ::google::protobuf::MessageLite
++#define GRPC_CUSTOM_MESSAGE ::google::protobuf_tempo::Message
++#define GRPC_CUSTOM_MESSAGELITE ::google::protobuf_tempo::MessageLite
+ #endif
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_DESCRIPTOR
+ #include <google/protobuf/descriptor.h>
+ #include <google/protobuf/descriptor.pb.h>
+-#define GRPC_CUSTOM_DESCRIPTOR ::google::protobuf::Descriptor
+-#define GRPC_CUSTOM_DESCRIPTORPOOL ::google::protobuf::DescriptorPool
+-#define GRPC_CUSTOM_FIELDDESCRIPTOR ::google::protobuf::FieldDescriptor
+-#define GRPC_CUSTOM_FILEDESCRIPTOR ::google::protobuf::FileDescriptor
+-#define GRPC_CUSTOM_FILEDESCRIPTORPROTO ::google::protobuf::FileDescriptorProto
+-#define GRPC_CUSTOM_METHODDESCRIPTOR ::google::protobuf::MethodDescriptor
+-#define GRPC_CUSTOM_SERVICEDESCRIPTOR ::google::protobuf::ServiceDescriptor
+-#define GRPC_CUSTOM_SOURCELOCATION ::google::protobuf::SourceLocation
++#define GRPC_CUSTOM_DESCRIPTOR ::google::protobuf_tempo::Descriptor
++#define GRPC_CUSTOM_DESCRIPTORPOOL ::google::protobuf_tempo::DescriptorPool
++#define GRPC_CUSTOM_FIELDDESCRIPTOR ::google::protobuf_tempo::FieldDescriptor
++#define GRPC_CUSTOM_FILEDESCRIPTOR ::google::protobuf_tempo::FileDescriptor
++#define GRPC_CUSTOM_FILEDESCRIPTORPROTO ::google::protobuf_tempo::FileDescriptorProto
++#define GRPC_CUSTOM_METHODDESCRIPTOR ::google::protobuf_tempo::MethodDescriptor
++#define GRPC_CUSTOM_SERVICEDESCRIPTOR ::google::protobuf_tempo::ServiceDescriptor
++#define GRPC_CUSTOM_SOURCELOCATION ::google::protobuf_tempo::SourceLocation
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_DESCRIPTORDATABASE
+ #include <google/protobuf/descriptor_database.h>
+-#define GRPC_CUSTOM_DESCRIPTORDATABASE ::google::protobuf::DescriptorDatabase
++#define GRPC_CUSTOM_DESCRIPTORDATABASE ::google::protobuf_tempo::DescriptorDatabase
+ #define GRPC_CUSTOM_SIMPLEDESCRIPTORDATABASE \
+-  ::google::protobuf::SimpleDescriptorDatabase
++  ::google::protobuf_tempo::SimpleDescriptorDatabase
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_ZEROCOPYOUTPUTSTREAM
+ #include <google/protobuf/io/coded_stream.h>
+ #include <google/protobuf/io/zero_copy_stream.h>
+ #define GRPC_CUSTOM_ZEROCOPYOUTPUTSTREAM \
+-  ::google::protobuf::io::ZeroCopyOutputStream
++  ::google::protobuf_tempo::io::ZeroCopyOutputStream
+ #define GRPC_CUSTOM_ZEROCOPYINPUTSTREAM \
+-  ::google::protobuf::io::ZeroCopyInputStream
+-#define GRPC_CUSTOM_CODEDINPUTSTREAM ::google::protobuf::io::CodedInputStream
++  ::google::protobuf_tempo::io::ZeroCopyInputStream
++#define GRPC_CUSTOM_CODEDINPUTSTREAM ::google::protobuf_tempo::io::CodedInputStream
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_JSONUTIL
+@@ -72,7 +72,7 @@
+ #include <google/protobuf/util/type_resolver_util.h>
+ 
+ #include "absl/status/status.h"
+-#define GRPC_CUSTOM_JSONUTIL ::google::protobuf::util
++#define GRPC_CUSTOM_JSONUTIL ::google::protobuf_tempo::util
+ #define GRPC_CUSTOM_UTIL_STATUS ::absl::Status
+ #endif
+ 
 diff --git a/include/grpcpp/impl/proto_utils.h b/include/grpcpp/impl/proto_utils.h
 index c6240ffa84..13ab1ea4fe 100644
 --- a/include/grpcpp/impl/proto_utils.h
@@ -485,6 +574,153 @@ index f51c526078..35f11dc181 100644
    // signifies that the server is not serving.
    virtual void OnServingStatusUpdate(std::string uri,
                                       ServingStatusUpdate update) = 0;
+diff --git a/src/compiler/config_protobuf.h b/src/compiler/config_protobuf.h
+index dc0178afaa..1c7facf34e 100644
+--- a/src/compiler/config_protobuf.h
++++ b/src/compiler/config_protobuf.h
+@@ -23,42 +23,42 @@
+ 
+ #ifndef GRPC_CUSTOM_CODEGENERATOR
+ #include <google/protobuf/compiler/code_generator.h>
+-#define GRPC_CUSTOM_CODEGENERATOR ::google::protobuf::compiler::CodeGenerator
++#define GRPC_CUSTOM_CODEGENERATOR ::google::protobuf_tempo::compiler::CodeGenerator
+ #define GRPC_CUSTOM_GENERATORCONTEXT \
+-  ::google::protobuf::compiler::GeneratorContext
++  ::google::protobuf_tempo::compiler::GeneratorContext
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_PRINTER
+ #include <google/protobuf/io/coded_stream.h>
+ #include <google/protobuf/io/printer.h>
+ #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+-#define GRPC_CUSTOM_PRINTER ::google::protobuf::io::Printer
+-#define GRPC_CUSTOM_CODEDOUTPUTSTREAM ::google::protobuf::io::CodedOutputStream
++#define GRPC_CUSTOM_PRINTER ::google::protobuf_tempo::io::Printer
++#define GRPC_CUSTOM_CODEDOUTPUTSTREAM ::google::protobuf_tempo::io::CodedOutputStream
+ #define GRPC_CUSTOM_STRINGOUTPUTSTREAM \
+-  ::google::protobuf::io::StringOutputStream
++  ::google::protobuf_tempo::io::StringOutputStream
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_PLUGINMAIN
+ #include <google/protobuf/compiler/plugin.h>
+-#define GRPC_CUSTOM_PLUGINMAIN ::google::protobuf::compiler::PluginMain
++#define GRPC_CUSTOM_PLUGINMAIN ::google::protobuf_tempo::compiler::PluginMain
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_PARSEGENERATORPARAMETER
+ #include <google/protobuf/compiler/code_generator.h>
+ #define GRPC_CUSTOM_PARSEGENERATORPARAMETER \
+-  ::google::protobuf::compiler::ParseGeneratorParameter
++  ::google::protobuf_tempo::compiler::ParseGeneratorParameter
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_CSHARP_GETCLASSNAME
+ #include <google/protobuf/compiler/csharp/names.h>
+ #define GRPC_CUSTOM_CSHARP_GETCLASSNAME \
+-  ::google::protobuf::compiler::csharp::GetClassName
++  ::google::protobuf_tempo::compiler::csharp::GetClassName
+ #define GRPC_CUSTOM_CSHARP_GETFILENAMESPACE \
+-  ::google::protobuf::compiler::csharp::GetFileNamespace
++  ::google::protobuf_tempo::compiler::csharp::GetFileNamespace
+ #define GRPC_CUSTOM_CSHARP_GETOUTPUTFILE \
+-  ::google::protobuf::compiler::csharp::GetOutputFile
++  ::google::protobuf_tempo::compiler::csharp::GetOutputFile
+ #define GRPC_CUSTOM_CSHARP_GETREFLECTIONCLASSNAME \
+-  ::google::protobuf::compiler::csharp::GetReflectionClassName
++  ::google::protobuf_tempo::compiler::csharp::GetReflectionClassName
+ #endif
+ 
+ #endif  // SRC_COMPILER_CONFIG_PROTOBUF_H
+diff --git a/src/compiler/objective_c_generator.cc b/src/compiler/objective_c_generator.cc
+index 2a2a9ebc0d..0c71f79c1e 100644
+--- a/src/compiler/objective_c_generator.cc
++++ b/src/compiler/objective_c_generator.cc
+@@ -27,7 +27,7 @@
+ #include "src/compiler/config.h"
+ #include "src/compiler/objective_c_generator_helpers.h"
+ 
+-using ::google::protobuf::compiler::objectivec::ClassName;
++using ::google::protobuf_tempo::compiler::objectivec::ClassName;
+ using ::grpc::protobuf::FileDescriptor;
+ using ::grpc::protobuf::MethodDescriptor;
+ using ::grpc::protobuf::ServiceDescriptor;
+diff --git a/src/compiler/objective_c_generator_helpers.h b/src/compiler/objective_c_generator_helpers.h
+index 8490ecf6a0..3844a72e96 100644
+--- a/src/compiler/objective_c_generator_helpers.h
++++ b/src/compiler/objective_c_generator_helpers.h
+@@ -33,7 +33,7 @@ using ::grpc::protobuf::MethodDescriptor;
+ using ::grpc::protobuf::ServiceDescriptor;
+ 
+ inline std::string MessageHeaderName(const FileDescriptor* file) {
+-  return google::protobuf::compiler::objectivec::FilePath(file) + ".pbobjc.h";
++  return google::protobuf_tempo::compiler::objectivec::FilePath(file) + ".pbobjc.h";
+ }
+ 
+ inline bool AsciiIsUpper(char c) { return c >= 'A' && c <= 'Z'; }
+@@ -41,7 +41,7 @@ inline bool AsciiIsUpper(char c) { return c >= 'A' && c <= 'Z'; }
+ inline ::std::string ServiceClassName(const ServiceDescriptor* service) {
+   const FileDescriptor* file = service->file();
+   ::std::string prefix =
+-      google::protobuf::compiler::objectivec::FileClassPrefix(file);
++      google::protobuf_tempo::compiler::objectivec::FileClassPrefix(file);
+   ::std::string class_name = service->name();
+   // We add the prefix in the cases where the string is missing a prefix.
+   // We define "missing a prefix" as where 'input':
+diff --git a/src/compiler/objective_c_plugin.cc b/src/compiler/objective_c_plugin.cc
+index e13693227f..575c12f068 100644
+--- a/src/compiler/objective_c_plugin.cc
++++ b/src/compiler/objective_c_plugin.cc
+@@ -26,11 +26,11 @@
+ #include "src/compiler/objective_c_generator.h"
+ #include "src/compiler/objective_c_generator_helpers.h"
+ 
+-using ::google::protobuf::compiler::objectivec::
++using ::google::protobuf_tempo::compiler::objectivec::
+     IsProtobufLibraryBundledProtoFile;
+-using ::google::protobuf::compiler::objectivec::ProtobufLibraryFrameworkName;
++using ::google::protobuf_tempo::compiler::objectivec::ProtobufLibraryFrameworkName;
+ #ifdef SUPPORT_OBJC_PREFIX_VALIDATION
+-using ::google::protobuf::compiler::objectivec::ValidateObjCClassPrefixes;
++using ::google::protobuf_tempo::compiler::objectivec::ValidateObjCClassPrefixes;
+ #endif
+ using ::grpc_objective_c_generator::FrameworkImport;
+ using ::grpc_objective_c_generator::LocalImport;
+@@ -146,7 +146,7 @@ class ObjectiveCGrpcGenerator : public grpc::protobuf::compiler::CodeGenerator {
+         "GPB_GRPC_FORWARD_DECLARE_MESSAGE_PROTO";
+ 
+     ::std::string file_name =
+-        google::protobuf::compiler::objectivec::FilePath(file);
++        google::protobuf_tempo::compiler::objectivec::FilePath(file);
+ 
+     grpc_objective_c_generator::Parameters generator_params;
+     generator_params.no_v1_compatibility = false;
+diff --git a/src/compiler/php_generator.cc b/src/compiler/php_generator.cc
+index 7d42dc8f1a..bf0d5da2b8 100644
+--- a/src/compiler/php_generator.cc
++++ b/src/compiler/php_generator.cc
+@@ -24,7 +24,7 @@
+ #include "src/compiler/generator_helpers.h"
+ #include "src/compiler/php_generator_helpers.h"
+ 
+-using google::protobuf::compiler::php::GeneratedClassName;
++using google::protobuf_tempo::compiler::php::GeneratedClassName;
+ using grpc::protobuf::Descriptor;
+ using grpc::protobuf::FileDescriptor;
+ using grpc::protobuf::MethodDescriptor;
+diff --git a/src/compiler/php_plugin.cc b/src/compiler/php_plugin.cc
+index 7d4e4ce32c..1f3a55e193 100644
+--- a/src/compiler/php_plugin.cc
++++ b/src/compiler/php_plugin.cc
+@@ -24,7 +24,7 @@
+ #include "src/compiler/php_generator.h"
+ #include "src/compiler/php_generator_helpers.h"
+ 
+-using google::protobuf::compiler::ParseGeneratorParameter;
++using google::protobuf_tempo::compiler::ParseGeneratorParameter;
+ using grpc_php_generator::GenerateFile;
+ using grpc_php_generator::GetPHPServiceFilename;
+ 
 diff --git a/src/core/lib/config/config_vars.cc b/src/core/lib/config/config_vars.cc
 index 75b56d344c..7f41a6c942 100644
 --- a/src/core/lib/config/config_vars.cc
@@ -735,6 +971,73 @@ index 784b0157c4..b02a8fcc48 100644
    }
    return grpc::Status(
        grpc::StatusCode::PERMISSION_DENIED,
+diff --git a/src/cpp/ext/gcp/observability_logging_sink.cc b/src/cpp/ext/gcp/observability_logging_sink.cc
+index 8d85746e17..67db69a8c0 100644
+--- a/src/cpp/ext/gcp/observability_logging_sink.cc
++++ b/src/cpp/ext/gcp/observability_logging_sink.cc
+@@ -138,7 +138,7 @@ std::string LoggerToString(LoggingSink::Entry::Logger type) {
+ }
+ 
+ void PayloadToJsonStructProto(LoggingSink::Entry::Payload payload,
+-                              ::google::protobuf::Struct* payload_proto) {
++                              ::google::protobuf_tempo::Struct* payload_proto) {
+   grpc_core::Json::Object payload_json;
+   if (!payload.metadata.empty()) {
+     auto* metadata_proto =
+@@ -194,7 +194,7 @@ std::string AddressTypeToString(LoggingSink::Entry::Address::Type type) {
+ }
+ 
+ void PeerToJsonStructProto(LoggingSink::Entry::Address peer,
+-                           ::google::protobuf::Struct* peer_json) {
++                           ::google::protobuf_tempo::Struct* peer_json) {
+   (*peer_json->mutable_fields())["type"].set_string_value(
+       AddressTypeToString(peer.type));
+   if (peer.type != LoggingSink::Entry::Address::Type::kUnknown) {
+@@ -207,7 +207,7 @@ void PeerToJsonStructProto(LoggingSink::Entry::Address peer,
+ }  // namespace
+ 
+ void EntryToJsonStructProto(LoggingSink::Entry entry,
+-                            ::google::protobuf::Struct* json_payload) {
++                            ::google::protobuf_tempo::Struct* json_payload) {
+   (*json_payload->mutable_fields())["callId"].set_string_value(
+       grpc_core::GenerateUUIDv4(absl::Uint128High64(entry.call_id),
+                                 absl::Uint128Low64(entry.call_id)));
+@@ -367,7 +367,7 @@ void ObservabilityLoggingSink::FlushEntriesHelper(
+               status.error_code(), status.error_message().c_str());
+           for (auto& entry : call->request.entries()) {
+             std::string output;
+-            ::google::protobuf::TextFormat::PrintToString(entry.json_payload(),
++            ::google::protobuf_tempo::TextFormat::PrintToString(entry.json_payload(),
+                                                           &output);
+             gpr_log(
+                 GPR_INFO, "Log Entry recorded at time: %s : %s",
+@@ -418,11 +418,11 @@ void ObservabilityLoggingSink::MaybeTriggerFlushLocked() {
+     // Buffer limits have been reached. Dump entries with gpr_log
+     gpr_log(GPR_INFO, "Buffer limit reached. Dumping log entries.");
+     for (auto& entry : entries_) {
+-      google::protobuf::Struct proto;
++      google::protobuf_tempo::Struct proto;
+       std::string timestamp = entry.timestamp.ToString();
+       EntryToJsonStructProto(std::move(entry), &proto);
+       std::string output;
+-      ::google::protobuf::TextFormat::PrintToString(proto, &output);
++      ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+       gpr_log(GPR_INFO, "Log Entry recorded at time: %s : %s",
+               timestamp.c_str(), output.c_str());
+     }
+diff --git a/src/cpp/ext/gcp/observability_logging_sink.h b/src/cpp/ext/gcp/observability_logging_sink.h
+index 5a405133e4..c9584f3e4c 100644
+--- a/src/cpp/ext/gcp/observability_logging_sink.h
++++ b/src/cpp/ext/gcp/observability_logging_sink.h
+@@ -114,7 +114,7 @@ class ObservabilityLoggingSink : public grpc_core::LoggingSink {
+ 
+ // Exposed for just for testing purposes
+ void EntryToJsonStructProto(grpc_core::LoggingSink::Entry entry,
+-                            ::google::protobuf::Struct* json_payload);
++                            ::google::protobuf_tempo::Struct* json_payload);
+ 
+ }  // namespace internal
+ }  // namespace grpc
 diff --git a/src/cpp/ext/proto_server_reflection.cc b/src/cpp/ext/proto_server_reflection.cc
 index 7d008794c4..ee11bee042 100644
 --- a/src/cpp/ext/proto_server_reflection.cc
@@ -934,6 +1237,40 @@ index 685317d633..45def3af53 100644
    return reactor;
  }
  
+diff --git a/src/cpp/server/load_reporter/load_reporter.cc b/src/cpp/server/load_reporter/load_reporter.cc
+index e26786e532..b5b4aa65c4 100644
+--- a/src/cpp/server/load_reporter/load_reporter.cc
++++ b/src/cpp/server/load_reporter/load_reporter.cc
+@@ -295,14 +295,14 @@ LoadReporter::GenerateLoadBalancingFeedback() {
+   return feedback;
+ }
+ 
+-::google::protobuf::RepeatedPtrField<grpc::lb::v1::Load>
++::google::protobuf_tempo::RepeatedPtrField<grpc::lb::v1::Load>
+ LoadReporter::GenerateLoads(const std::string& hostname,
+                             const std::string& lb_id) {
+   grpc_core::MutexLock lock(&store_mu_);
+   auto assigned_stores = load_data_store_.GetAssignedStores(hostname, lb_id);
+   GPR_ASSERT(assigned_stores != nullptr);
+   GPR_ASSERT(!assigned_stores->empty());
+-  ::google::protobuf::RepeatedPtrField<grpc::lb::v1::Load> loads;
++  ::google::protobuf_tempo::RepeatedPtrField<grpc::lb::v1::Load> loads;
+   for (PerBalancerStore* per_balancer_store : *assigned_stores) {
+     GPR_ASSERT(!per_balancer_store->IsSuspended());
+     if (!per_balancer_store->load_record_map().empty()) {
+diff --git a/src/cpp/server/load_reporter/load_reporter.h b/src/cpp/server/load_reporter/load_reporter.h
+index 5f79a3c588..3281cd76fd 100644
+--- a/src/cpp/server/load_reporter/load_reporter.h
++++ b/src/cpp/server/load_reporter/load_reporter.h
+@@ -148,7 +148,7 @@ class LoadReporter {
+   // all the stats data accumulated between the last report (i.e., the last
+   // consumption) and the last fetch from Census (i.e., the last production).
+   // Thread-safe.
+-  ::google::protobuf::RepeatedPtrField<grpc::lb::v1::Load> GenerateLoads(
++  ::google::protobuf_tempo::RepeatedPtrField<grpc::lb::v1::Load> GenerateLoads(
+       const std::string& hostname, const std::string& lb_id);
+ 
+   // The feedback is calculated from the stats data recorded in the sliding
 diff --git a/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc b/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc
 index 2c19660514..fe46ddd49c 100644
 --- a/src/cpp/server/load_reporter/load_reporter_async_service_impl.cc
@@ -990,6 +1327,19 @@ index 3fcaebf8ad..e0b8326ac4 100644
 -const Status& Status::CANCELLED = Status(StatusCode::CANCELLED, "");
 -
  }  // namespace grpc
+diff --git a/src/objective-c/examples/RemoteTestClient/test.proto b/src/objective-c/examples/RemoteTestClient/test.proto
+index 8c91f7d9f2..ad179c41a7 100644
+--- a/src/objective-c/examples/RemoteTestClient/test.proto
++++ b/src/objective-c/examples/RemoteTestClient/test.proto
+@@ -27,7 +27,7 @@ option objc_class_prefix = "RMT";
+ // performance with various types of payload.
+ service TestService {
+   // One empty request followed by one empty response.
+-  rpc EmptyCall(google.protobuf.Empty) returns (google.protobuf.Empty);
++  rpc EmptyCall(google.protobuf_tempo.Empty) returns (google.protobuf_tempo.Empty);
+ 
+   // One request followed by one response.
+   rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
 diff --git a/src/objective-c/tests/CppCronetTests/TestHelper.mm b/src/objective-c/tests/CppCronetTests/TestHelper.mm
 index de056ae28a..60e61fb6ba 100644
 --- a/src/objective-c/tests/CppCronetTests/TestHelper.mm
@@ -1037,6 +1387,1539 @@ index de056ae28a..60e61fb6ba 100644
  }
  
  void PhonyInterceptor::Intercept(grpc::experimental::InterceptorBatchMethods* methods) {
+diff --git a/src/objective-c/tests/RemoteTestClient/test.proto b/src/objective-c/tests/RemoteTestClient/test.proto
+index 6931600edc..c177621b9d 100644
+--- a/src/objective-c/tests/RemoteTestClient/test.proto
++++ b/src/objective-c/tests/RemoteTestClient/test.proto
+@@ -27,7 +27,7 @@ option objc_class_prefix = "RMT";
+ // performance with various types of payload.
+ service TestService {
+   // One empty request followed by one empty response.
+-  rpc EmptyCall(google.protobuf.Empty) returns (google.protobuf.Empty);
++  rpc EmptyCall(google.protobuf_tempo.Empty) returns (google.protobuf_tempo.Empty);
+ 
+   // One request followed by one response.
+   rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
+diff --git a/src/proto/grpc/channelz/channelz.proto b/src/proto/grpc/channelz/channelz.proto
+index d0781094ea..d0004a75d2 100644
+--- a/src/proto/grpc/channelz/channelz.proto
++++ b/src/proto/grpc/channelz/channelz.proto
+@@ -114,7 +114,7 @@ message ChannelData {
+   int64 calls_failed = 6;
+ 
+   // The last time a call was started on the channel.
+-  google.protobuf.Timestamp last_call_started_timestamp = 7;
++  google.protobuf_tempo.Timestamp last_call_started_timestamp = 7;
+ }
+ 
+ // A trace event is an interesting thing that happened to a channel or
+@@ -132,7 +132,7 @@ message ChannelTraceEvent {
+   // the severity of the trace event
+   Severity severity = 2;
+   // When this event occurred.
+-  google.protobuf.Timestamp timestamp = 3;
++  google.protobuf_tempo.Timestamp timestamp = 3;
+   // ref of referenced channel or subchannel.
+   // Optional, only present if this event refers to a child object. For example,
+   // this field would be filled if this trace event was for a subchannel being
+@@ -150,7 +150,7 @@ message ChannelTrace {
+   // implementations.
+   int64 num_events_logged = 1;
+   // Time that this channel was created.
+-  google.protobuf.Timestamp creation_timestamp = 2;
++  google.protobuf_tempo.Timestamp creation_timestamp = 2;
+   // List of events that have occurred on this channel.
+   repeated ChannelTraceEvent events = 3;
+ }
+@@ -221,7 +221,7 @@ message ServerData {
+   int64 calls_failed = 4;
+ 
+   // The last time a call was started on the server.
+-  google.protobuf.Timestamp last_call_started_timestamp = 5;
++  google.protobuf_tempo.Timestamp last_call_started_timestamp = 5;
+ }
+ 
+ // Information about an actual connection.  Pronounced "sock-ay".
+@@ -269,25 +269,25 @@ message SocketData {
+ 
+   // The last time a stream was created by this endpoint.  Usually unset for
+   // servers.
+-  google.protobuf.Timestamp last_local_stream_created_timestamp = 7;
++  google.protobuf_tempo.Timestamp last_local_stream_created_timestamp = 7;
+   // The last time a stream was created by the remote endpoint.  Usually unset
+   // for clients.
+-  google.protobuf.Timestamp last_remote_stream_created_timestamp = 8;
++  google.protobuf_tempo.Timestamp last_remote_stream_created_timestamp = 8;
+ 
+   // The last time a message was sent by this endpoint.
+-  google.protobuf.Timestamp last_message_sent_timestamp = 9;
++  google.protobuf_tempo.Timestamp last_message_sent_timestamp = 9;
+   // The last time a message was received by this endpoint.
+-  google.protobuf.Timestamp last_message_received_timestamp = 10;
++  google.protobuf_tempo.Timestamp last_message_received_timestamp = 10;
+ 
+   // The amount of window, granted to the local endpoint by the remote endpoint.
+   // This may be slightly out of date due to network latency.  This does NOT
+   // include stream level or TCP level flow control info.
+-  google.protobuf.Int64Value local_flow_control_window = 11;
++  google.protobuf_tempo.Int64Value local_flow_control_window = 11;
+ 
+   // The amount of window, granted to the remote endpoint by the local endpoint.
+   // This may be slightly out of date due to network latency.  This does NOT
+   // include stream level or TCP level flow control info.
+-  google.protobuf.Int64Value  remote_flow_control_window = 12;
++  google.protobuf_tempo.Int64Value  remote_flow_control_window = 12;
+ 
+   // Socket options set on this socket.  May be absent if 'summary' is set
+   // on GetSocketRequest.
+@@ -312,7 +312,7 @@ message Address {
+     // The human readable version of the value.  This value should be set.
+     string name = 1;
+     // The actual address message.
+-    google.protobuf.Any value = 2;
++    google.protobuf_tempo.Any value = 2;
+   }
+ 
+   oneof address {
+@@ -342,7 +342,7 @@ message Security {
+     // The human readable version of the value.
+     string name = 1;
+     // The actual security details message.
+-    google.protobuf.Any value = 2;
++    google.protobuf_tempo.Any value = 2;
+   }
+   oneof model {
+     Tls tls = 1;
+@@ -361,13 +361,13 @@ message SocketOption {
+   string value = 2;
+   // Additional data associated with the socket option.  At least one of value
+   // or additional will be set.
+-  google.protobuf.Any additional = 3;
++  google.protobuf_tempo.Any additional = 3;
+ }
+ 
+ // For use with SocketOption's additional field.  This is primarily used for
+ // SO_RCVTIMEO and SO_SNDTIMEO
+ message SocketOptionTimeout {
+-  google.protobuf.Duration duration = 1;
++  google.protobuf_tempo.Duration duration = 1;
+ }
+ 
+ // For use with SocketOption's additional field.  This is primarily used for
+@@ -376,7 +376,7 @@ message SocketOptionLinger {
+   // active maps to `struct linger.l_onoff`
+   bool active = 1;
+   // duration maps to `struct linger.l_linger`
+-  google.protobuf.Duration duration = 2;
++  google.protobuf_tempo.Duration duration = 2;
+ }
+ 
+ // For use with SocketOption's additional field.  Tcp info for
+diff --git a/src/proto/grpc/lb/v1/load_balancer.proto b/src/proto/grpc/lb/v1/load_balancer.proto
+index 00fc7096c9..55044040a5 100644
+--- a/src/proto/grpc/lb/v1/load_balancer.proto
++++ b/src/proto/grpc/lb/v1/load_balancer.proto
+@@ -65,7 +65,7 @@ message ClientStatsPerToken {
+ // count except the timestamp should be reset to zero after reporting the stats.
+ message ClientStats {
+   // The timestamp of generating the report.
+-  google.protobuf.Timestamp timestamp = 1;
++  google.protobuf_tempo.Timestamp timestamp = 1;
+ 
+   // The total number of RPCs that started.
+   int64 num_calls_started = 2;
+@@ -109,7 +109,7 @@ message InitialLoadBalanceResponse {
+   // This interval defines how often the client should send the client stats
+   // to the load balancer. Stats should only be reported when the duration is
+   // positive.
+-  google.protobuf.Duration client_stats_report_interval = 2;
++  google.protobuf_tempo.Duration client_stats_report_interval = 2;
+ }
+ 
+ message ServerList {
+@@ -119,7 +119,7 @@ message ServerList {
+   // unless instructed otherwise via the client_config.
+   repeated Server servers = 1;
+ 
+-  // Was google.protobuf.Duration expiration_interval.
++  // Was google.protobuf_tempo.Duration expiration_interval.
+   reserved 3;
+ }
+ 
+diff --git a/src/proto/grpc/lb/v1/load_reporter.proto b/src/proto/grpc/lb/v1/load_reporter.proto
+index d57a37fed7..d33d4ac1c4 100644
+--- a/src/proto/grpc/lb/v1/load_reporter.proto
++++ b/src/proto/grpc/lb/v1/load_reporter.proto
+@@ -43,7 +43,7 @@ message InitialLoadReportRequest {
+ 
+   // This interval defines how often the server should send load reports to
+   // the load balancer.
+-  google.protobuf.Duration load_report_interval = 3;
++  google.protobuf_tempo.Duration load_report_interval = 3;
+ }
+ 
+ message LoadReportResponse {
+@@ -135,7 +135,7 @@ message Load {
+   // Totals are from calls that with _and_ without error.
+   int64 total_bytes_sent = 8;
+   int64 total_bytes_received = 9;
+-  google.protobuf.Duration total_latency = 10;
++  google.protobuf_tempo.Duration total_latency = 10;
+ 
+   // Optional metrics reported for the call(s). Requires that metric_name is
+   // unique.
+diff --git a/src/proto/grpc/lookup/v1/rls_config.proto b/src/proto/grpc/lookup/v1/rls_config.proto
+index 9d2b6c54cf..fecfc7f568 100644
+--- a/src/proto/grpc/lookup/v1/rls_config.proto
++++ b/src/proto/grpc/lookup/v1/rls_config.proto
+@@ -181,19 +181,19 @@ message RouteLookupConfig {
+ 
+   // Configure a timeout value for lookup service requests.
+   // Defaults to 10 seconds if not specified.
+-  google.protobuf.Duration lookup_service_timeout = 4;
++  google.protobuf_tempo.Duration lookup_service_timeout = 4;
+ 
+   // How long are responses valid for (like HTTP Cache-Control).
+   // If omitted or zero, the longest valid cache time is used.
+   // This value is clamped to 5 minutes to avoid unflushable bad responses.
+-  google.protobuf.Duration max_age = 5;
++  google.protobuf_tempo.Duration max_age = 5;
+ 
+   // After a response has been in the client cache for this amount of time
+   // and is re-requested, start an asynchronous RPC to re-validate it.
+   // This value should be less than max_age by at least the length of a
+   // typical RTT to the Route Lookup Service to fully mask the RTT latency.
+   // If omitted, keys are only re-requested after they have expired.
+-  google.protobuf.Duration stale_age = 6;
++  google.protobuf_tempo.Duration stale_age = 6;
+ 
+   // Rough indicator of amount of memory to use for the client cache.  Some of
+   // the data structure overhead is not accounted for, so actual memory consumed
+diff --git a/src/proto/grpc/status/status.proto b/src/proto/grpc/status/status.proto
+index bc6097b29f..872eabc18f 100644
+--- a/src/proto/grpc/status/status.proto
++++ b/src/proto/grpc/status/status.proto
+@@ -88,5 +88,5 @@ message Status {
+ 
+   // A list of messages that carry the error details.  There will be a
+   // common set of message types for APIs to use.
+-  repeated google.protobuf.Any details = 3;
++  repeated google.protobuf_tempo.Any details = 3;
+ }
+diff --git a/src/proto/grpc/testing/control.proto b/src/proto/grpc/testing/control.proto
+index 0cdd40600a..ab12bf0629 100644
+--- a/src/proto/grpc/testing/control.proto
++++ b/src/proto/grpc/testing/control.proto
+@@ -269,8 +269,8 @@ message ScenarioResultSummary
+ 
+ 
+   // Start and end time for the test scenario
+-  google.protobuf.Timestamp start_time = 19;
+-  google.protobuf.Timestamp end_time =20;
++  google.protobuf_tempo.Timestamp start_time = 19;
++  google.protobuf_tempo.Timestamp end_time =20;
+ }
+ 
+ // Results of a single benchmark scenario.
+diff --git a/src/proto/grpc/testing/istio_echo.proto b/src/proto/grpc/testing/istio_echo.proto
+index d6ca9a1e90..1e77c0b68e 100644
+--- a/src/proto/grpc/testing/istio_echo.proto
++++ b/src/proto/grpc/testing/istio_echo.proto
+@@ -71,7 +71,7 @@ message ForwardEchoRequest {
+   string serverName = 20;
+   // Expected response determines what string to look for in the response to validate TCP requests succeeded.
+   // If not set, defaults to "StatusCode=200"
+-  google.protobuf.StringValue expectedResponse = 21;
++  google.protobuf_tempo.StringValue expectedResponse = 21;
+ }
+ 
+ message Alpn {
+diff --git a/src/proto/grpc/testing/xds/v3/address.proto b/src/proto/grpc/testing/xds/v3/address.proto
+index df0c90acd4..a73adf8c54 100644
+--- a/src/proto/grpc/testing/xds/v3/address.proto
++++ b/src/proto/grpc/testing/xds/v3/address.proto
+@@ -71,5 +71,5 @@ message CidrRange {
+   string address_prefix = 1;
+ 
+   // Length of prefix, e.g. 0, 32.
+-  google.protobuf.UInt32Value prefix_len = 2;
++  google.protobuf_tempo.UInt32Value prefix_len = 2;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/base.proto b/src/proto/grpc/testing/xds/v3/base.proto
+index fcf78419f5..2bac450bc5 100644
+--- a/src/proto/grpc/testing/xds/v3/base.proto
++++ b/src/proto/grpc/testing/xds/v3/base.proto
+@@ -73,7 +73,7 @@ message Node {
+ 
+   // Opaque metadata extending the node identifier. Envoy will pass this
+   // directly to the management server.
+-  google.protobuf.Struct metadata = 3;
++  google.protobuf_tempo.Struct metadata = 3;
+ 
+   // Locality specifying where the Envoy instance is running.
+   Locality locality = 4;
+@@ -126,7 +126,7 @@ message TransportSocket {
+   // Implementation specific configuration which depends on the implementation being instantiated.
+   // See the supported transport socket implementations for further documentation.
+   oneof config_type {
+-    google.protobuf.Any typed_config = 3;
++    google.protobuf_tempo.Any typed_config = 3;
+   }
+ }
+ 
+@@ -159,13 +159,13 @@ message Metadata {
+   // :ref:`typed_filter_metadata <envoy_v3_api_field_config.core.v3.Metadata.typed_filter_metadata>`
+   // fields are present in the metadata with same keys,
+   // only ``typed_filter_metadata`` field will be parsed.
+-  map<string, google.protobuf.Struct> filter_metadata = 1;
++  map<string, google.protobuf_tempo.Struct> filter_metadata = 1;
+ 
+   // Key is the reverse DNS filter name, e.g. com.acme.widget. The ``envoy.*``
+   // namespace is reserved for Envoy's built-in filters.
+-  // The value is encoded as google.protobuf.Any.
++  // The value is encoded as google.protobuf_tempo.Any.
+   // If both :ref:`filter_metadata <envoy_v3_api_field_config.core.v3.Metadata.filter_metadata>`
+   // and ``typed_filter_metadata`` fields are present in the metadata with same keys,
+   // only ``typed_filter_metadata`` field will be parsed.
+-  map<string, google.protobuf.Any> typed_filter_metadata = 2;
++  map<string, google.protobuf_tempo.Any> typed_filter_metadata = 2;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/client_side_weighted_round_robin.proto b/src/proto/grpc/testing/xds/v3/client_side_weighted_round_robin.proto
+index 8a9958bbf6..002d61264d 100644
+--- a/src/proto/grpc/testing/xds/v3/client_side_weighted_round_robin.proto
++++ b/src/proto/grpc/testing/xds/v3/client_side_weighted_round_robin.proto
+@@ -40,12 +40,12 @@ import "google/protobuf/wrappers.proto";
+ message ClientSideWeightedRoundRobin {
+   // Whether to enable out-of-band utilization reporting collection from
+   // the endpoints. By default, per-request utilization reporting is used.
+-  google.protobuf.BoolValue enable_oob_load_report = 1;
++  google.protobuf_tempo.BoolValue enable_oob_load_report = 1;
+ 
+   // Load reporting interval to request from the server. Note that the
+   // server may not provide reports as frequently as the client requests.
+   // Used only when enable_oob_load_report is true. Default is 10 seconds.
+-  google.protobuf.Duration oob_reporting_period = 2;
++  google.protobuf_tempo.Duration oob_reporting_period = 2;
+ 
+   // A given endpoint must report load metrics continuously for at least
+   // this long before the endpoint weight will be used. This avoids
+@@ -53,19 +53,19 @@ message ClientSideWeightedRoundRobin {
+   // both immediately after we establish a connection to an endpoint and
+   // after weight_expiration_period has caused us to stop using the most
+   // recent load metrics. Default is 10 seconds.
+-  google.protobuf.Duration blackout_period = 3;
++  google.protobuf_tempo.Duration blackout_period = 3;
+ 
+   // If a given endpoint has not reported load metrics in this long,
+   // then we stop using the reported weight. This ensures that we do
+   // not continue to use very stale weights. Once we stop using a stale
+   // value, if we later start seeing fresh reports again, the
+   // blackout_period applies. Defaults to 3 minutes.
+-  google.protobuf.Duration weight_expiration_period = 4;
++  google.protobuf_tempo.Duration weight_expiration_period = 4;
+ 
+   // How often endpoint weights are recalculated.  Default is 1 second.
+-  google.protobuf.Duration weight_update_period = 5;
++  google.protobuf_tempo.Duration weight_update_period = 5;
+ 
+   // The multiplier used to adjust endpoint weights with the error rate
+   // calculated as eps/qps. Default is 1.0.
+-  google.protobuf.FloatValue error_utilization_penalty = 6;
++  google.protobuf_tempo.FloatValue error_utilization_penalty = 6;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/cluster.proto b/src/proto/grpc/testing/xds/v3/cluster.proto
+index a7c438399a..6f131c4234 100644
+--- a/src/proto/grpc/testing/xds/v3/cluster.proto
++++ b/src/proto/grpc/testing/xds/v3/cluster.proto
+@@ -36,7 +36,7 @@ enum RoutingPriority {
+ message CircuitBreakers {
+   message Thresholds {
+     RoutingPriority priority = 1;
+-    google.protobuf.UInt32Value max_requests = 4;
++    google.protobuf_tempo.UInt32Value max_requests = 4;
+   }
+   repeated Thresholds thresholds = 1;
+ }
+@@ -48,7 +48,7 @@ message CustomClusterType {
+ 
+   // Cluster specific configuration which depends on the cluster being instantiated.
+   // See the supported cluster for further documentation.
+-  google.protobuf.Any typed_config = 2;
++  google.protobuf_tempo.Any typed_config = 2;
+ }
+ 
+ // [#protodoc-title: Cluster configuration]
+@@ -177,7 +177,7 @@ message Cluster {
+     // provided host) the better the request distribution will reflect the desired weights. Defaults
+     // to 1024 entries, and limited to 8M entries. See also
+     // :ref:`maximum_ring_size<envoy_api_field_config.cluster.v3.Cluster.RingHashLbConfig.maximum_ring_size>`.
+-    google.protobuf.UInt64Value minimum_ring_size = 1;
++    google.protobuf_tempo.UInt64Value minimum_ring_size = 1;
+ 
+     // The hash function used to hash hosts onto the ketama ring. The value defaults to
+     // :ref:`XX_HASH<envoy_api_enum_value_config.cluster.v3.Cluster.RingHashLbConfig.HashFunction.XX_HASH>`.
+@@ -186,7 +186,7 @@ message Cluster {
+     // Maximum hash ring size. Defaults to 8M entries, and limited to 8M entries, but can be lowered
+     // to further constrain resource use. See also
+     // :ref:`minimum_ring_size<envoy_api_field_config.cluster.v3.Cluster.RingHashLbConfig.minimum_ring_size>`.
+-    google.protobuf.UInt64Value maximum_ring_size = 4;
++    google.protobuf_tempo.UInt64Value maximum_ring_size = 4;
+   }
+ 
+   // The :ref:`load balancer type <arch_overview_load_balancing_types>` to use
+diff --git a/src/proto/grpc/testing/xds/v3/config_dump.proto b/src/proto/grpc/testing/xds/v3/config_dump.proto
+index d69b3109aa..996e0b7304 100644
+--- a/src/proto/grpc/testing/xds/v3/config_dump.proto
++++ b/src/proto/grpc/testing/xds/v3/config_dump.proto
+@@ -49,10 +49,10 @@ enum ClientResourceStatus {
+ message UpdateFailureState {
+   // What the component configuration would have been if the update had succeeded.
+   // This field may not be populated by xDS clients due to storage overhead.
+-  google.protobuf.Any failed_configuration = 1;
++  google.protobuf_tempo.Any failed_configuration = 1;
+ 
+   // Time of the latest failed update attempt.
+-  google.protobuf.Timestamp last_update_attempt = 2;
++  google.protobuf_tempo.Timestamp last_update_attempt = 2;
+ 
+   // Details about the last failed update attempt.
+   string details = 3;
+@@ -69,10 +69,10 @@ message ListenersConfigDump {
+   // Describes a statically loaded listener.
+   message StaticListener {
+     // The listener config.
+-    google.protobuf.Any listener = 1;
++    google.protobuf_tempo.Any listener = 1;
+ 
+     // The timestamp when the Listener was last successfully updated.
+-    google.protobuf.Timestamp last_updated = 2;
++    google.protobuf_tempo.Timestamp last_updated = 2;
+   }
+ 
+   message DynamicListenerState {
+@@ -83,10 +83,10 @@ message ListenersConfigDump {
+     string version_info = 1;
+ 
+     // The listener config.
+-    google.protobuf.Any listener = 2;
++    google.protobuf_tempo.Any listener = 2;
+ 
+     // The timestamp when the Listener was last successfully updated.
+-    google.protobuf.Timestamp last_updated = 3;
++    google.protobuf_tempo.Timestamp last_updated = 3;
+   }
+ 
+   // Describes a dynamically loaded listener via the LDS API.
+@@ -141,10 +141,10 @@ message ClustersConfigDump {
+   // Describes a statically loaded cluster.
+   message StaticCluster {
+     // The cluster config.
+-    google.protobuf.Any cluster = 1;
++    google.protobuf_tempo.Any cluster = 1;
+ 
+     // The timestamp when the Cluster was last updated.
+-    google.protobuf.Timestamp last_updated = 2;
++    google.protobuf_tempo.Timestamp last_updated = 2;
+   }
+ 
+   // Describes a dynamically loaded cluster via the CDS API.
+@@ -157,10 +157,10 @@ message ClustersConfigDump {
+     string version_info = 1;
+ 
+     // The cluster config.
+-    google.protobuf.Any cluster = 2;
++    google.protobuf_tempo.Any cluster = 2;
+ 
+     // The timestamp when the Cluster was last updated.
+-    google.protobuf.Timestamp last_updated = 3;
++    google.protobuf_tempo.Timestamp last_updated = 3;
+ 
+     // Set if the last update failed, cleared after the next successful update.
+     // The *error_state* field contains the rejected version of this particular
+@@ -201,10 +201,10 @@ message ClustersConfigDump {
+ message RoutesConfigDump {
+   message StaticRouteConfig {
+     // The route config.
+-    google.protobuf.Any route_config = 1;
++    google.protobuf_tempo.Any route_config = 1;
+ 
+     // The timestamp when the Route was last updated.
+-    google.protobuf.Timestamp last_updated = 2;
++    google.protobuf_tempo.Timestamp last_updated = 2;
+   }
+ 
+   // [#next-free-field: 6]
+@@ -215,10 +215,10 @@ message RoutesConfigDump {
+     string version_info = 1;
+ 
+     // The route config.
+-    google.protobuf.Any route_config = 2;
++    google.protobuf_tempo.Any route_config = 2;
+ 
+     // The timestamp when the Route was last updated.
+-    google.protobuf.Timestamp last_updated = 3;
++    google.protobuf_tempo.Timestamp last_updated = 3;
+ 
+     // Set if the last update failed, cleared after the next successful update.
+     // The *error_state* field contains the rejected version of this particular
+@@ -245,10 +245,10 @@ message RoutesConfigDump {
+ message EndpointsConfigDump {
+   message StaticEndpointConfig {
+     // The endpoint config.
+-    google.protobuf.Any endpoint_config = 1;
++    google.protobuf_tempo.Any endpoint_config = 1;
+ 
+     // [#not-implemented-hide:] The timestamp when the Endpoint was last updated.
+-    google.protobuf.Timestamp last_updated = 2;
++    google.protobuf_tempo.Timestamp last_updated = 2;
+   }
+ 
+   // [#next-free-field: 6]
+@@ -259,10 +259,10 @@ message EndpointsConfigDump {
+     string version_info = 1;
+ 
+     // The endpoint config.
+-    google.protobuf.Any endpoint_config = 2;
++    google.protobuf_tempo.Any endpoint_config = 2;
+ 
+     // [#not-implemented-hide:] The timestamp when the Endpoint was last updated.
+-    google.protobuf.Timestamp last_updated = 3;
++    google.protobuf_tempo.Timestamp last_updated = 3;
+ 
+     // Set if the last update failed, cleared after the next successful update.
+     // The *error_state* field contains the rejected version of this particular
+diff --git a/src/proto/grpc/testing/xds/v3/cookie.proto b/src/proto/grpc/testing/xds/v3/cookie.proto
+index 8f2515f13c..6069f8830a 100644
+--- a/src/proto/grpc/testing/xds/v3/cookie.proto
++++ b/src/proto/grpc/testing/xds/v3/cookie.proto
+@@ -30,7 +30,7 @@ message Cookie {
+ 
+   // Duration of cookie. This will be used to set the expiry time of a new cookie when it is
+   // generated. Set this to 0 to use a session cookie.
+-  google.protobuf.Duration ttl = 2;
++  google.protobuf_tempo.Duration ttl = 2;
+ 
+   // Path of cookie. This will be used to set the path of a new cookie when it is generated.
+   // If no path is specified here, no path will be set for the cookie.
+diff --git a/src/proto/grpc/testing/xds/v3/csds.proto b/src/proto/grpc/testing/xds/v3/csds.proto
+index a18473cf7a..26e6b4f959 100644
+--- a/src/proto/grpc/testing/xds/v3/csds.proto
++++ b/src/proto/grpc/testing/xds/v3/csds.proto
+@@ -98,10 +98,10 @@ message ClientConfig {
+     string version_info = 3;
+ 
+     // The xDS resource config. Actual content depends on the type
+-    google.protobuf.Any xds_config = 4;
++    google.protobuf_tempo.Any xds_config = 4;
+ 
+     // Timestamp when the xDS resource was last updated
+-    google.protobuf.Timestamp last_updated = 5;
++    google.protobuf_tempo.Timestamp last_updated = 5;
+ 
+     // Per xDS resource config status. It is generated by management servers.
+     // It will not be present if the CSDS server is an xDS client.
+diff --git a/src/proto/grpc/testing/xds/v3/discovery.proto b/src/proto/grpc/testing/xds/v3/discovery.proto
+index f7335c3b62..ff51082ed8 100644
+--- a/src/proto/grpc/testing/xds/v3/discovery.proto
++++ b/src/proto/grpc/testing/xds/v3/discovery.proto
+@@ -34,7 +34,7 @@ message Status {
+ 
+   // A list of messages that carry the error details.  There is a common set of
+   // message types for APIs to use.
+-  repeated google.protobuf.Any details = 3;
++  repeated google.protobuf_tempo.Any details = 3;
+ }
+ 
+ // [#protodoc-title: Common discovery API components]
+@@ -89,7 +89,7 @@ message DiscoveryResponse {
+   string version_info = 1;
+ 
+   // The response resources. These resources are typed and depend on the API being called.
+-  repeated google.protobuf.Any resources = 2;
++  repeated google.protobuf_tempo.Any resources = 2;
+ 
+   // [#not-implemented-hide:]
+   // Canary is used to support two Envoy command line flags:
+@@ -144,7 +144,7 @@ message Resource {
+   string version = 1;
+ 
+   // The resource being tracked.
+-  google.protobuf.Any resource = 2;
++  google.protobuf_tempo.Any resource = 2;
+ 
+   // Time-to-live value for the resource. For each resource, a timer is started. The timer is
+   // reset each time the resource is received with a new TTL. If the resource is received with
+@@ -159,7 +159,7 @@ message Resource {
+   // a management server failure. For example, the feature may be used for fault injection
+   // testing where the fault injection should be terminated in the event that Envoy loses contact
+   // with the management server.
+-  google.protobuf.Duration ttl = 6;
++  google.protobuf_tempo.Duration ttl = 6;
+ 
+   // Cache control properties for the resource.
+   // [#not-implemented-hide:]
+diff --git a/src/proto/grpc/testing/xds/v3/endpoint.proto b/src/proto/grpc/testing/xds/v3/endpoint.proto
+index 1d01a9c797..3593e28a73 100644
+--- a/src/proto/grpc/testing/xds/v3/endpoint.proto
++++ b/src/proto/grpc/testing/xds/v3/endpoint.proto
+@@ -73,7 +73,7 @@ message LbEndpoint {
+   // LocalityLbEndpoints. If unspecified, each host is presumed to have equal
+   // weight in a locality. The sum of the weights of all endpoints in the
+   // endpoint's locality must not exceed uint32_t maximal value (4294967295).
+-  google.protobuf.UInt32Value load_balancing_weight = 4;
++  google.protobuf_tempo.UInt32Value load_balancing_weight = 4;
+ }
+ 
+ // A group of endpoints belonging to a Locality.
+@@ -99,7 +99,7 @@ message LocalityLbEndpoints {
+   // configured. These weights are ignored otherwise. If no weights are
+   // specified when locality weighted load balancing is enabled, the locality is
+   // assigned no load.
+-  google.protobuf.UInt32Value load_balancing_weight = 3;
++  google.protobuf_tempo.UInt32Value load_balancing_weight = 3;
+ 
+   // Optional: the priority for this LocalityLbEndpoints. If unspecified this will
+   // default to the highest priority (0).
+diff --git a/src/proto/grpc/testing/xds/v3/extension.proto b/src/proto/grpc/testing/xds/v3/extension.proto
+index 10f4b00208..9aa6db57d0 100644
+--- a/src/proto/grpc/testing/xds/v3/extension.proto
++++ b/src/proto/grpc/testing/xds/v3/extension.proto
+@@ -34,5 +34,5 @@ message TypedExtensionConfig {
+   // the inner type URL of *TypedStruct* will be utilized. See the
+   // :ref:`extension configuration overview
+   // <config_overview_extension_configuration>` for further details.
+-  google.protobuf.Any typed_config = 2;
++  google.protobuf_tempo.Any typed_config = 2;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/fault.proto b/src/proto/grpc/testing/xds/v3/fault.proto
+index 05ec641d0e..de7bbe0444 100644
+--- a/src/proto/grpc/testing/xds/v3/fault.proto
++++ b/src/proto/grpc/testing/xds/v3/fault.proto
+@@ -87,5 +87,5 @@ message HTTPFault {
+   //   Like other :ref:`circuit breakers <arch_overview_circuit_break>` in Envoy, this is a fuzzy
+   //   limit. It's possible for the number of active faults to rise slightly above the configured
+   //   amount due to the implementation details.
+-  google.protobuf.UInt32Value max_active_faults = 6;
++  google.protobuf_tempo.UInt32Value max_active_faults = 6;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/fault_common.proto b/src/proto/grpc/testing/xds/v3/fault_common.proto
+index 2c2aedc789..5689f247a7 100644
+--- a/src/proto/grpc/testing/xds/v3/fault_common.proto
++++ b/src/proto/grpc/testing/xds/v3/fault_common.proto
+@@ -37,7 +37,7 @@ message FaultDelay {
+     // delay will be injected before a new request/operation. For TCP
+     // connections, the proxying of the connection upstream will be delayed
+     // for the specified period. This is required if type is FIXED.
+-    google.protobuf.Duration fixed_delay = 3;
++    google.protobuf_tempo.Duration fixed_delay = 3;
+ 
+     // Fault delays are controlled via an HTTP header (if applicable).
+     HeaderDelay header_delay = 5;
+diff --git a/src/proto/grpc/testing/xds/v3/http_connection_manager.proto b/src/proto/grpc/testing/xds/v3/http_connection_manager.proto
+index a8d3ea49e7..c3df44b0f4 100644
+--- a/src/proto/grpc/testing/xds/v3/http_connection_manager.proto
++++ b/src/proto/grpc/testing/xds/v3/http_connection_manager.proto
+@@ -102,7 +102,7 @@ message HttpFilter {
+   oneof config_type {
+     // Filter specific configuration which depends on the filter being instantiated. See the supported
+     // filters for further documentation.
+-    google.protobuf.Any typed_config = 4;
++    google.protobuf_tempo.Any typed_config = 4;
+   }
+ 
+   bool is_optional = 6;
+diff --git a/src/proto/grpc/testing/xds/v3/listener.proto b/src/proto/grpc/testing/xds/v3/listener.proto
+index df9ee71e72..76f7b9e247 100644
+--- a/src/proto/grpc/testing/xds/v3/listener.proto
++++ b/src/proto/grpc/testing/xds/v3/listener.proto
+@@ -38,7 +38,7 @@ message ApiListener {
+   // it would have caused circular dependencies for go protos: lds.proto depends on this file,
+   // and http_connection_manager.proto depends on rds.proto, which is in the same directory as
+   // lds.proto, so lds.proto cannot depend on this file.]
+-  google.protobuf.Any api_listener = 1;
++  google.protobuf_tempo.Any api_listener = 1;
+ }
+ 
+ message Filter {
+@@ -52,7 +52,7 @@ message Filter {
+   oneof config_type {
+     // Filter specific configuration which depends on the filter being
+     // instantiated. See the supported filters for further documentation.
+-    google.protobuf.Any typed_config = 4;
++    google.protobuf_tempo.Any typed_config = 4;
+   }
+ }
+ 
+@@ -72,7 +72,7 @@ message FilterChainMatch {
+ 
+   // Optional destination port to consider when use_original_dst is set on the
+   // listener in determining a filter chain match.
+-  google.protobuf.UInt32Value destination_port = 8;
++  google.protobuf_tempo.UInt32Value destination_port = 8;
+ 
+   // If non-empty, an IP address and prefix length to match addresses when the
+   // listener is bound to 0.0.0.0/:: or when use_original_dst is specified.
+@@ -187,7 +187,7 @@ message Listener {
+   // true, the listener hands off redirected connections to the listener associated with the
+   // original destination address. If there is no listener associated with the original destination
+   // address, the connection is handled by the listener that receives it. Defaults to false.
+-  google.protobuf.BoolValue use_original_dst = 4; 
++  google.protobuf_tempo.BoolValue use_original_dst = 4; 
+ 
+   // The default filter chain if none of the filter chain matches. If no default filter chain is supplied,
+   // the connection will be closed. The filter chain match is ignored in this field.
+diff --git a/src/proto/grpc/testing/xds/v3/load_report.proto b/src/proto/grpc/testing/xds/v3/load_report.proto
+index b8ee86fb48..521a2f1b03 100644
+--- a/src/proto/grpc/testing/xds/v3/load_report.proto
++++ b/src/proto/grpc/testing/xds/v3/load_report.proto
+@@ -72,7 +72,7 @@ message UpstreamEndpointStats {
+ 
+   // Opaque and implementation dependent metadata of the
+   // endpoint. Envoy will pass this directly to the management server.
+-  google.protobuf.Struct metadata = 6;
++  google.protobuf_tempo.Struct metadata = 6;
+ 
+   // The total number of requests successfully completed by the endpoints in the
+   // locality. These include non-5xx responses for HTTP, where errors
+@@ -158,5 +158,5 @@ message ClusterStats {
+   // request reported. Due to system load and delays between the *LoadStatsRequest* sent from Envoy
+   // and the *LoadStatsResponse* message sent from the management server, this may be longer than
+   // the requested load reporting interval in the *LoadStatsResponse*.
+-  google.protobuf.Duration load_report_interval = 4;
++  google.protobuf_tempo.Duration load_report_interval = 4;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/lrs.proto b/src/proto/grpc/testing/xds/v3/lrs.proto
+index e118b7f957..d49db87093 100644
+--- a/src/proto/grpc/testing/xds/v3/lrs.proto
++++ b/src/proto/grpc/testing/xds/v3/lrs.proto
+@@ -88,7 +88,7 @@ message LoadStatsResponse {
+   //    *LoadStatsResponse* will also be accumulated and billed to the cluster. This avoids a period
+   //    of inobservability that might otherwise exists between the messages. New clusters are not
+   //    subject to this consideration.
+-  google.protobuf.Duration load_reporting_interval = 2;
++  google.protobuf_tempo.Duration load_reporting_interval = 2;
+ 
+   // Set to *true* if the management server supports endpoint granularity
+   // report.
+diff --git a/src/proto/grpc/testing/xds/v3/orca_service.proto b/src/proto/grpc/testing/xds/v3/orca_service.proto
+index 4ba5a46edc..5f7123210e 100644
+--- a/src/proto/grpc/testing/xds/v3/orca_service.proto
++++ b/src/proto/grpc/testing/xds/v3/orca_service.proto
+@@ -39,7 +39,7 @@ service OpenRcaService {
+ 
+ message OrcaLoadReportRequest {
+   // Interval for generating Open RCA core metric responses.
+-  google.protobuf.Duration report_interval = 1;
++  google.protobuf_tempo.Duration report_interval = 1;
+   // Request costs to collect. If this is empty, all known requests costs tracked by
+   // the load reporting agent will be returned. This provides an opportunity for
+   // the client to selectively obtain a subset of tracked costs.
+diff --git a/src/proto/grpc/testing/xds/v3/outlier_detection.proto b/src/proto/grpc/testing/xds/v3/outlier_detection.proto
+index 5f2425458c..2258ce559e 100644
+--- a/src/proto/grpc/testing/xds/v3/outlier_detection.proto
++++ b/src/proto/grpc/testing/xds/v3/outlier_detection.proto
+@@ -25,35 +25,35 @@ message OutlierDetection {
+   // The time interval between ejection analysis sweeps. This can result in
+   // both new ejections as well as hosts being returned to service. Defaults
+   // to 10000ms or 10s.
+-  google.protobuf.Duration interval = 2;
++  google.protobuf_tempo.Duration interval = 2;
+ 
+   // The base time that a host is ejected for. The real time is equal to the
+   // base time multiplied by the number of times the host has been ejected and is
+   // capped by :ref:`max_ejection_time<envoy_v3_api_field_config.cluster.v3.OutlierDetection.max_ejection_time>`.
+   // Defaults to 30000ms or 30s.
+-  google.protobuf.Duration base_ejection_time = 3;
++  google.protobuf_tempo.Duration base_ejection_time = 3;
+ 
+   // The maximum % of an upstream cluster that can be ejected due to outlier
+   // detection. Defaults to 10% but will eject at least one host regardless of the value.
+-  google.protobuf.UInt32Value max_ejection_percent = 4;
++  google.protobuf_tempo.UInt32Value max_ejection_percent = 4;
+ 
+   // The % chance that a host will be actually ejected when an outlier status
+   // is detected through success rate statistics. This setting can be used to
+   // disable ejection or to ramp it up slowly. Defaults to 100.
+-  google.protobuf.UInt32Value enforcing_success_rate = 6;
++  google.protobuf_tempo.UInt32Value enforcing_success_rate = 6;
+ 
+   // The number of hosts in a cluster that must have enough request volume to
+   // detect success rate outliers. If the number of hosts is less than this
+   // setting, outlier detection via success rate statistics is not performed
+   // for any host in the cluster. Defaults to 5.
+-  google.protobuf.UInt32Value success_rate_minimum_hosts = 7;
++  google.protobuf_tempo.UInt32Value success_rate_minimum_hosts = 7;
+ 
+   // The minimum number of total requests that must be collected in one
+   // interval (as defined by the interval duration above) to include this host
+   // in success rate based outlier detection. If the volume is lower than this
+   // setting, outlier detection via success rate statistics is not performed
+   // for that host. Defaults to 100.
+-  google.protobuf.UInt32Value success_rate_request_volume = 8;
++  google.protobuf_tempo.UInt32Value success_rate_request_volume = 8;
+ 
+   // This factor is used to determine the ejection threshold for success rate
+   // outlier ejection. The ejection threshold is the difference between the
+@@ -62,12 +62,12 @@ message OutlierDetection {
+   // success_rate_stdev_factor). This factor is divided by a thousand to get a
+   // double. That is, if the desired factor is 1.9, the runtime value should
+   // be 1900. Defaults to 1900.
+-  google.protobuf.UInt32Value success_rate_stdev_factor = 9;
++  google.protobuf_tempo.UInt32Value success_rate_stdev_factor = 9;
+ 
+   // The failure percentage to use when determining failure percentage-based outlier detection. If
+   // the failure percentage of a given host is greater than or equal to this value, it will be
+   // ejected. Defaults to 85.
+-  google.protobuf.UInt32Value failure_percentage_threshold = 16;
++  google.protobuf_tempo.UInt32Value failure_percentage_threshold = 16;
+ 
+   // The % chance that a host will be actually ejected when an outlier status is detected through
+   // failure percentage statistics. This setting can be used to disable ejection or to ramp it up
+@@ -75,22 +75,22 @@ message OutlierDetection {
+   //
+   // [#next-major-version: setting this without setting failure_percentage_threshold should be
+   // invalid in v4.]
+-  google.protobuf.UInt32Value enforcing_failure_percentage = 17;
++  google.protobuf_tempo.UInt32Value enforcing_failure_percentage = 17;
+ 
+   // The minimum number of hosts in a cluster in order to perform failure percentage-based ejection.
+   // If the total number of hosts in the cluster is less than this value, failure percentage-based
+   // ejection will not be performed. Defaults to 5.
+-  google.protobuf.UInt32Value failure_percentage_minimum_hosts = 19;
++  google.protobuf_tempo.UInt32Value failure_percentage_minimum_hosts = 19;
+ 
+   // The minimum number of total requests that must be collected in one interval (as defined by the
+   // interval duration above) to perform failure percentage-based ejection for this host. If the
+   // volume is lower than this setting, failure percentage-based ejection will not be performed for
+   // this host. Defaults to 50.
+-  google.protobuf.UInt32Value failure_percentage_request_volume = 20;
++  google.protobuf_tempo.UInt32Value failure_percentage_request_volume = 20;
+ 
+   // The maximum time that a host is ejected for. See :ref:`base_ejection_time<envoy_v3_api_field_config.cluster.v3.OutlierDetection.base_ejection_time>`
+   // for more information. If not specified, the default value (300000ms or 300s) or
+   // :ref:`base_ejection_time<envoy_v3_api_field_config.cluster.v3.OutlierDetection.base_ejection_time>` value is applied, whatever is larger.
+-  google.protobuf.Duration max_ejection_time = 21;
++  google.protobuf_tempo.Duration max_ejection_time = 21;
+ 
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/protocol.proto b/src/proto/grpc/testing/xds/v3/protocol.proto
+index 3a75bdd85b..5444aa5b3d 100644
+--- a/src/proto/grpc/testing/xds/v3/protocol.proto
++++ b/src/proto/grpc/testing/xds/v3/protocol.proto
+@@ -23,8 +23,8 @@ import "google/protobuf/duration.proto";
+ // [#next-free-field: 5]
+ message HttpProtocolOptions {
+   // The connection idle timeout.  Defaults to 1h.
+-  google.protobuf.Duration idle_timeout = 1;
++  google.protobuf_tempo.Duration idle_timeout = 1;
+ 
+   // The maximum duration of a stream.
+-  google.protobuf.Duration max_stream_duration = 4;
++  google.protobuf_tempo.Duration max_stream_duration = 4;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/ring_hash.proto b/src/proto/grpc/testing/xds/v3/ring_hash.proto
+index e8f61cfc7a..561b553949 100644
+--- a/src/proto/grpc/testing/xds/v3/ring_hash.proto
++++ b/src/proto/grpc/testing/xds/v3/ring_hash.proto
+@@ -50,10 +50,10 @@ message RingHash {
+   // provided host) the better the request distribution will reflect the desired weights. Defaults
+   // to 1024 entries, and limited to 8M entries. See also
+   // :ref:`maximum_ring_size<envoy_v3_api_field_config.cluster.v3.Cluster.RingHashLbConfig.maximum_ring_size>`.
+-  google.protobuf.UInt64Value minimum_ring_size = 2;
++  google.protobuf_tempo.UInt64Value minimum_ring_size = 2;
+ 
+   // Maximum hash ring size. Defaults to 8M entries, and limited to 8M entries, but can be lowered
+   // to further constrain resource use. See also
+   // :ref:`minimum_ring_size<envoy_v3_api_field_config.cluster.v3.Cluster.RingHashLbConfig.minimum_ring_size>`.
+-  google.protobuf.UInt64Value maximum_ring_size = 3;
++  google.protobuf_tempo.UInt64Value maximum_ring_size = 3;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/route.proto b/src/proto/grpc/testing/xds/v3/route.proto
+index 97eb9d8a3a..2331b87e53 100644
+--- a/src/proto/grpc/testing/xds/v3/route.proto
++++ b/src/proto/grpc/testing/xds/v3/route.proto
+@@ -35,11 +35,11 @@ import "google/protobuf/wrappers.proto";
+ 
+ message RetryPolicy {
+   string retry_on = 1;
+-  google.protobuf.UInt32Value num_retries = 2;
++  google.protobuf_tempo.UInt32Value num_retries = 2;
+ 
+   message RetryBackOff {
+-    google.protobuf.Duration base_interval = 1;
+-    google.protobuf.Duration max_interval = 2;
++    google.protobuf_tempo.Duration base_interval = 1;
++    google.protobuf_tempo.Duration max_interval = 2;
+   }
+ 
+   RetryBackOff retry_back_off = 8;
+@@ -85,7 +85,7 @@ message VirtualHost {
+   // *envoy.filters.http.buffer* for the HTTP buffer filter. Use of this field is filter
+   // specific; see the :ref:`HTTP filter documentation <config_http_filters>`
+   // for if and how it is utilized.
+-  map<string, google.protobuf.Any> typed_per_filter_config = 15;
++  map<string, google.protobuf_tempo.Any> typed_per_filter_config = 15;
+ 
+   RetryPolicy retry_policy = 16;
+ }
+@@ -127,7 +127,7 @@ message Route {
+   // *envoy.filters.http.buffer* for the HTTP buffer filter. Use of this field is filter
+   // specific; see the :ref:`HTTP filter documentation <config_http_filters>` for
+   // if and how it is utilized.
+-  map<string, google.protobuf.Any> typed_per_filter_config = 13;
++  map<string, google.protobuf_tempo.Any> typed_per_filter_config = 13;
+ }
+ 
+ // Compared to the :ref:`cluster <envoy_api_field_config.route.v3.RouteAction.cluster>` field that specifies a
+@@ -147,14 +147,14 @@ message WeightedCluster {
+     // <envoy_api_field_config.route.v3.WeightedCluster.total_weight>`. When a request matches the route,
+     // the choice of an upstream cluster is determined by its weight. The sum of weights across all
+     // entries in the clusters array must add up to the total_weight, which defaults to 100.
+-    google.protobuf.UInt32Value weight = 2;
++    google.protobuf_tempo.UInt32Value weight = 2;
+ 
+     // The per_filter_config field can be used to provide weighted cluster-specific
+     // configurations for filters. The key should match the filter name, such as
+     // *envoy.filters.http.buffer* for the HTTP buffer filter. Use of this field is filter
+     // specific; see the :ref:`HTTP filter documentation <config_http_filters>`
+     // for if and how it is utilized.
+-    map<string, google.protobuf.Any> typed_per_filter_config = 10;
++    map<string, google.protobuf_tempo.Any> typed_per_filter_config = 10;
+   }
+ 
+   // Specifies one or more upstream clusters associated with the route.
+@@ -162,7 +162,7 @@ message WeightedCluster {
+ 
+   // Specifies the total weight across all clusters. The sum of all cluster weights must equal this
+   // value, which must be greater than 0. Defaults to 100.
+-  google.protobuf.UInt32Value total_weight = 3;
++  google.protobuf_tempo.UInt32Value total_weight = 3;
+ }
+ 
+ // [#next-free-field: 13]
+@@ -195,7 +195,7 @@ message RouteMatch {
+ 
+   // Indicates that prefix/path matching should be case insensitive. The default
+   // is true.
+-  google.protobuf.BoolValue case_sensitive = 4;
++  google.protobuf_tempo.BoolValue case_sensitive = 4;
+ 
+   // Indicates that the route should additionally match on a runtime key. Every time the route
+   // is considered for a match, it must also fall under the percentage of matches indicated by
+@@ -239,13 +239,13 @@ message MaxStreamDuration {
+   // is used. If this field is set explicitly to zero, any
+   // HttpConnectionManager max_stream_duration timeout will be disabled for
+   // this route.
+-  google.protobuf.Duration max_stream_duration = 1;
++  google.protobuf_tempo.Duration max_stream_duration = 1;
+ 
+   // If present, and the request contains a `grpc-timeout header
+   // <https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md>`_, use that value as the
+   // *max_stream_duration*, but limit the applied timeout to the maximum value specified here.
+   // If set to 0, the `grpc-timeout` header is used without modification.
+-  google.protobuf.Duration grpc_timeout_header_max = 2;
++  google.protobuf_tempo.Duration grpc_timeout_header_max = 2;
+ }
+ 
+ // [#next-free-field: 37]
+@@ -489,7 +489,7 @@ message RedirectAction {
+ 
+ message FilterConfig {
+   // The filter config.
+-  google.protobuf.Any config = 1;
++  google.protobuf_tempo.Any config = 1;
+ 
+   // If true, the filter is optional, meaning that if the client does
+   // not support the specified filter, it may ignore the map entry rather
+diff --git a/src/proto/grpc/testing/xds/v3/tls.proto b/src/proto/grpc/testing/xds/v3/tls.proto
+index b2fc4532d8..2039b6c2c2 100644
+--- a/src/proto/grpc/testing/xds/v3/tls.proto
++++ b/src/proto/grpc/testing/xds/v3/tls.proto
+@@ -132,7 +132,7 @@ message CertificateValidationContext {
+   repeated type.matcher.v3.StringMatcher match_subject_alt_names = 9;
+ 
+   // [#not-implemented-hide:] Must present signed certificate time-stamp.
+-  google.protobuf.BoolValue require_signed_certificate_timestamp = 6;
++  google.protobuf_tempo.BoolValue require_signed_certificate_timestamp = 6;
+ 
+   // An optional `certificate revocation list
+   // <https://en.wikipedia.org/wiki/Certificate_revocation_list>`_
+@@ -192,11 +192,11 @@ message DownstreamTlsContext {
+ 
+   // If specified, Envoy will reject connections without a valid client
+   // certificate.
+-  google.protobuf.BoolValue require_client_certificate = 2;
++  google.protobuf_tempo.BoolValue require_client_certificate = 2;
+ 
+   // If specified, Envoy will reject connections without a valid and matching SNI.
+   // [#not-implemented-hide:]
+-  google.protobuf.BoolValue require_sni = 3;
++  google.protobuf_tempo.BoolValue require_sni = 3;
+ 
+   // Config for whether to use certificates if they do not have
+   // an accompanying OCSP response or if the response expires at runtime.
+diff --git a/src/proto/grpc/testing/xds/v3/typed_struct.proto b/src/proto/grpc/testing/xds/v3/typed_struct.proto
+index f7ba4c524c..0787b0dc3c 100644
+--- a/src/proto/grpc/testing/xds/v3/typed_struct.proto
++++ b/src/proto/grpc/testing/xds/v3/typed_struct.proto
+@@ -21,8 +21,8 @@ package xds.type.v3;
+ import "google/protobuf/struct.proto";
+ 
+ // A TypedStruct contains an arbitrary JSON serialized protocol buffer message with a URL that
+-// describes the type of the serialized message. This is very similar to google.protobuf.Any,
+-// instead of having protocol buffer binary, this employs google.protobuf.Struct as value.
++// describes the type of the serialized message. This is very similar to google.protobuf_tempo.Any,
++// instead of having protocol buffer binary, this employs google.protobuf_tempo.Struct as value.
+ //
+ // This message is intended to be embedded inside Any, so it shouldn't be directly referred
+ // from other UDPA messages.
+@@ -44,10 +44,10 @@ import "google/protobuf/struct.proto";
+ // protobuf descriptor with DPLB itself, (e.g. gRPC LB Plugin, Envoy WASM extensions).
+ message TypedStruct {
+   // A URL that uniquely identifies the type of the serialize protocol buffer message.
+-  // This has same semantics and format described in google.protobuf.Any:
+-  // https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto
++  // This has same semantics and format described in google.protobuf_tempo.Any:
++  // https://github.com/protocolbuffers/protobuf/blob/master/src/google.import "google/protobuf/any.proto
+   string type_url = 1;
+ 
+   // A JSON representation of the above specified type.
+-  google.protobuf.Struct value = 2;
++  google.protobuf_tempo.Struct value = 2;
+ }
+diff --git a/src/proto/grpc/testing/xds/v3/udpa_typed_struct.proto b/src/proto/grpc/testing/xds/v3/udpa_typed_struct.proto
+index 5a8ef1d32a..ab3420f0a9 100644
+--- a/src/proto/grpc/testing/xds/v3/udpa_typed_struct.proto
++++ b/src/proto/grpc/testing/xds/v3/udpa_typed_struct.proto
+@@ -21,8 +21,8 @@ package udpa.type.v1;
+ import "google/protobuf/struct.proto";
+ 
+ // A TypedStruct contains an arbitrary JSON serialized protocol buffer message with a URL that
+-// describes the type of the serialized message. This is very similar to google.protobuf.Any,
+-// instead of having protocol buffer binary, this employs google.protobuf.Struct as value.
++// describes the type of the serialized message. This is very similar to google.protobuf_tempo.Any,
++// instead of having protocol buffer binary, this employs google.protobuf_tempo.Struct as value.
+ //
+ // This message is intended to be embedded inside Any, so it shouldn't be directly referred
+ // from other UDPA messages.
+@@ -44,10 +44,10 @@ import "google/protobuf/struct.proto";
+ // protobuf descriptor with DPLB itself, (e.g. gRPC LB Plugin, Envoy WASM extensions).
+ message TypedStruct {
+   // A URL that uniquely identifies the type of the serialize protocol buffer message.
+-  // This has same semantics and format described in google.protobuf.Any:
+-  // https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto
++  // This has same semantics and format described in google.protobuf_tempo.Any:
++  // https://github.com/protocolbuffers/protobuf/blob/master/src/google.import "google/protobuf/any.proto
+   string type_url = 1;
+ 
+   // A JSON representation of the above specified type.
+-  google.protobuf.Struct value = 2;
++  google.protobuf_tempo.Struct value = 2;
+ }
+diff --git a/src/python/grpcio_tests/tests/unit/data/foo/bar_with_wkt.proto b/src/python/grpcio_tests/tests/unit/data/foo/bar_with_wkt.proto
+index 2fd1f43793..f7dc2a5178 100644
+--- a/src/python/grpcio_tests/tests/unit/data/foo/bar_with_wkt.proto
++++ b/src/python/grpcio_tests/tests/unit/data/foo/bar_with_wkt.proto
+@@ -20,7 +20,7 @@ import "google/protobuf/any.proto";
+ 
+ message BarMessage {
+   string a = 1;
+-  google.protobuf.Any b = 2;
++  google.protobuf_tempo.Any b = 2;
+ };
+ 
+ service Bar {
+diff --git a/test/build/protobuf.cc b/test/build/protobuf.cc
+index 47520c2337..7bba88df24 100644
+--- a/test/build/protobuf.cc
++++ b/test/build/protobuf.cc
+@@ -19,7 +19,7 @@
+ #include <google/protobuf/descriptor.h>
+ #include <google/protobuf/descriptor.pb.h>
+ 
+-bool protobuf_test(const google::protobuf::MethodDescriptor *method) {
++bool protobuf_test(const google::protobuf_tempo::MethodDescriptor *method) {
+   return method->client_streaming() || method->server_streaming();
+ }
+ 
+diff --git a/test/core/xds/xds_client_test.cc b/test/core/xds/xds_client_test.cc
+index 7a699bcfcb..6a5dfc4190 100644
+--- a/test/core/xds/xds_client_test.cc
++++ b/test/core/xds/xds_client_test.cc
+@@ -397,8 +397,8 @@ class XdsClientTest : public ::testing::Test {
+     }
+     void InitUpbSymtab(XdsClient*, upb_DefPool* /*symtab*/) const override {}
+ 
+-    static google::protobuf::Any EncodeAsAny(const ResourceStruct& resource) {
+-      google::protobuf::Any any;
++    static google::protobuf_tempo::Any EncodeAsAny(const ResourceStruct& resource) {
++      google::protobuf_tempo::Any any;
+       any.set_type_url(
+           absl::StrCat("type.googleapis.com/", ResourceStruct::TypeUrl()));
+       any.set_value(resource.AsJsonString());
+diff --git a/test/core/xds/xds_cluster_resource_type_test.cc b/test/core/xds/xds_cluster_resource_type_test.cc
+index af8795e00f..6c2a57350d 100644
+--- a/test/core/xds/xds_cluster_resource_type_test.cc
++++ b/test/core/xds/xds_cluster_resource_type_test.cc
+@@ -1682,7 +1682,7 @@ TEST_F(TelemetryLabelTest, IgnoreNonStringEntries) {
+   label_map["bool_value"].set_bool_value(true);
+   label_map["number_value"].set_number_value(3.14);
+   *label_map["string_value"].mutable_string_value() = "abc";
+-  label_map["null_value"].set_null_value(::google::protobuf::NULL_VALUE);
++  label_map["null_value"].set_null_value(::google::protobuf_tempo::NULL_VALUE);
+   auto& list_value_values =
+       *label_map["list_value"].mutable_list_value()->mutable_values();
+   *list_value_values.Add()->mutable_string_value() = "efg";
+diff --git a/test/core/xds/xds_http_filters_test.cc b/test/core/xds/xds_http_filters_test.cc
+index b8585d319d..a8b3e52a42 100644
+--- a/test/core/xds/xds_http_filters_test.cc
++++ b/test/core/xds/xds_http_filters_test.cc
+@@ -122,7 +122,7 @@ class XdsHttpFilterTest : public ::testing::Test {
+   }
+ 
+   XdsExtension MakeXdsExtension(const grpc::protobuf::Message& message) {
+-    google::protobuf::Any any;
++    google::protobuf_tempo::Any any;
+     any.PackFrom(message);
+     type_url_storage_ =
+         std::string(absl::StripPrefix(any.type_url(), "type.googleapis.com/"));
+diff --git a/test/cpp/end2end/message_allocator_end2end_test.cc b/test/cpp/end2end/message_allocator_end2end_test.cc
+index 530ec6daf6..6c4de87a6c 100644
+--- a/test/cpp/end2end/message_allocator_end2end_test.cc
++++ b/test/cpp/end2end/message_allocator_end2end_test.cc
+@@ -325,15 +325,15 @@ class ArenaAllocatorTest : public MessageAllocatorEnd2endTestBase {
+      public:
+       MessageHolderImpl() {
+         set_request(
+-            google::protobuf::Arena::CreateMessage<EchoRequest>(&arena_));
++            google::protobuf_tempo::Arena::CreateMessage<EchoRequest>(&arena_));
+         set_response(
+-            google::protobuf::Arena::CreateMessage<EchoResponse>(&arena_));
++            google::protobuf_tempo::Arena::CreateMessage<EchoResponse>(&arena_));
+       }
+       void Release() override { delete this; }
+       void FreeRequest() override { GPR_ASSERT(0); }
+ 
+      private:
+-      google::protobuf::Arena arena_;
++      google::protobuf_tempo::Arena arena_;
+     };
+     MessageHolder<EchoRequest, EchoResponse>* AllocateMessages() override {
+       allocation_count++;
+diff --git a/test/cpp/end2end/xds/xds_csds_end2end_test.cc b/test/cpp/end2end/xds/xds_csds_end2end_test.cc
+index 117e555528..af38e06d1e 100644
+--- a/test/cpp/end2end/xds/xds_csds_end2end_test.cc
++++ b/test/cpp/end2end/xds/xds_csds_end2end_test.cc
+@@ -353,7 +353,7 @@ TEST_P(ClientStatusDiscoveryServiceTest, XdsConfigDumpVanilla) {
+                      ::testing::ElementsAre(
+                          "envoy.lb.does_not_support_overprovisioning")));
+   // Listener matcher depends on whether RDS is enabled.
+-  ::testing::Matcher<google::protobuf::Any> api_listener_matcher;
++  ::testing::Matcher<google::protobuf_tempo::Any> api_listener_matcher;
+   if (GetParam().enable_rds_testing()) {
+     api_listener_matcher = IsRdsEnabledHCM();
+   } else {
+@@ -415,7 +415,7 @@ TEST_P(ClientStatusDiscoveryServiceTest, XdsConfigDumpListenerError) {
+   balancer_->ads_service()->SetLdsResource(listener);
+   // The old xDS configs should still be effective.
+   CheckRpcSendOk(DEBUG_LOCATION);
+-  ::testing::Matcher<google::protobuf::Any> api_listener_matcher;
++  ::testing::Matcher<google::protobuf_tempo::Any> api_listener_matcher;
+   if (GetParam().enable_rds_testing()) {
+     api_listener_matcher = IsRdsEnabledHCM();
+   } else {
+diff --git a/test/cpp/end2end/xds/xds_end2end_test.cc b/test/cpp/end2end/xds/xds_end2end_test.cc
+index f48de70c7d..01aba2e1ae 100644
+--- a/test/cpp/end2end/xds/xds_end2end_test.cc
++++ b/test/cpp/end2end/xds/xds_end2end_test.cc
+@@ -2027,7 +2027,7 @@ class XdsRbacTest : public XdsServerRdsTest {
+           break;
+         case XdsTestType::HttpFilterConfigLocation::kHttpFilterConfigInRoute:
+           filter->mutable_typed_config()->PackFrom(RBAC());
+-          google::protobuf::Any filter_config;
++          google::protobuf_tempo::Any filter_config;
+           RBACPerRoute rbac_per_route;
+           *rbac_per_route.mutable_rbac() = rbac;
+           filter_config.PackFrom(rbac_per_route);
+@@ -2099,7 +2099,7 @@ TEST_P(XdsRbacTestWithRouteOverrideAlwaysPresent, EmptyRBACPerRouteOverride) {
+   filter->mutable_typed_config()->PackFrom(rbac);
+   // Override with an Empty RBACPerRoute policy which should result in RBAC
+   // being disabled and RPCs being allowed.
+-  google::protobuf::Any filter_config;
++  google::protobuf_tempo::Any filter_config;
+   filter_config.PackFrom(RBACPerRoute());
+   auto* config_map = route_config.mutable_virtual_hosts(0)
+                          ->mutable_routes(0)
+@@ -2136,7 +2136,7 @@ TEST_P(XdsRbacTestWithRouteOverrideAlwaysPresent,
+   (*rules->mutable_policies())["policy"] = policy;
+   filter->mutable_typed_config()->PackFrom(rbac);
+   // Override with a non-empty RBACPerRoute policy which allows all RPCs.
+-  google::protobuf::Any filter_config;
++  google::protobuf_tempo::Any filter_config;
+   RBACPerRoute rbac_per_route;
+   rules = rbac_per_route.mutable_rbac()->mutable_rules();
+   rules->set_action(RBAC_Action_ALLOW);
+diff --git a/test/cpp/end2end/xds/xds_end2end_test_lib.cc b/test/cpp/end2end/xds/xds_end2end_test_lib.cc
+index e91e4af451..85d7f8e656 100644
+--- a/test/cpp/end2end/xds/xds_end2end_test_lib.cc
++++ b/test/cpp/end2end/xds/xds_end2end_test_lib.cc
+@@ -780,7 +780,7 @@ absl::optional<AdsServiceImpl::ResponseState> XdsEnd2endTest::WaitForNack(
+ }
+ 
+ void XdsEnd2endTest::SetProtoDuration(
+-    grpc_core::Duration duration, google::protobuf::Duration* duration_proto) {
++    grpc_core::Duration duration, google::protobuf_tempo::Duration* duration_proto) {
+   duration *= grpc_test_slowdown_factor();
+   gpr_timespec ts = duration.as_timespec();
+   duration_proto->set_seconds(ts.tv_sec);
+diff --git a/test/cpp/end2end/xds/xds_end2end_test_lib.h b/test/cpp/end2end/xds/xds_end2end_test_lib.h
+index cdb98d9059..453de26531 100644
+--- a/test/cpp/end2end/xds/xds_end2end_test_lib.h
++++ b/test/cpp/end2end/xds/xds_end2end_test_lib.h
+@@ -896,7 +896,7 @@ class XdsEnd2endTest : public ::testing::TestWithParam<XdsTestType>,
+ 
+   // Sets duration_proto to duration times grpc_test_slowdown_factor().
+   static void SetProtoDuration(grpc_core::Duration duration,
+-                               google::protobuf::Duration* duration_proto);
++                               google::protobuf_tempo::Duration* duration_proto);
+ 
+   // Returns the number of RPCs needed to pass error_tolerance at 99.99994%
+   // chance. Rolling dices in drop/fault-injection generates a binomial
+diff --git a/test/cpp/end2end/xds/xds_fault_injection_end2end_test.cc b/test/cpp/end2end/xds/xds_fault_injection_end2end_test.cc
+index 82cd3070ee..9b158c779f 100644
+--- a/test/cpp/end2end/xds/xds_fault_injection_end2end_test.cc
++++ b/test/cpp/end2end/xds/xds_fault_injection_end2end_test.cc
+@@ -63,7 +63,7 @@ class FaultInjectionTest : public XdsEnd2endTest {
+   RouteConfiguration BuildRouteConfigurationWithFaultInjection(
+       const HTTPFault& http_fault) {
+     // Package as Any
+-    google::protobuf::Any filter_config;
++    google::protobuf_tempo::Any filter_config;
+     filter_config.PackFrom(http_fault);
+     // Plug into the RouteConfiguration
+     RouteConfiguration new_route_config = default_route_config_;
+diff --git a/test/cpp/end2end/xds/xds_override_host_end2end_test.cc b/test/cpp/end2end/xds/xds_override_host_end2end_test.cc
+index 65d5c43f9b..d4c03e7329 100644
+--- a/test/cpp/end2end/xds/xds_override_host_end2end_test.cc
++++ b/test/cpp/end2end/xds/xds_override_host_end2end_test.cc
+@@ -234,7 +234,7 @@ class OverrideHostTest : public XdsEnd2endTest {
+       }
+       session_state->mutable_typed_config()->PackFrom(cookie_config);
+     }
+-    google::protobuf::Any any;
++    google::protobuf_tempo::Any any;
+     any.PackFrom(stateful_session_per_route);
+     Route route;
+     route.mutable_match()->set_prefix(match_prefix);
+diff --git a/test/cpp/end2end/xds/xds_server.cc b/test/cpp/end2end/xds/xds_server.cc
+index b4a657cb29..be35b971ba 100644
+--- a/test/cpp/end2end/xds/xds_server.cc
++++ b/test/cpp/end2end/xds/xds_server.cc
+@@ -40,7 +40,7 @@ namespace testing {
+ // AdsServiceImpl
+ //
+ 
+-void AdsServiceImpl::SetResource(google::protobuf::Any resource,
++void AdsServiceImpl::SetResource(google::protobuf_tempo::Any resource,
+                                  const std::string& type_url,
+                                  const std::string& name) {
+   grpc_core::MutexLock lock(&ads_mu_);
+diff --git a/test/cpp/end2end/xds/xds_server.h b/test/cpp/end2end/xds/xds_server.h
+index b4fa2713cb..574fc183fa 100644
+--- a/test/cpp/end2end/xds/xds_server.h
++++ b/test/cpp/end2end/xds/xds_server.h
+@@ -85,34 +85,34 @@ class AdsServiceImpl
+   }
+ 
+   // Sets a resource to a particular value, overwriting any previous value.
+-  void SetResource(google::protobuf::Any resource, const std::string& type_url,
++  void SetResource(google::protobuf_tempo::Any resource, const std::string& type_url,
+                    const std::string& name);
+ 
+   // Removes a resource from the server's state.
+   void UnsetResource(const std::string& type_url, const std::string& name);
+ 
+   void SetLdsResource(const ::envoy::config::listener::v3::Listener& listener) {
+-    google::protobuf::Any resource;
++    google::protobuf_tempo::Any resource;
+     resource.PackFrom(listener);
+     SetResource(std::move(resource), kLdsTypeUrl, listener.name());
+   }
+ 
+   void SetRdsResource(
+       const ::envoy::config::route::v3::RouteConfiguration& route) {
+-    google::protobuf::Any resource;
++    google::protobuf_tempo::Any resource;
+     resource.PackFrom(route);
+     SetResource(std::move(resource), kRdsTypeUrl, route.name());
+   }
+ 
+   void SetCdsResource(const ::envoy::config::cluster::v3::Cluster& cluster) {
+-    google::protobuf::Any resource;
++    google::protobuf_tempo::Any resource;
+     resource.PackFrom(cluster);
+     SetResource(std::move(resource), kCdsTypeUrl, cluster.name());
+   }
+ 
+   void SetEdsResource(
+       const ::envoy::config::endpoint::v3::ClusterLoadAssignment& assignment) {
+-    google::protobuf::Any resource;
++    google::protobuf_tempo::Any resource;
+     resource.PackFrom(assignment);
+     SetResource(std::move(resource), kEdsTypeUrl, assignment.cluster_name());
+   }
+@@ -201,7 +201,7 @@ class AdsServiceImpl
+   // A struct representing the current state for an individual resource.
+   struct ResourceState {
+     // The resource itself, if present.
+-    absl::optional<google::protobuf::Any> resource;
++    absl::optional<google::protobuf_tempo::Any> resource;
+     // The resource type version that this resource was last updated in.
+     int resource_type_version = 0;
+     // A list of subscriptions to this resource.
+diff --git a/test/cpp/ext/filters/logging/library.h b/test/cpp/ext/filters/logging/library.h
+index dcfd7f5a4d..7b9518b4b1 100644
+--- a/test/cpp/ext/filters/logging/library.h
++++ b/test/cpp/ext/filters/logging/library.h
+@@ -54,10 +54,10 @@ class TestLoggingSink : public grpc_core::LoggingSink {
+   }
+ 
+   void LogEntry(Entry entry) override {
+-    ::google::protobuf::Struct json;
++    ::google::protobuf_tempo::Struct json;
+     grpc::internal::EntryToJsonStructProto(entry, &json);
+     std::string output;
+-    ::google::protobuf::TextFormat::PrintToString(json, &output);
++    ::google::protobuf_tempo::TextFormat::PrintToString(json, &output);
+     gpr_log(GPR_INFO, "%s", output.c_str());
+     gpr_log(GPR_INFO, "trace_id: %s", entry.trace_id.c_str());
+     gpr_log(GPR_INFO, "span_id: %s", entry.span_id.c_str());
+diff --git a/test/cpp/ext/gcp/observability_logging_sink_test.cc b/test/cpp/ext/gcp/observability_logging_sink_test.cc
+index 59a1b030d0..148adcd93f 100644
+--- a/test/cpp/ext/gcp/observability_logging_sink_test.cc
++++ b/test/cpp/ext/gcp/observability_logging_sink_test.cc
+@@ -334,10 +334,10 @@ TEST(EntryToJsonStructTest, ClientHeader) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   const char* pb_str =
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -455,10 +455,10 @@ TEST(EntryToJsonStructTest, ServerHeader) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   const char* pb_str =
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -565,10 +565,10 @@ TEST(EntryToJsonStructTest, ClientMessage) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   std::string pb_str = absl::StrFormat(
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -675,10 +675,10 @@ TEST(EntryToJsonStructTest, ServerMessage) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   std::string pb_str = absl::StrFormat(
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -783,10 +783,10 @@ TEST(EntryToJsonStructTest, ClientHalfClose) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   const char* pb_str =
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -879,10 +879,10 @@ TEST(EntryToJsonStructTest, ServerTrailer) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   const char* pb_str =
+       "fields {\n"
+       "  key: \"authority\"\n"
+@@ -987,10 +987,10 @@ TEST(EntryToJsonStructTest, Cancel) {
+   entry.service_name = "service_name";
+   entry.method_name = "method_name";
+ 
+-  google::protobuf::Struct proto;
++  google::protobuf_tempo::Struct proto;
+   EntryToJsonStructProto(std::move(entry), &proto);
+   std::string output;
+-  ::google::protobuf::TextFormat::PrintToString(proto, &output);
++  ::google::protobuf_tempo::TextFormat::PrintToString(proto, &output);
+   const char* pb_str =
+       "fields {\n"
+       "  key: \"authority\"\n"
+diff --git a/test/cpp/util/channelz_sampler.cc b/test/cpp/util/channelz_sampler.cc
+index db9c600c51..bf38ebe13b 100644
+--- a/test/cpp/util/channelz_sampler.cc
++++ b/test/cpp/util/channelz_sampler.cc
+@@ -443,26 +443,26 @@ class ChannelzSampler final {
+                 << GetChannelName(_channel) << " data:" << std::endl;
+       // TODO(mohanli): TextFormat::PrintToString records time as seconds and
+       // nanos. Need a more human readable way.
+-      ::google::protobuf::TextFormat::PrintToString(_channel.data(), &data_str);
++      ::google::protobuf_tempo::TextFormat::PrintToString(_channel.data(), &data_str);
+       printf("%s\n", data_str.c_str());
+     }
+     for (const auto& _subchannel : all_subchannels_) {
+       std::cout << "subchannel ID" << GetSubchannelID(_subchannel) << "_"
+                 << GetSubchannelName(_subchannel) << " data:" << std::endl;
+-      ::google::protobuf::TextFormat::PrintToString(_subchannel.data(),
++      ::google::protobuf_tempo::TextFormat::PrintToString(_subchannel.data(),
+                                                     &data_str);
+       printf("%s\n", data_str.c_str());
+     }
+     for (const auto& _server : all_servers_) {
+       std::cout << "server ID" << GetServerID(_server) << "_"
+                 << GetServerName(_server) << " data:" << std::endl;
+-      ::google::protobuf::TextFormat::PrintToString(_server.data(), &data_str);
++      ::google::protobuf_tempo::TextFormat::PrintToString(_server.data(), &data_str);
+       printf("%s\n", data_str.c_str());
+     }
+     for (const auto& _socket : all_sockets_) {
+       std::cout << "socket ID" << GetSocketID(_socket) << "_"
+                 << GetSocketName(_socket) << " data:" << std::endl;
+-      ::google::protobuf::TextFormat::PrintToString(_socket.data(), &data_str);
++      ::google::protobuf_tempo::TextFormat::PrintToString(_socket.data(), &data_str);
+       printf("%s\n", data_str.c_str());
+     }
+   }
+@@ -472,7 +472,7 @@ class ChannelzSampler final {
+     std::string id = grpc::to_string(GetChannelID(channel));
+     std::string type = "Channel";
+     std::string description;
+-    ::google::protobuf::TextFormat::PrintToString(channel.data(), &description);
++    ::google::protobuf_tempo::TextFormat::PrintToString(channel.data(), &description);
+     grpc_core::Json description_json = grpc_core::Json::FromString(description);
+     StoreEntityInJson(id, type, description_json);
+   }
+@@ -482,7 +482,7 @@ class ChannelzSampler final {
+     std::string id = grpc::to_string(GetSubchannelID(subchannel));
+     std::string type = "Subchannel";
+     std::string description;
+-    ::google::protobuf::TextFormat::PrintToString(subchannel.data(),
++    ::google::protobuf_tempo::TextFormat::PrintToString(subchannel.data(),
+                                                   &description);
+     grpc_core::Json description_json = grpc_core::Json::FromString(description);
+     StoreEntityInJson(id, type, description_json);
+@@ -493,7 +493,7 @@ class ChannelzSampler final {
+     std::string id = grpc::to_string(GetServerID(server));
+     std::string type = "Server";
+     std::string description;
+-    ::google::protobuf::TextFormat::PrintToString(server.data(), &description);
++    ::google::protobuf_tempo::TextFormat::PrintToString(server.data(), &description);
+     grpc_core::Json description_json = grpc_core::Json::FromString(description);
+     StoreEntityInJson(id, type, description_json);
+   }
+@@ -503,7 +503,7 @@ class ChannelzSampler final {
+     std::string id = grpc::to_string(GetSocketID(socket));
+     std::string type = "Socket";
+     std::string description;
+-    ::google::protobuf::TextFormat::PrintToString(socket.data(), &description);
++    ::google::protobuf_tempo::TextFormat::PrintToString(socket.data(), &description);
+     grpc_core::Json description_json = grpc_core::Json::FromString(description);
+     StoreEntityInJson(id, type, description_json);
+   }
+diff --git a/test/cpp/util/config_grpc_cli.h b/test/cpp/util/config_grpc_cli.h
+index f6d0034b13..c751ff0a9a 100644
+--- a/test/cpp/util/config_grpc_cli.h
++++ b/test/cpp/util/config_grpc_cli.h
+@@ -24,28 +24,28 @@
+ #ifndef GRPC_CUSTOM_DYNAMICMESSAGEFACTORY
+ #include <google/protobuf/dynamic_message.h>
+ #define GRPC_CUSTOM_DYNAMICMESSAGEFACTORY \
+-  ::google::protobuf::DynamicMessageFactory
++  ::google::protobuf_tempo::DynamicMessageFactory
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_DESCRIPTORPOOLDATABASE
+ #include <google/protobuf/descriptor.h>
+ #define GRPC_CUSTOM_DESCRIPTORPOOLDATABASE \
+-  ::google::protobuf::DescriptorPoolDatabase
++  ::google::protobuf_tempo::DescriptorPoolDatabase
+ #define GRPC_CUSTOM_MERGEDDESCRIPTORDATABASE \
+-  ::google::protobuf::MergedDescriptorDatabase
++  ::google::protobuf_tempo::MergedDescriptorDatabase
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_TEXTFORMAT
+ #include <google/protobuf/text_format.h>
+-#define GRPC_CUSTOM_TEXTFORMAT ::google::protobuf::TextFormat
++#define GRPC_CUSTOM_TEXTFORMAT ::google::protobuf_tempo::TextFormat
+ #endif
+ 
+ #ifndef GRPC_CUSTOM_DISKSOURCETREE
+ #include <google/protobuf/compiler/importer.h>
+-#define GRPC_CUSTOM_DISKSOURCETREE ::google::protobuf::compiler::DiskSourceTree
+-#define GRPC_CUSTOM_IMPORTER ::google::protobuf::compiler::Importer
++#define GRPC_CUSTOM_DISKSOURCETREE ::google::protobuf_tempo::compiler::DiskSourceTree
++#define GRPC_CUSTOM_IMPORTER ::google::protobuf_tempo::compiler::Importer
+ #define GRPC_CUSTOM_MULTIFILEERRORCOLLECTOR \
+-  ::google::protobuf::compiler::MultiFileErrorCollector
++  ::google::protobuf_tempo::compiler::MultiFileErrorCollector
+ #endif
+ 
+ namespace grpc {
+diff --git a/test/distrib/bazel/python/helloworld.proto b/test/distrib/bazel/python/helloworld.proto
+index d9cb0b53c3..4795139b6b 100644
+--- a/test/distrib/bazel/python/helloworld.proto
++++ b/test/distrib/bazel/python/helloworld.proto
+@@ -34,13 +34,13 @@ service Greeter {
+ // The request message containing the user's name.
+ message HelloRequest {
+   string name = 1;
+-  google.protobuf.Timestamp request_initiation = 2;
++  google.protobuf_tempo.Timestamp request_initiation = 2;
+ }
+ 
+ // The response message containing the greetings, plus some additional
+ // data of a type defined in a separate .proto file.
+ message HelloReply {
+   string message = 1;
+-  google.protobuf.Duration request_duration = 2;
++  google.protobuf_tempo.Duration request_duration = 2;
+   HelloDep dep = 3;
+ }
 diff --git a/third_party/abseil-cpp b/third_party/abseil-cpp
 --- a/third_party/abseil-cpp
 +++ b/third_party/abseil-cpp
@@ -1067,4 +2950,74 @@ index e8e8429cfd..b2082c9594 100644
 +  UPB_ASSERT(elem_size == (size_t)(1ULL << _upb_Array_ElementSizeLg2(arr)));
    char* arr_data = (char*)_upb_array_ptr(arr);
    memcpy(arr_data + (i * elem_size), data, elem_size);
+ }
+diff --git a/tools/distrib/python/grpcio_tools/grpc_tools/main.cc b/tools/distrib/python/grpcio_tools/grpc_tools/main.cc
+index 1d9749861b..9c482748e9 100644
+--- a/tools/distrib/python/grpcio_tools/grpc_tools/main.cc
++++ b/tools/distrib/python/grpcio_tools/grpc_tools/main.cc
+@@ -33,27 +33,27 @@
+ 
+ #include "src/compiler/python_generator.h"
+ 
+-using ::google::protobuf::FileDescriptor;
+-using ::google::protobuf::compiler::CodeGenerator;
+-using ::google::protobuf::compiler::DiskSourceTree;
+-using ::google::protobuf::compiler::GeneratorContext;
+-using ::google::protobuf::compiler::Importer;
+-using ::google::protobuf::compiler::MultiFileErrorCollector;
+-using ::google::protobuf::io::StringOutputStream;
+-using ::google::protobuf::io::ZeroCopyOutputStream;
++using ::google::protobuf_tempo::FileDescriptor;
++using ::google::protobuf_tempo::compiler::CodeGenerator;
++using ::google::protobuf_tempo::compiler::DiskSourceTree;
++using ::google::protobuf_tempo::compiler::GeneratorContext;
++using ::google::protobuf_tempo::compiler::Importer;
++using ::google::protobuf_tempo::compiler::MultiFileErrorCollector;
++using ::google::protobuf_tempo::io::StringOutputStream;
++using ::google::protobuf_tempo::io::ZeroCopyOutputStream;
+ 
+ namespace grpc_tools {
+ int protoc_main(int argc, char* argv[]) {
+-  google::protobuf::compiler::CommandLineInterface cli;
++  google::protobuf_tempo::compiler::CommandLineInterface cli;
+   cli.AllowPlugins("protoc-");
+ 
+   // Proto2 Python
+-  google::protobuf::compiler::python::Generator py_generator;
++  google::protobuf_tempo::compiler::python::Generator py_generator;
+   cli.RegisterGenerator("--python_out", &py_generator,
+                         "Generate Python source file.");
+ 
+   // pyi files for type checking
+-  google::protobuf::compiler::python::PyiGenerator pyi_generator;
++  google::protobuf_tempo::compiler::python::PyiGenerator pyi_generator;
+   cli.RegisterGenerator("--pyi_out", &pyi_generator,
+                         "Generate Python pyi stub.");
+ 
+@@ -92,7 +92,7 @@ class GeneratorContextImpl : public GeneratorContext {
+   }
+ 
+   void ListParsedFiles(
+-      std::vector<const ::google::protobuf::FileDescriptor*>* output) {
++      std::vector<const ::google::protobuf_tempo::FileDescriptor*>* output) {
+     *output = parsed_files_;
+   }
+ 
+@@ -127,7 +127,7 @@ class ErrorCollectorImpl : public MultiFileErrorCollector {
+ static void calculate_transitive_closure(
+     const FileDescriptor* descriptor,
+     std::vector<const FileDescriptor*>* transitive_closure,
+-    std::unordered_set<const ::google::protobuf::FileDescriptor*>* visited) {
++    std::unordered_set<const ::google::protobuf_tempo::FileDescriptor*>* visited) {
+   for (int i = 0; i < descriptor->dependency_count(); ++i) {
+     const FileDescriptor* dependency = descriptor->dependency(i);
+     if (visited->find(dependency) == visited->end()) {
+@@ -175,7 +175,7 @@ int protoc_get_protos(
+     std::vector<std::pair<std::string, std::string>>* files_out,
+     std::vector<::grpc_tools::ProtocError>* errors,
+     std::vector<::grpc_tools::ProtocWarning>* warnings) {
+-  ::google::protobuf::compiler::python::Generator python_generator;
++  ::google::protobuf_tempo::compiler::python::Generator python_generator;
+   return generate_code(&python_generator, protobuf_path, include_paths,
+                        files_out, errors, warnings);
  }

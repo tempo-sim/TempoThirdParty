@@ -100,9 +100,9 @@ cmake -G "Unix Makefiles" \
  \
  -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
- -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
- -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a" \
- -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a" \
+ -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.3/include" \
+ -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Mac/Release/libz.a" \
+ -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Mac/Release/libz.a" \
  -DgRPC_SSL_PROVIDER=package \
  -DOPENSSL_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Mac" \
  -DOPENSSL_SSL_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Mac/libssl.a" \
