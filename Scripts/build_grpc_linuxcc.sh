@@ -98,13 +98,13 @@ rm -rf "$ROOT_DIR/Builds/gRPC"
 
 echo "Applying Tempo patches..."
 cd "$ROOT_DIR/Source/gRPC"
-git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/gRPC.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/re2"
-git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/re2.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/abseil-cpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/abseil-cpp.patch" --ignore-whitespace
 cd "$ROOT_DIR/Source/gRPC/third_party/protobuf"
-git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch"
+git reset --hard && git apply "$ROOT_DIR/Patches/protobuf.patch" --ignore-whitespace
 echo -e "Successfully applied patches\n"
 
 echo -e "Building gRPC..."
@@ -138,9 +138,9 @@ cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  \
  -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
- -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.2.13/include" \
- -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Unix/Release/libz.a" \
- -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Unix/Release/libz.a" \
+ -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.3/include" \
+ -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/Release/libz.a" \
+ -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/Release/libz.a" \
  -DgRPC_SSL_PROVIDER=package \
  -DOPENSSL_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Unix" \
  -DOPENSSL_SSL_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/libssl.a" \
