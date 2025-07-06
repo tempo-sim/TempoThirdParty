@@ -56,7 +56,7 @@ fi
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
-LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v22_clang-16.0.6-centos7"
+LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v25_clang-18.1.0-rockylinux8"
 LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
 export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
 export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
@@ -157,7 +157,7 @@ cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rcl
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
 ./bootstrap.sh --prefix="$ROOT_DIR/Source/rclcpp/install"
-./b2 install toolset=clang-unreal --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0 cxxflags="-std=c++11"
+./b2 install toolset=clang-unreal --with-python --user-config="$ROOT_DIR/Source/rclcpp/boost_user_configs/boost-user-config-linux.jam" -d0
 
 echo -e "Building ogg"
 cd "$ROOT_DIR/Source/rclcpp/ogg"
@@ -236,11 +236,11 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DBUILD_TESTING=OFF" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
- " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
+ " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
  " -DPNG_FOUND=ON" \
- " -DPNG_PNG_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
- " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
+ " -DPNG_PNG_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
  " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
  " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
  " -DZLIB_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \

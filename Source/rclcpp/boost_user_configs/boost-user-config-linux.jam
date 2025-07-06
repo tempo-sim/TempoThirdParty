@@ -8,6 +8,9 @@ local CLANG_TOOLCHAIN_ROOT = $(LINUX_MULTIARCH_ROOT)/$(LINUX_ARCH_NAME) ;
 local CLANG_TOOLCHAIN_BIN = $(CLANG_TOOLCHAIN_ROOT)/bin ;
 
 using clang : unreal : $(CLANG_TOOLCHAIN_BIN)/clang++ :
+    <cxxflags>-std=c++11
+    <cxxflags>-stdlib=libc++
+    <cxxflags>-nostdinc++
     <cxxflags>-isystem$(UE_THIRD_PARTY_PATH)/Unix/LibCxx/include/c++/v1
     <cxxflags>-fexceptions
     <cxxflags>-DPLATFORM_EXCEPTIONS_DISABLED=0
