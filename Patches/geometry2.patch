@@ -840,36 +840,20 @@ index b84af48e..e66f3efa 100644
      NodeT && node,
      const rclcpp::QoS & qos = DynamicBroadcasterQoS(),
 diff --git a/tf2_ros/include/tf2_ros/transform_listener.h b/tf2_ros/include/tf2_ros/transform_listener.h
-index 01620a8f..a8c55781 100644
+index 01620a8f..3cb68c35 100644
 --- a/tf2_ros/include/tf2_ros/transform_listener.h
 +++ b/tf2_ros/include/tf2_ros/transform_listener.h
-@@ -36,6 +36,25 @@
+@@ -36,6 +36,9 @@
  #include <memory>
  #include <thread>
  #include <utility>
-+#ifdef __linux__
-+#include <experimental/memory_resource>
-+#include <experimental/vector>
-+#include <experimental/string>
-+#else
 +#include <memory_resource>
 +#include <vector>
 +#include <string>
-+#endif
-+
-+#ifdef __linux__
-+namespace std::pmr
-+{
-+  using string = std::experimental::pmr::string;
-+  template <class _ValueT>
-+  using vector = std::experimental::pmr::vector<_ValueT>;
-+  using wstring = std::experimental::pmr::wstring;
-+}
-+#endif
  
  #include "tf2/buffer_core.h"
  #include "tf2/time.h"
-@@ -51,7 +70,7 @@ namespace tf2_ros
+@@ -51,7 +54,7 @@ namespace tf2_ros
  
  namespace detail
  {
@@ -878,7 +862,7 @@ index 01620a8f..a8c55781 100644
  rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>
  get_default_transform_listener_sub_options()
  {
-@@ -64,7 +83,7 @@ get_default_transform_listener_sub_options()
+@@ -64,7 +67,7 @@ get_default_transform_listener_sub_options()
    return options;
  }
  
@@ -887,7 +871,7 @@ index 01620a8f..a8c55781 100644
  rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>
  get_default_transform_listener_static_sub_options()
  {
-@@ -86,7 +105,7 @@ public:
+@@ -86,7 +89,7 @@ public:
    TF2_ROS_PUBLIC
    explicit TransformListener(tf2::BufferCore & buffer, bool spin_thread = true);
  
@@ -896,7 +880,7 @@ index 01620a8f..a8c55781 100644
    TransformListener(
      tf2::BufferCore & buffer,
      NodeT && node,
-@@ -106,7 +125,7 @@ public:
+@@ -106,7 +109,7 @@ public:
    virtual ~TransformListener();
  
  private:

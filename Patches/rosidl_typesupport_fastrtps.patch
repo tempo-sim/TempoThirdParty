@@ -26,22 +26,18 @@ index 4a761ad..9f904b4 100644
  target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix} PUBLIC
    fastcdr
 diff --git a/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp b/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
-index ce85914..a517333 100644
+index ce85914..0891052 100644
 --- a/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
 +++ b/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
-@@ -16,6 +16,11 @@
+@@ -16,6 +16,7 @@
  #define ROSIDL_TYPESUPPORT_FASTRTPS_C__WSTRING_CONVERSION_HPP_
  
  #include <string>
-+#ifdef __linux__
-+#include <experimental/memory_resource>
-+#else
 +#include <memory_resource>
-+#endif
  
  #include "rosidl_runtime_c/u16string.h"
  #include "rosidl_typesupport_fastrtps_c/visibility_control.h"
-@@ -28,9 +33,15 @@ namespace rosidl_typesupport_fastrtps_c
+@@ -28,9 +29,15 @@ namespace rosidl_typesupport_fastrtps_c
   * \param[in] u16str The 16-bit character string to copy from.
   * \param[in,out] wstr The std::wstring to copy to.
   */
@@ -59,7 +55,7 @@ index ce85914..a517333 100644
  
  /// Convert a std::wstring into a `rosidl_runtime_c__U16String`.
  /**
-@@ -38,9 +49,19 @@ void u16string_to_wstring(
+@@ -38,9 +45,19 @@ void u16string_to_wstring(
   * \param[in,out] u16str The u16string to copy to.
   * \return true if resizing u16str and assignment succeeded, otherwise false.
   */
@@ -215,22 +211,18 @@ index bfb6c9d..cf136a3 100644
  # Set compiler flags
  if(NOT WIN32)
 diff --git a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
-index 35bc7c3..d2d411b 100644
+index 35bc7c3..750be66 100644
 --- a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
 +++ b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
-@@ -18,6 +18,11 @@
+@@ -18,6 +18,7 @@
  #include <rosidl_typesupport_fastrtps_cpp/visibility_control.h>
  
  #include <string>
-+#ifdef __linux__
-+#include <experimental/memory_resource>
-+#else
 +#include <memory_resource>
-+#endif
  
  namespace rosidl_typesupport_fastrtps_cpp
  {
-@@ -27,8 +32,14 @@ namespace rosidl_typesupport_fastrtps_cpp
+@@ -27,8 +28,14 @@ namespace rosidl_typesupport_fastrtps_cpp
   * \param[in] u16str The std::u16string character string to copy from.
   * \param[in,out] wstr The std::wstring to copy to.
   */
@@ -247,7 +239,7 @@ index 35bc7c3..d2d411b 100644
  
  /// Convert a std::wstring into a std::u16string.
  /**
-@@ -36,8 +47,19 @@ void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr);
+@@ -36,8 +43,19 @@ void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr);
   * \param[in,out] u16str The std::u16string to copy to.
   * \return true if resizing u16str and assignment succeeded, otherwise false.
   */

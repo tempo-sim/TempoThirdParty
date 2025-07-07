@@ -36,13 +36,13 @@ include_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/include/c++/v1")
 include_directories("${CLANG_TOOLCHAIN_ROOT}/usr/include")
 
 # Library paths (use libc++, specifically the one that comes with Unreal)
-set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+set(CMAKE_CXX_STANDARD_LIBRARIES "-stdlib=libc++ -nostdlib++ -lc++ -lc++abi")
 link_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/lib/Unix/${LINUX_ARCH_NAME}")
 
 # Compiler flags (chosen to match those Unreal uses as closely as possible)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(COMPILER_FLAGS " -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
-                     -fpascal-strings -fasm-blocks -ffp-contract=off \
+                     -fpascal-strings -fasm-blocks -ffp-contract=off -nostdinc++\
                      -fvisibility-inlines-hidden -fPIC --target=${LINUX_ARCH_NAME} -O3 -DNDEBUG \
                      --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc \
                      -funwind-tables -gdwarf-3 -pthread -Wno-unused-command-line-argument \
