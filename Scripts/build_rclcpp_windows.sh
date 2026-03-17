@@ -316,6 +316,9 @@ find "$ROOT_DIR/Source/rclcpp/install" -name "*.lib" -exec cp -P {} "$DEST/Libra
 mkdir -p "$DEST/Libraries/Windows/python3.11"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/site-packages" "$DEST/Libraries/Windows/python3.11"
 
+# Copy the Python deps from the virtual environment
+cp -r -P "$ROOT_DIR/Builds/rclcpp/venv/Lib/site-packages" "$DEST/Libraries/Windows/python3.11"
+
 # Copy the "share" folder
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Binaries/Windows"
 
