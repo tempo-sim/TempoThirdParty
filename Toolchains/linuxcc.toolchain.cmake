@@ -29,22 +29,27 @@ set(CMAKE_AR 			${CLANG_TOOLCHAIN_BIN}/x86_64-unknown-linux-gnu-ar.exe		CACHE PA
 # Include paths
 set(CMAKE_SYSTEM_INCLUDE_PATH "")
 set(CMAKE_INCLUDE_PATH	"")
-include_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/include/c++/v1")
+include_directories("${CLANG_TOOLCHAIN_ROOT}/include/c++/v1")
 include_directories("${CLANG_TOOLCHAIN_ROOT}/usr/include")
 
 # Library paths (use libc++, specifically the one that comes with Unreal)
-SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
-link_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/lib/Unix/${LINUX_ARCH_NAME}")
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib++")
+
+# This gets appended AFTER all project targets on the link line
+SET(CMAKE_CXX_STANDARD_LIBRARIES "-Wl,--start-group ${CLANG_TOOLCHAIN_ROOT}/lib64/libc++.a ${CLANG_TOOLCHAIN_ROOT}/lib64/libc++abi.a ${CLANG_TOOLCHAIN_ROOT}/lib64/libsupc++.a -Wl,--end-group -lpthread" CACHE STRING "" FORCE)
+
+link_directories("${CLANG_TOOLCHAIN_ROOT}/lib")
+link_directories("${CLANG_TOOLCHAIN_ROOT}/lib64")
 
 # Compiler flags (chosen to match those Unreal uses as closely as possible)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
-set(COMPILER_FLAGS " -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
+set(COMPILER_FLAGS " -nostdinc++ -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 \
                      -fpascal-strings -fasm-blocks -ffp-contract=off -fvisibility-ms-compat \
                      -fvisibility-inlines-hidden -fPIC --target=${LINUX_ARCH_NAME} -O3 -DNDEBUG \
                      --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc \
                      -funwind-tables -gdwarf-3 -pthread -Wno-error=unused-command-line-argument \
-                     -Wno-error=deprecated-declarations ")
+                     -Wno-error=deprecated-declarations -Wno-deprecated-this-capture")
 
 string(CONCAT CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_INIT} ${COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 string(CONCAT CMAKE_C_FLAGS   "${CMAKE_C_FLAGS_INIT}   ${COMPILER_FLAGS}")
