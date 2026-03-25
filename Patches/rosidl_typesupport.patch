@@ -37,7 +37,7 @@ index 6783240..4007c54 100644
  if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    target_compile_options(${rosidl_generate_interfaces_TARGET}${_target_suffix}
 diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-index c662ffc..3cf07ba 100644
+index c662ffc..4bf9cc8 100644
 --- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 +++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 @@ -18,12 +18,20 @@
@@ -85,7 +85,7 @@ index c662ffc..3cf07ba 100644
          char library_basename[1024];
          int ret = rcutils_snprintf(
            library_basename, 1023, "%s__%s",
-@@ -72,45 +84,89 @@ get_typesupport_handle_function(
+@@ -72,45 +84,95 @@ get_typesupport_handle_function(
  
          try {
            lib = new rcpputils::SharedLibrary(library_name);
@@ -141,19 +141,25 @@ index c662ffc..3cf07ba 100644
 +        // Windows does not have a way to search the whole process space at once,
 +        // so get each module and search individually.
 +        HANDLE hProcess = GetCurrentProcess();
-+        HMODULE hModules[1024];
-+        DWORD cbNeeded;
++        DWORD cbNeeded = 0;
  
 -      void * sym = nullptr;
 +        RCUTILS_LOG_DEBUG_NAMED(
 +          "type_support_dispatch", "Searching for symbol %s", map->symbol_name[i]);
-+        if (EnumProcessModules(hProcess, hModules, sizeof(hModules), &cbNeeded)) {
-+          for (unsigned int module_idx = 0; module_idx < (cbNeeded / sizeof(HMODULE)); ++module_idx) {
-+            sym = GetProcAddress(hModules[module_idx], map->symbol_name[i]);
-+            if (sym) {
-+              RCUTILS_LOG_DEBUG_NAMED(
-+                "type_support_dispatch", "Actually found symbol %s", map->symbol_name[i]);
-+              break;
++        // First call to determine how many modules are loaded.
++        EnumProcessModules(hProcess, nullptr, 0, &cbNeeded);
++        if (cbNeeded > 0) {
++          size_t num_modules = cbNeeded / sizeof(HMODULE);
++          auto hModules = std::make_unique<HMODULE[]>(num_modules);
++          if (EnumProcessModules(hProcess, hModules.get(), cbNeeded, &cbNeeded)) {
++            num_modules = cbNeeded / sizeof(HMODULE);
++            for (size_t module_idx = 0; module_idx < num_modules; ++module_idx) {
++              sym = GetProcAddress(hModules[module_idx], map->symbol_name[i]);
++              if (sym) {
++                RCUTILS_LOG_DEBUG_NAMED(
++                  "type_support_dispatch", "Actually found symbol %s", map->symbol_name[i]);
++                break;
++              }
 +            }
 +          }
 +        }
