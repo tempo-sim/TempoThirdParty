@@ -214,6 +214,10 @@ cmake -G "Visual Studio 17 2022" \
  "$ROOT_DIR/Source/rclcpp/opencv"
 cmake --build . -t install --config Release -j "$NUM_JOBS"
 
+# Remove the root-level "Windows Pack" OpenCVConfig that doesn't know about the installed binaries.
+# The correct config is in install/lib/OpenCVConfig.cmake.
+rm -f "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig.cmake" "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig-version.cmake"
+
 cp -r "$UE_THIRD_PARTY_PATH/Eigen" "$BUILD_DIR/eigen-cp"
 
 echo -e "Creating Python virtual environment for colcon build.\n"
@@ -252,6 +256,7 @@ export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig-windows:$PKG_CONFIG_PA
 NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
 NATIVE_PYTHON_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/python.exe")
 export VisualStudioVersion="17.8"
+export OpenCV_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
 colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis iceoryx \
  --build-base "$BUILD_DIR/Windows" \
  --merge-install \
@@ -280,7 +285,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DPNG_FOUND=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DOPENCV_MAP_IMPORTED_CONFIG='RELWITHDEBINFO=Release;MINSIZEREL=Release'" \
- " -DOpenCV_DIR='$BUILD_DIR/opencv'" \
+ " -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/install/lib'" \
  " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -DBoost_USE_STATIC_LIBS=OFF" \
@@ -305,7 +310,6 @@ DEST="$ROOT_DIR/Outputs/rclcpp"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/theora.dll" "$DEST/Binaries/Windows/libtheora.dll"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/tf2_eigen_kdl.dll" "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-"*".dll" "$DEST/Binaries/Windows"
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/x64/vc17/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/Scripts"/* "$DEST/Binaries/Windows"
 
