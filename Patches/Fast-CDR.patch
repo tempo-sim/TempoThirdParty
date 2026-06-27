@@ -65,7 +65,7 @@ index 25c8055..2bc69f7 100644
                  endif()
              endif()
 diff --git a/include/fastcdr/Cdr.h b/include/fastcdr/Cdr.h
-index 6e7bae1..4bf55b8 100644
+index 6e7bae1..3f8654a 100644
 --- a/include/fastcdr/Cdr.h
 +++ b/include/fastcdr/Cdr.h
 @@ -19,16 +19,17 @@
@@ -532,7 +532,7 @@ index 6e7bae1..4bf55b8 100644
       * @return Reference to the eprosima::fastcdr::Cdr object.
       * @exception exception::NotEnoughMemoryException This exception is thrown when trying to deserialize a position that exceeds the internal memory size.
       */
-+    template <class T, class Traits, class Allocator>
++    template <class Allocator>
      inline
      Cdr& deserializeArray(
 -            std::string* string_t,
