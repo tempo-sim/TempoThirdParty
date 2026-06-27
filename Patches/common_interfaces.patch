@@ -1,5 +1,5 @@
 diff --git a/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp b/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
-index d766d0d..6d27770 100644
+index d766d0d..4cba089 100644
 --- a/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
 +++ b/sensor_msgs/include/sensor_msgs/impl/point_cloud2_iterator.hpp
 @@ -236,8 +236,9 @@ PointCloud2IteratorBase<T, TT, U, C, V>::PointCloud2IteratorBase()
@@ -13,7 +13,7 @@ index d766d0d..6d27770 100644
  {
    int offset = set_field(cloud_msg, field_name);
  
-@@ -347,8 +348,9 @@ V<T> PointCloud2IteratorBase<T, TT, U, C, V>::end() const
+@@ -347,16 +348,16 @@ V<T> PointCloud2IteratorBase<T, TT, U, C, V>::end() const
    * @return the offset at which the field is found
    */
  template<typename T, typename TT, typename U, typename C, template<typename> class V>
@@ -24,11 +24,13 @@ index d766d0d..6d27770 100644
  {
    is_bigendian_ = cloud_msg.is_bigendian;
    point_step_ = cloud_msg.point_step;
-@@ -356,7 +358,7 @@ int PointCloud2IteratorBase<T, TT, U, C, V>::set_field(
-   std::vector<sensor_msgs::msg::PointField>::const_iterator field_iter = cloud_msg.fields.begin(),
-     field_end =
-     cloud_msg.fields.end();
+   // make sure the channel is valid
+-  std::vector<sensor_msgs::msg::PointField>::const_iterator field_iter = cloud_msg.fields.begin(),
+-    field_end =
+-    cloud_msg.fields.end();
 -  while ((field_iter != field_end) && (field_iter->name != field_name)) {
++  auto field_iter = cloud_msg.fields.begin();
++  auto field_end = cloud_msg.fields.end();
 +  while ((field_iter != field_end) && (strcmp(field_iter->name.c_str(), field_name.c_str()) != 0)) {
      ++field_iter;
    }
