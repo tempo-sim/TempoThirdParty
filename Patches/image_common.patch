@@ -345,18 +345,10 @@ index 0afadaf..2692f07 100644
  
  CameraSubscriber ImageTransport::subscribeCamera(
 diff --git a/image_transport/src/publisher.cpp b/image_transport/src/publisher.cpp
-index b554125..3534d27 100644
+index b554125..b109202 100644
 --- a/image_transport/src/publisher.cpp
 +++ b/image_transport/src/publisher.cpp
-@@ -33,6 +33,7 @@
- #include <string>
- #include <utility>
- #include <vector>
-+#include <iostream>
- 
- #include "rclcpp/expand_topic_or_service_name.hpp"
- #include "rclcpp/logging.hpp"
-@@ -98,7 +99,8 @@ struct Publisher::Impl
+@@ -98,7 +98,8 @@ struct Publisher::Impl
  
  Publisher::Publisher(
    rclcpp::Node * node, const std::string & base_topic,
@@ -366,7 +358,7 @@ index b554125..3534d27 100644
  : impl_(std::make_shared<Impl>(node))
  {
    // Resolve the name explicitly because otherwise the compressed topics don't remap
-@@ -141,7 +143,7 @@ Publisher::Publisher(
+@@ -141,7 +142,7 @@ Publisher::Publisher(
      const auto & lookup_name = transport_name + "_pub";
      try {
        auto pub = loader->createUniqueInstance(lookup_name);
@@ -375,24 +367,3 @@ index b554125..3534d27 100644
        impl_->publishers_.push_back(std::move(pub));
      } catch (const std::runtime_error & e) {
        RCLCPP_ERROR(
-@@ -151,6 +153,20 @@ Publisher::Publisher(
-   }
- 
-   if (impl_->publishers_.empty()) {
-+    std::cout << "allowlist: ";
-+    for (const std::string& elem: allowlist)
-+    {
-+      std::cout << elem + " ";
-+    }
-+    std::cout << std::endl;
-+
-+    std::cout << "all_transport_names: ";
-+    for (const std::string& elem: all_transport_names)
-+    {
-+      std::cout << elem + " ";
-+    }
-+    std::cout << std::endl;
-+
-     throw Exception(
-             "No plugins found! Does `rospack plugins --attrib=plugin "
-             "image_transport` find any packages?");
