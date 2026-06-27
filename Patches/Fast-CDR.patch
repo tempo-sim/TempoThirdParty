@@ -65,7 +65,7 @@ index 25c8055..2bc69f7 100644
                  endif()
              endif()
 diff --git a/include/fastcdr/Cdr.h b/include/fastcdr/Cdr.h
-index 6e7bae1..3f8654a 100644
+index 6e7bae1..be02bb1 100644
 --- a/include/fastcdr/Cdr.h
 +++ b/include/fastcdr/Cdr.h
 @@ -19,16 +19,17 @@
@@ -613,7 +613,7 @@ index 6e7bae1..3f8654a 100644
              std::wstring*& sequence_t,
              size_t& numElements);
  
-+#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || __cplusplus >= 201703L
 +    Cdr& serializeBoolSequence(
 +            const std::pmr::vector<bool>& vector_t);
 +  
@@ -627,7 +627,7 @@ index 6e7bae1..3f8654a 100644
 +    Cdr& deserializeWStringSequence(
 +            std::pmr::wstring*& sequence_t,
 +            size_t& numElements);
-+#endif // defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#endif // defined(_MSC_VER) || __cplusplus >= 201703L
 +
  #if HAVE_CXX0X
      /*!
@@ -647,14 +647,14 @@ index 26a6320..0d6fc59 100644
  #define CONSTEXPR const
  #endif
 diff --git a/src/cpp/Cdr.cpp b/src/cpp/Cdr.cpp
-index 4a8bb25..745a6f7 100644
+index 4a8bb25..97a477e 100644
 --- a/src/cpp/Cdr.cpp
 +++ b/src/cpp/Cdr.cpp
 @@ -2649,6 +2649,43 @@ Cdr& Cdr::serializeBoolSequence(
      return *this;
  }
  
-+#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || __cplusplus >= 201703L
 +Cdr& Cdr::serializeBoolSequence(
 +        const std::pmr::vector<bool>& vector_t)
 +{
@@ -698,7 +698,7 @@ index 4a8bb25..745a6f7 100644
      return *this;
  }
  
-+#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || __cplusplus >= 201703L
 +Cdr& Cdr::deserializeBoolSequence(
 +            std::pmr::vector<bool>& vector_t)
 +{
@@ -751,7 +751,7 @@ index 4a8bb25..745a6f7 100644
      return *this;
  }
  
-+#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || __cplusplus >= 201703L
 +Cdr& Cdr::deserializeStringSequence(
 +        std::pmr::string*& sequence_t,
 +        size_t& numElements)
@@ -787,7 +787,7 @@ index 4a8bb25..745a6f7 100644
      return *this;
  }
 +
-+#if defined(_MSC_VER) || _LIBCPP_STD_VER >= 17
++#if defined(_MSC_VER) || __cplusplus >= 201703L
 +Cdr& Cdr::deserializeWStringSequence(
 +        std::pmr::wstring*& sequence_t,
 +        size_t& numElements)
