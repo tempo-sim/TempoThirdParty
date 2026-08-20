@@ -257,6 +257,13 @@ NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
 NATIVE_PYTHON_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/python.exe")
 export VisualStudioVersion="17.8"
 export OpenCV_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
+# Pass Unreal's OpenSSL explicitly, the same way zlib/libPNG/libJPG are passed below. Modules/Windows/
+# FindOpenSSL.cmake is supposed to force this via CMAKE_MODULE_PATH, but as of v0.16 it was not taking
+# effect for CycloneDDS or Fast-DDS: ddsc.dll and fastrtps-2.6.dll shipped importing the build machine's
+# libssl-1_1-x64.dll/libcrypto-1_1-x64.dll, which no Unreal install provides (tempo-sim/TempoROS#71).
+# A missed CMAKE_MODULE_PATH fails silently, because find_package(OpenSSL) then falls back to CMake's
+# builtin module and happily finds a system OpenSSL. These cache entries pin the static Unreal libs
+# whether or not our FindOpenSSL.cmake is the one that gets loaded.
 colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis iceoryx \
  --build-base "$BUILD_DIR/Windows" \
  --merge-install \
@@ -294,6 +301,11 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
  " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Windows'" \
+ " -DOPENSSL_USE_STATIC_LIBS=ON" \
+ " -DOPENSSL_ROOT_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t'" \
+ " -DOPENSSL_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Win64/VS2015'" \
+ " -DOPENSSL_CRYPTO_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libcrypto.lib'" \
+ " -DOPENSSL_SSL_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libssl.lib'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
@@ -312,6 +324,12 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/tf2_eigen_kdl.dll" "$DEST/Binaries
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-"*".dll" "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/Scripts"/* "$DEST/Binaries/Windows"
+
+# Vendor packages (yaml_cpp_vendor, etc) install to their own prefix under install/opt rather than
+# install/bin, so the copy above misses them. Search the whole install tree, the way the Mac and
+# Linux scripts do for dylibs/sos. Without this, yaml-cpp.lib ships (the *.lib find below is already
+# recursive) but yaml-cpp.dll does not, and camera_calibration_parsers.dll fails to load at runtime.
+find "$ROOT_DIR/Source/rclcpp/install" -name "*.dll" -exec cp -P {} "$DEST/Binaries/Windows" \;
 
 # Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.lib" -exec cp -P {} "$DEST/Libraries/Windows" \;
