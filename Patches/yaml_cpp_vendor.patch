@@ -1,0 +1,16 @@
+diff --git a/yaml_cpp_vendor-extras.cmake.in b/yaml_cpp_vendor-extras.cmake.in
+index deac98c..28ddc52 100644
+--- a/yaml_cpp_vendor-extras.cmake.in
++++ b/yaml_cpp_vendor-extras.cmake.in
+@@ -2,7 +2,10 @@ find_package(yaml-cpp QUIET)
+ 
+ if(NOT yaml-cpp_FOUND)
+   # add the local Modules directory to the modules path
+-  if(WIN32)
++  # yaml-cpp installed its package config to CMake/ on Windows up through 0.6.x, but 0.7.0 -- the
++  # version build_yaml_cpp() pins -- switched to GNUInstallDirs and installs to share/cmake/yaml-cpp
++  # on every platform. Only take the Windows branch if that old layout is actually present.
++  if(WIN32 AND EXISTS "${@PROJECT_NAME@_DIR}/../../../opt/yaml_cpp_vendor/CMake")
+     set(yaml-cpp_DIR "${@PROJECT_NAME@_DIR}/../../../opt/yaml_cpp_vendor/CMake")
+   else()
+     set(yaml-cpp_DIR "${@PROJECT_NAME@_DIR}/../../../opt/yaml_cpp_vendor/share/cmake/yaml-cpp")

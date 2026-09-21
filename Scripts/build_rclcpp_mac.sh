@@ -79,6 +79,32 @@ if [ ! -d "${UE_THIRD_PARTY_PATH}" ]; then
 fi
 export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
 
+# Unreal bumps its zlib and libPNG versions between engine releases (5.6 shipped zlib 1.2.13 and
+# libPNG-1.5.27, 5.7/5.8 ship zlib 1.3 and libPNG-1.6.44) and libpng.a moved into a Release
+# subdirectory along the way. Discover both rather than hard-coding paths that only match one engine.
+ZLIB_ROOT=$(find "$UE_THIRD_PARTY_PATH/zlib" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+ZLIB_LIBRARY="$ZLIB_ROOT/lib/Mac/Release/libz.a"
+if [ ! -f "$ZLIB_LIBRARY" ]; then
+  ZLIB_LIBRARY="$ZLIB_ROOT/lib/Mac/libz.a"
+fi
+if [ ! -f "$ZLIB_LIBRARY" ] || [ ! -f "$ZLIB_ROOT/include/zlib.h" ]; then
+  echo "Couldn't find Unreal's zlib for Mac under $UE_THIRD_PARTY_PATH/zlib";
+  exit 1
+fi
+
+PNG_ROOT=$(find "$UE_THIRD_PARTY_PATH/libPNG" -mindepth 1 -maxdepth 1 -type d -name "libPNG-*" | sort -V | tail -1)
+PNG_LIBRARY="$PNG_ROOT/lib/Mac/Release/libpng.a"
+if [ ! -f "$PNG_LIBRARY" ]; then
+  PNG_LIBRARY="$PNG_ROOT/lib/Mac/libpng.a"
+fi
+if [ ! -f "$PNG_LIBRARY" ] || [ ! -f "$PNG_ROOT/png.h" ]; then
+  echo "Couldn't find Unreal's libPNG for Mac under $UE_THIRD_PARTY_PATH/libPNG";
+  exit 1
+fi
+
+echo -e "Using Unreal zlib: $ZLIB_LIBRARY";
+echo -e "Using Unreal libPNG: $PNG_LIBRARY";
+
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
 echo -e "Using git tag: $TAG\n"
@@ -159,6 +185,15 @@ cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
 cd "$ROOT_DIR/Source/rclcpp/vorbis"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+# OpenCV 4.5.4's bundled zlib 1.2.11 and libpng 1.6.37 both take their Classic Mac OS branches
+# whenever TARGET_OS_MAC is defined. The macOS 26 SDK defines it (via TargetConditionals.h) before
+# those headers are reached, so zlib #defines fdopen to NULL - mangling stdio.h's fdopen
+# declaration - and libpng tries to include <fp.h>, which has not existed since Mac OS 9. Both
+# fixes are what upstream did: zlib skips that branch on __APPLE__ (where the __APPLE__ branch
+# right below already sets OS_CODE 19), and libpng 1.6.44 dropped the fp.h block for a plain
+# <math.h> include.
+cd "$ROOT_DIR/Source/rclcpp/opencv"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/opencv.patch"
 
 echo -e "Copying asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
@@ -184,8 +219,11 @@ make install
 
 echo -e "Building theora"
 cd "$ROOT_DIR/Source/rclcpp/theora"
-./autogen.sh
-./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
+# theora resolves libogg through pkg-config, not --with-ogg, so without our install prefix on
+# PKG_CONFIG_PATH it silently links Homebrew's libogg - a dependency no user's machine has.
+THEORA_PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/install/lib/pkgconfig:$PKG_CONFIG_PATH"
+PKG_CONFIG_PATH="$THEORA_PKG_CONFIG_PATH" ./autogen.sh
+PKG_CONFIG_PATH="$THEORA_PKG_CONFIG_PATH" ./configure --prefix="$ROOT_DIR/Source/rclcpp/install" --with-ogg="$ROOT_DIR/Source/rclcpp/install" --disable-examples
 make clean
 make install
 
@@ -255,15 +293,17 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
- " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
- " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Mac/Release/libz.a'" \
- " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.2.13/include'" \
+ " -DZLIB_LIBRARY='$ZLIB_LIBRARY'" \
+ " -DZLIB_LIBRARIES='$ZLIB_LIBRARY'" \
+ " -DZLIB_INCLUDE_DIRS='$ZLIB_ROOT/include'" \
+ " -DZLIB_INCLUDE_DIR='$ZLIB_ROOT/include'" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DZLIB_FOUND=ON" \
- " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27'" \
- " -DPNG_PNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac/libpng.a'" \
- " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.27/lib/Mac/libpng.a'" \
+ " -DPNG_INCLUDE_DIRS='$PNG_ROOT'" \
+ " -DPNG_PNG_INCLUDE_DIRS='$PNG_ROOT'" \
+ " -DPNG_PNG_INCLUDE_DIR='$PNG_ROOT'" \
+ " -DPNG_LIBRARIES='$PNG_LIBRARY'" \
+ " -DPNG_LIBRARY='$PNG_LIBRARY'" \
  " -DPNG_FOUND=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DOpenCV_DIR='$ROOT_DIR/Builds/rclcpp/opencv'" \
@@ -298,6 +338,29 @@ cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Mac"
 
 # Copy the libraries
 find "$ROOT_DIR/Source/rclcpp/install" -name "*.dylib" -exec cp -P {} "$DEST/Libraries/Mac" \;
+
+# The CMake packages get relocatable install names from CMAKE_INSTALL_RPATH above, but the
+# autotools-built ogg and theora libraries bake in absolute paths to the build machine's install
+# prefix, so they only load on the machine that built them. Everything lands in one flat directory
+# here, so point every non-system reference at @loader_path. install_name_tool invalidates the
+# code signature, hence the re-sign.
+echo -e "Making dylib references relocatable"
+for DYLIB in "$DEST/Libraries/Mac"/*.dylib; do
+  CHANGED=0
+  DYLIB_ID=$(otool -D "$DYLIB" | tail -n +2)
+  case "$DYLIB_ID" in
+    /*) install_name_tool -id "@rpath/$(basename "$DYLIB_ID")" "$DYLIB"; CHANGED=1 ;;
+  esac
+  for DEP in $(otool -L "$DYLIB" | tail -n +2 | awk '{print $1}'); do
+    case "$DEP" in
+      @*|/usr/lib/*|/System/*) ;;
+      /*) install_name_tool -change "$DEP" "@loader_path/$(basename "$DEP")" "$DYLIB"; CHANGED=1 ;;
+    esac
+  done
+  if [ "$CHANGED" = "1" ]; then
+    codesign --force --sign - "$DYLIB"
+  fi
+done
 
 # Copy the Python deps from the virtual environment
 cp -r -P "$ROOT_DIR/Builds/rclcpp/venv/lib/python"* "$DEST/Libraries/Mac"

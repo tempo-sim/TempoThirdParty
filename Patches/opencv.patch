@@ -1,0 +1,37 @@
+diff --git a/3rdparty/libpng/pngpriv.h b/3rdparty/libpng/pngpriv.h
+index 583c26f9bd..83e0ab887f 100644
+--- a/3rdparty/libpng/pngpriv.h
++++ b/3rdparty/libpng/pngpriv.h
+@@ -517,18 +517,7 @@
+     */
+ #  include <float.h>
+ 
+-#  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
+-    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
+-   /* We need to check that <math.h> hasn't already been included earlier
+-    * as it seems it doesn't agree with <fp.h>, yet we should really use
+-    * <fp.h> if possible.
+-    */
+-#    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
+-#      include <fp.h>
+-#    endif
+-#  else
+-#    include <math.h>
+-#  endif
++#  include <math.h>
+ #  if defined(_AMIGA) && defined(__SASC) && defined(_M68881)
+    /* Amiga SAS/C: We must include builtin FPU functions when compiling using
+     * MATH=68881
+diff --git a/3rdparty/zlib/zutil.h b/3rdparty/zlib/zutil.h
+index 4774fc3235..68be7413c4 100644
+--- a/3rdparty/zlib/zutil.h
++++ b/3rdparty/zlib/zutil.h
+@@ -130,7 +130,7 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
+ #  endif
+ #endif
+ 
+-#if defined(MACOS) || defined(TARGET_OS_MAC)
++#if (defined(MACOS) || defined(TARGET_OS_MAC)) && !defined(__APPLE__)
+ #  define OS_CODE  7
+ #  ifndef Z_SOLO
+ #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os
