@@ -1,3 +1,15 @@
+diff --git a/cv_bridge/CMakeLists.txt b/cv_bridge/CMakeLists.txt
+index c909dd1..e91cd4d 100644
+--- a/cv_bridge/CMakeLists.txt
++++ b/cv_bridge/CMakeLists.txt
+@@ -4,6 +4,7 @@ project(cv_bridge)
+ find_package(ament_cmake_ros REQUIRED)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/cv_bridge/src/cv_bridge.cpp b/cv_bridge/src/cv_bridge.cpp
 index 0a2e4f5..fe74cf8 100644
 --- a/cv_bridge/src/cv_bridge.cpp
@@ -85,6 +97,18 @@ index 3d2a35a..1f6ff78 100644
    ASSERT_EQ(static_cast<int>(imgmsg.height), cv_ptr->image.rows);
    ASSERT_EQ(static_cast<int>(imgmsg.width), cv_ptr->image.cols);
    ASSERT_EQ(10, cv_ptr->image.channels());
+diff --git a/image_geometry/CMakeLists.txt b/image_geometry/CMakeLists.txt
+index 0e33091..ad8d707 100644
+--- a/image_geometry/CMakeLists.txt
++++ b/image_geometry/CMakeLists.txt
+@@ -7,6 +7,7 @@ find_package(ament_cmake_ros REQUIRED)
+ ament_python_install_package(${PROJECT_NAME})
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/image_geometry/include/image_geometry/pinhole_camera_model.h b/image_geometry/include/image_geometry/pinhole_camera_model.h
 index fdbecd7..2a82080 100644
 --- a/image_geometry/include/image_geometry/pinhole_camera_model.h

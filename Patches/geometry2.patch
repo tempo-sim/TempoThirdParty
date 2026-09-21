@@ -10,6 +10,18 @@ index 5d32c060..c0d88090 100644
    <exec_depend>tf2_eigen</exec_depend>
    <exec_depend>tf2_eigen_kdl</exec_depend>
    <exec_depend>tf2_geometry_msgs</exec_depend>
+diff --git a/tf2/CMakeLists.txt b/tf2/CMakeLists.txt
+index afb90fb6..05aa113e 100644
+--- a/tf2/CMakeLists.txt
++++ b/tf2/CMakeLists.txt
+@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
+ project(tf2)
+ 
+ # Default to C++14
++set(CMAKE_CXX_STANDARD 20)
+ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD 14)
+ endif()
 diff --git a/tf2/src/buffer_core.cpp b/tf2/src/buffer_core.cpp
 index c8c994e3..0402ead4 100644
 --- a/tf2/src/buffer_core.cpp
