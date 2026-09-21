@@ -62,6 +62,33 @@ export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
 export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
 export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
 
+# Unreal bumps its zlib and libPNG versions between engine releases (5.6 shipped zlib 1.2.13 and
+# libPNG-1.5.27, 5.7/5.8 ship zlib 1.3 and libPNG-1.6.44) and the static libraries have moved into
+# a Release subdirectory along the way. Discover both rather than hard-coding paths that only match
+# one engine.
+ZLIB_ROOT=$(find "$UE_THIRD_PARTY_PATH/zlib" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+ZLIB_LIBRARY="$ZLIB_ROOT/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a"
+if [ ! -f "$ZLIB_LIBRARY" ]; then
+  ZLIB_LIBRARY="$ZLIB_ROOT/lib/Unix/$LINUX_ARCH_NAME/libz.a"
+fi
+if [ ! -f "$ZLIB_LIBRARY" ] || [ ! -f "$ZLIB_ROOT/include/zlib.h" ]; then
+  echo "Couldn't find Unreal's zlib for Linux under $UE_THIRD_PARTY_PATH/zlib";
+  exit 1
+fi
+
+PNG_ROOT=$(find "$UE_THIRD_PARTY_PATH/libPNG" -mindepth 1 -maxdepth 1 -type d -name "libPNG-*" | sort -V | tail -1)
+PNG_LIBRARY="$PNG_ROOT/lib/Unix/$LINUX_ARCH_NAME/Release/libpng.a"
+if [ ! -f "$PNG_LIBRARY" ]; then
+  PNG_LIBRARY="$PNG_ROOT/lib/Unix/$LINUX_ARCH_NAME/libpng.a"
+fi
+if [ ! -f "$PNG_LIBRARY" ] || [ ! -f "$PNG_ROOT/png.h" ]; then
+  echo "Couldn't find Unreal's libPNG for Linux under $UE_THIRD_PARTY_PATH/libPNG";
+  exit 1
+fi
+
+echo -e "Using Unreal zlib: $ZLIB_LIBRARY";
+echo -e "Using Unreal libPNG: $PNG_LIBRARY";
+
 echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
@@ -236,14 +263,14 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DBUILD_TESTING=OFF" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
- " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
+ " -DPNG_INCLUDE_DIRS='$PNG_ROOT'" \
+ " -DPNG_LIBRARIES='$PNG_LIBRARY'" \
  " -DPNG_FOUND=ON" \
- " -DPNG_PNG_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
- " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Unix/$LINUX_ARCH_NAME/libpng.a'" \
- " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
- " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a'" \
- " -DZLIB_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
+ " -DPNG_PNG_INCLUDE_DIR='$PNG_ROOT'" \
+ " -DPNG_LIBRARY='$PNG_LIBRARY'" \
+ " -DZLIB_LIBRARY='$ZLIB_LIBRARY'" \
+ " -DZLIB_LIBRARIES='$ZLIB_LIBRARY'" \
+ " -DZLIB_INCLUDE_DIR='$ZLIB_ROOT/include'" \
  " -DZLIB_FOUND=ON" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
