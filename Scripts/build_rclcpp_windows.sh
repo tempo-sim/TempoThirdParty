@@ -145,6 +145,8 @@ cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
 cd "$ROOT_DIR/Source/rclcpp/vorbis"
 git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+cd "$ROOT_DIR/Source/rclcpp/yaml_cpp_vendor"
+git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/yaml_cpp_vendor.patch"
 
 echo -e "Copying asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
@@ -214,9 +216,19 @@ cmake -G "Visual Studio 17 2022" \
  "$ROOT_DIR/Source/rclcpp/opencv"
 cmake --build . -t install --config Release -j "$NUM_JOBS"
 
-# Remove the root-level "Windows Pack" OpenCVConfig that doesn't know about the installed binaries.
-# The correct config is in install/lib/OpenCVConfig.cmake.
+# Remove the root-level "Windows Pack" OpenCVConfig, which is only a forwarder that guesses the
+# runtime subdirectory from MSVC_VERSION. We point OpenCV_DIR straight at the real config instead.
 rm -f "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig.cmake" "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig-version.cmake"
+
+# On Windows OpenCV installs the real config (the one next to OpenCVModules.cmake) under
+# <prefix>/<arch>/<runtime>/lib, e.g. install/x64/vc17/lib -- not install/lib as it does on Unix.
+OPENCV_CMAKE_DIR=$(dirname "$(find "$ROOT_DIR/Source/rclcpp/install/x64" -name OpenCVConfig.cmake | head -1)")
+if [ ! -f "$OPENCV_CMAKE_DIR/OpenCVModules.cmake" ]; then
+  echo "Could not find the installed OpenCV cmake config under $ROOT_DIR/Source/rclcpp/install/x64"
+  exit 1
+fi
+NATIVE_OPENCV_CMAKE_DIR=$(cygpath -m "$OPENCV_CMAKE_DIR")
+echo -e "Using OpenCV cmake config: $NATIVE_OPENCV_CMAKE_DIR\n"
 
 cp -r "$UE_THIRD_PARTY_PATH/Eigen" "$BUILD_DIR/eigen-cp"
 
@@ -251,12 +263,22 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # " -DCMAKE_CXX_STANDARD_REQUIRED=ON" \
 # " -DCMAKE_CXX_EXTENSIONS=OFF" \
 # " -DBoost_NO_BOOST_CMAKE=ON" \
-export CMAKE_PREFIX_PATH="$ROOT_DIR/Source/rclcpp/cmake"
-export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig-windows:$PKG_CONFIG_PATH"
+# cmake.exe is a native Windows program, so every path we hand it has to be a Windows path. MSYS only
+# rewrites arguments it recognizes as paths, and it does not rewrite the quoted "-DVAR='...'" strings
+# we pass through colcon's --cmake-args, so anything derived from $ROOT_DIR must be converted here.
+# Getting this wrong fails silently: CMake stores the unusable /c/... value and then either reports
+# the package as NOTFOUND or ignores the setting entirely.
+NATIVE_ROOT_DIR=$(cygpath -m "$ROOT_DIR")
 NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
 NATIVE_PYTHON_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/python.exe")
+export CMAKE_PREFIX_PATH="$NATIVE_ROOT_DIR/Source/rclcpp/cmake"
+# pkg-config here is a native Windows build (C:\PkgConfig\pkg-config.exe), so PKG_CONFIG_PATH needs
+# Windows paths separated by ";" -- a "/c/..." entry is unreadable to it, and ":" would in any case
+# split "C:/..." at the drive letter. This is what theora_image_transport's pkg_check_modules(theora)
+# reads to find theora.pc/ogg.pc.
+export PKG_CONFIG_PATH="$NATIVE_ROOT_DIR/Source/rclcpp/pkgconfig-windows;$PKG_CONFIG_PATH"
 export VisualStudioVersion="17.8"
-export OpenCV_DIR="$ROOT_DIR/Source/rclcpp/install/lib"
+export OpenCV_DIR="$NATIVE_OPENCV_CMAKE_DIR"
 # Pass Unreal's OpenSSL explicitly, the same way zlib/libPNG/libJPG are passed below. Modules/Windows/
 # FindOpenSSL.cmake is supposed to force this via CMAKE_MODULE_PATH, but as of v0.16 it was not taking
 # effect for CycloneDDS or Fast-DDS: ddsc.dll and fastrtps-2.6.dll shipped importing the build machine's
@@ -280,27 +302,27 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DEIGEN3_INCLUDE_DIR='$NATIVE_EIGEN_PATH'" \
  " -DCMAKE_C_COMPILER_WORKS=ON" \
  " -DCMAKE_CXX_COMPILER_WORKS=ON" \
- " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Win64/Release/zlibstatic.lib'" \
- " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.2.13/lib/Win64/Release/zlibstatic.lib'" \
- " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.2.13/include'" \
+ " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
+ " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
+ " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DZLIB_FOUND=ON" \
- " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
- " -DPNG_PNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Win64-llvm/Release/libpng15_static.lib'" \
- " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.5.2/lib/Win64-llvm/Release/libpng15_static.lib'" \
+ " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_PNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
+ " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
  " -DPNG_FOUND=ON" \
  " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
  " -DOPENCV_MAP_IMPORTED_CONFIG='RELWITHDEBINFO=Release;MINSIZEREL=Release'" \
- " -DOpenCV_DIR='$ROOT_DIR/Source/rclcpp/install/lib'" \
- " -DBOOST_ROOT='$ROOT_DIR/Source/rclcpp/install'" \
+ " -DOpenCV_DIR='$NATIVE_OPENCV_CMAKE_DIR'" \
+ " -DBOOST_ROOT='$NATIVE_ROOT_DIR/Source/rclcpp/install'" \
  " -DBoost_NO_SYSTEM_PATHS=ON" \
  " -DBoost_USE_STATIC_LIBS=OFF" \
  " -Dtinyxml2_SHARED_LIBS=ON" \
  " -DTHREADS_PREFER_PTHREAD_FLAG=ON" \
  " -DSM_RUN_RESULT=0" \
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
- " -DCMAKE_MODULE_PATH='$ROOT_DIR/Source/rclcpp/cmake/Modules/Windows'" \
+ " -DCMAKE_MODULE_PATH='$NATIVE_ROOT_DIR/Source/rclcpp/cmake/Modules/Windows'" \
  " -DOPENSSL_USE_STATIC_LIBS=ON" \
  " -DOPENSSL_ROOT_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t'" \
  " -DOPENSSL_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Win64/VS2015'" \
@@ -339,7 +361,7 @@ mkdir -p "$DEST/Libraries/Windows/python3.11"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/site-packages" "$DEST/Libraries/Windows/python3.11"
 
 # Copy the Python deps from the virtual environment
-cp -r -P "$ROOT_DIR/Builds/rclcpp/venv/Lib/site-packages" "$DEST/Libraries/Windows/python3.11"
+cp -r -P "$BUILD_DIR/venv/Lib/site-packages" "$DEST/Libraries/Windows/python3.11"
 
 # Copy the "share" folder
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/share" "$DEST/Binaries/Windows"
