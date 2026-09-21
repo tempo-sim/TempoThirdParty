@@ -6,5 +6,5 @@ using python
      : 3.11 # version
      : "\"$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Win64/python.exe\"" # cmd-o>
      : "$(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Win64/include" # includes
-     : "$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Win64" # libraries
+     : "$(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Win64/libs" # libraries
      ;
