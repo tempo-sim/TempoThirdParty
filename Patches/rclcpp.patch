@@ -19,17 +19,18 @@ index 9572f422..a8203ed8 100644
  # TODO(wjwwood): address all deprecation warnings and then remove this
  if(WIN32)
 diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
-index 1251e58b..0c1dfde3 100644
+index 1251e58b..535ed976 100644
 --- a/rclcpp/include/rclcpp/context.hpp
 +++ b/rclcpp/include/rclcpp/context.hpp
 @@ -330,7 +330,11 @@ public:
    {
      std::lock_guard<std::recursive_mutex> lock(sub_contexts_mutex_);
  
+-    std::type_index type_i(typeid(SubContext));
 +#ifdef _LIBCPP_HAS_NO_RTTI
 +    std::string type_i(SubContext::class_name);
 +#else
-     std::type_index type_i(typeid(SubContext));
++    std::string type_i(typeid(SubContext).name());
 +#endif // _LIBCPP_HAS_NO_RTTI
      std::shared_ptr<SubContext> sub_context;
      auto it = sub_contexts_.find(type_i);
@@ -38,11 +39,12 @@ index 1251e58b..0c1dfde3 100644
    // Keep shared ownership of the global logging mutex.
    std::shared_ptr<std::recursive_mutex> logging_mutex_;
  
-+#ifdef _LIBCPP_HAS_NO_RTTI
+-  std::unordered_map<std::type_index, std::shared_ptr<void>> sub_contexts_;
++  // Keyed by a string (class_name under -fno-rtti, otherwise typeid(...).name()) rather than
++  // std::type_index so that the member layout does not depend on _LIBCPP_HAS_NO_RTTI. Otherwise the
++  // library (built with RTTI) and Unreal consumers (built with _LIBCPP_HAS_NO_RTTI) would disagree on
++  // sizeof(Context) and the offsets of every member after this one -- an ODR/ABI mismatch.
 +  std::unordered_map<std::string, std::shared_ptr<void>> sub_contexts_;
-+#else
-   std::unordered_map<std::type_index, std::shared_ptr<void>> sub_contexts_;
-+#endif// _LIBCPP_HAS_NO_RTTI
    // This mutex is recursive so that the constructor of a sub context may
    // attempt to acquire another sub context.
    std::recursive_mutex sub_contexts_mutex_;
