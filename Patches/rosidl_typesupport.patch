@@ -1,108 +1,135 @@
-diff --git a/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake b/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
-index 98eeed8..52c38ae 100644
---- a/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
-+++ b/rosidl_typesupport_c/cmake/rosidl_typesupport_c_generate_interfaces.cmake
-@@ -98,7 +98,7 @@ set_property(TARGET ${rosidl_generate_interfaces_TARGET}${_target_suffix}
-   PROPERTY DEFINE_SYMBOL "ROSIDL_GENERATOR_C_BUILDING_DLL_${PROJECT_NAME}")
- 
- set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
--  PROPERTIES CXX_STANDARD 14)
-+  PROPERTIES CXX_STANDARD 17)
- if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-   set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
-     PROPERTIES COMPILE_OPTIONS -Wall -Wextra -Wpedantic)
-diff --git a/rosidl_typesupport_cpp/CMakeLists.txt b/rosidl_typesupport_cpp/CMakeLists.txt
-index c6aa1cb..54608a6 100644
---- a/rosidl_typesupport_cpp/CMakeLists.txt
-+++ b/rosidl_typesupport_cpp/CMakeLists.txt
-@@ -28,6 +28,7 @@ add_library(${PROJECT_NAME}
-   src/identifier.cpp
-   src/message_type_support_dispatch.cpp
-   src/service_type_support_dispatch.cpp)
-+    
- if(WIN32)
-   target_compile_definitions(${PROJECT_NAME}
-     PRIVATE "ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL")
-diff --git a/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake b/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
-index 6783240..4007c54 100644
---- a/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
-+++ b/rosidl_typesupport_cpp/cmake/rosidl_typesupport_cpp_generate_interfaces.cmake
-@@ -92,7 +92,7 @@ endif()
- set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
-   PROPERTIES
-     DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_CPP_BUILDING_DLL"
--    CXX_STANDARD 14)
-+    CXX_STANDARD 17)
- 
- if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-   target_compile_options(${rosidl_generate_interfaces_TARGET}${_target_suffix}
 diff --git a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-index c662ffc..4bf9cc8 100644
+index 39c3401..2b8f809 100644
 --- a/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
 +++ b/rosidl_typesupport_cpp/src/type_support_dispatch.hpp
-@@ -18,12 +18,20 @@
- #include <cstddef>
- #include <cstdio>
- #include <cstring>
-+#include <iostream>
- #include <memory>
+@@ -22,8 +22,16 @@
  #include <stdexcept>
  #include <string>
+ 
 +#ifdef _WIN32
 +#include <windows.h>
 +#include <psapi.h>
 +#else
 +#include <dlfcn.h>
 +#endif
- 
++
  #include "rcpputils/shared_library.hpp"
  #include "rcutils/error_handling.h"
 +#include "rcutils/logging_macros.h"
  #include "rcutils/snprintf.h"
  #include "rosidl_typesupport_c/type_support_map.h"
  
-@@ -38,19 +46,23 @@ get_typesupport_handle_function(
-   const TypeSupport * handle, const char * identifier) noexcept
- {
-   if (strcmp(handle->typesupport_identifier, identifier) == 0) {
-+    RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "returning handle? %x", handle);
-     return handle;
-   }
+@@ -32,6 +40,73 @@ namespace rosidl_typesupport_cpp
  
-   if (handle->typesupport_identifier == rosidl_typesupport_cpp::typesupport_identifier) {
-+    RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "The identifiers match");
-     const type_support_map_t * map = \
-       static_cast<const type_support_map_t *>(handle->data);
-     for (size_t i = 0; i < map->size; ++i) {
-       if (strcmp(map->typesupport_identifier[i], identifier) != 0) {
-+        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Continue");
-         continue;
-       }
-       rcpputils::SharedLibrary * lib = nullptr;
+ extern const char * typesupport_identifier;
  
-       if (!map->data[i]) {
-+        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "!map->data[i]");
-         char library_basename[1024];
-         int ret = rcutils_snprintf(
-           library_basename, 1023, "%s__%s",
-@@ -72,45 +84,95 @@ get_typesupport_handle_function(
++// Look a typesupport symbol up among the symbols the process has already loaded.
++//
++// Upstream expects each package's typesupport to live in a separate shared library that it can
++// dlopen on demand. Under Unreal that assumption does not hold: the ROS libraries are linked or
++// preloaded into a single process image, so the per-package library either does not exist as a
++// standalone file or cannot be opened by name. The symbol is still there -- it is already in the
++// process -- so rather than failing we search what is loaded.
++inline void * get_typesupport_symbol_from_process(const char * symbol_name)
++{
++#ifndef _WIN32
++  // Clear any stale error first. dlerror() is the only way to tell a symbol that legitimately
++  // resolved to nullptr apart from one that was not found at all.
++  dlerror();
++  void * sym = dlsym(RTLD_DEFAULT, symbol_name);
++  const char * error = dlerror();
++  if (error != nullptr) {
++    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++      "Failed to get symbol '%s' in global scope: %s", symbol_name, error);
++    return nullptr;
++  }
++  return sym;
++#else
++  // Windows has no RTLD_DEFAULT equivalent -- there is no way to search the whole process at once
++  // -- so enumerate the loaded modules and ask each one in turn.
++  HANDLE process = GetCurrentProcess();
++  DWORD bytes_needed = 0;
++
++  // First call just sizes the buffer.
++  if (!EnumProcessModules(process, nullptr, 0, &bytes_needed) || bytes_needed == 0) {
++    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++      "Failed to enumerate process modules while looking for symbol '%s': %lu",
++      symbol_name, GetLastError());
++    return nullptr;
++  }
++
++  size_t num_modules = bytes_needed / sizeof(HMODULE);
++  auto modules = std::make_unique<HMODULE[]>(num_modules);
++  if (!EnumProcessModules(process, modules.get(), bytes_needed, &bytes_needed)) {
++    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++      "Failed to enumerate process modules while looking for symbol '%s': %lu",
++      symbol_name, GetLastError());
++    return nullptr;
++  }
++  // A module can be unloaded between the two calls, so trust the second count, and never read
++  // past the buffer we actually allocated.
++  size_t num_modules_filled = bytes_needed / sizeof(HMODULE);
++  if (num_modules_filled < num_modules) {
++    num_modules = num_modules_filled;
++  }
++
++  for (size_t i = 0; i < num_modules; ++i) {
++    // GetProcAddress returns FARPROC (a function pointer); the caller immediately casts it back
++    // to a function pointer, so round-tripping through void * here is safe in practice and is
++    // what the rest of this file already does with dlsym.
++    void * sym = reinterpret_cast<void *>(GetProcAddress(modules[i], symbol_name));
++    if (sym != nullptr) {
++      return sym;
++    }
++  }
++
++  RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
++    "Failed to find symbol '%s' in any of the %zu modules loaded in this process",
++    symbol_name, num_modules);
++  return nullptr;
++#endif  // _WIN32
++}
++
+ template<typename TypeSupport>
+ const TypeSupport *
+ get_typesupport_handle_function(
+@@ -73,35 +148,50 @@ get_typesupport_handle_function(
+           return nullptr;
+         }
  
++        // Failing to load the library is not fatal here, unlike upstream. When everything is
++        // already in the process image there is no separate library to open, and we resolve the
++        // symbol out of the process below instead.
          try {
            lib = new rcpputils::SharedLibrary(library_name);
 +          map->data[i] = lib;
          } catch (const std::runtime_error & e) {
-+          // We'll fall back on searching for the symbol in the global scope.
-+          RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Falling back to global 1");
-+        } catch (const std::bad_alloc & e) {
-+          // We'll fall back on searching for the symbol in the global scope.
-+          RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "Falling back to global 2");
-+        }
-+      }
-+
-+      void * sym = nullptr;
-+
+-          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
+-          return nullptr;
++          RCUTILS_LOG_DEBUG_NAMED(
++            "rosidl_typesupport_cpp",
++            "Could not load library %s (%s); falling back to a process-wide symbol lookup",
++            library_name.c_str(), e.what());
+         } catch (const std::bad_alloc & e) {
+-          RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+-            "Could not load library %s: %s", library_name.c_str(), e.what());
+-          return nullptr;
++          RCUTILS_LOG_DEBUG_NAMED(
++            "rosidl_typesupport_cpp",
++            "Could not load library %s (%s); falling back to a process-wide symbol lookup",
++            library_name.c_str(), e.what());
+         }
+-        map->data[i] = lib;
+       }
+-      auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
+-      lib = const_cast<rcpputils::SharedLibrary *>(clib);
+ 
+       void * sym = nullptr;
+ 
+-      try {
+-        if (!lib->has_symbol(map->symbol_name[i])) {
 +      if (map->data[i]) {
-+        RCUTILS_LOG_DEBUG_NAMED("type_support_dispatch", "map->data[i]");
 +        auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
 +        lib = const_cast<rcpputils::SharedLibrary *>(clib);
 +
@@ -115,64 +142,9 @@ index c662ffc..4bf9cc8 100644
 +          sym = lib->get_symbol(map->symbol_name[i]);
 +        } catch (const std::exception & e) {
            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
--            "Could not load library %s: %s", library_name.c_str(), e.what());
+-            "Failed to find symbol '%s' in library", map->symbol_name[i]);
 +            "Failed to get symbol '%s' in library: %s",
 +            map->symbol_name[i], e.what());
-           return nullptr;
--        } catch (const std::bad_alloc & e) {
-+        }
-+      } else {
-+      // Fall back on searching for the symbol in the global scope
-+#ifndef _WIN32
-+        sym = dlsym(RTLD_DEFAULT, map->symbol_name[i]);
-+        char * error = dlerror();
-+        if (error != NULL) {
-           RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
--            "Could not load library %s: %s", library_name.c_str(), e.what());
-+            "Failed to get symbol '%s' in global scope: %d",
-+            map->symbol_name[i], error);
-           return nullptr;
-         }
--        map->data[i] = lib;
--      }
--      auto clib = static_cast<const rcpputils::SharedLibrary *>(map->data[i]);
--      lib = const_cast<rcpputils::SharedLibrary *>(clib);
-+#else
-+        // Windows does not have a way to search the whole process space at once,
-+        // so get each module and search individually.
-+        HANDLE hProcess = GetCurrentProcess();
-+        DWORD cbNeeded = 0;
- 
--      void * sym = nullptr;
-+        RCUTILS_LOG_DEBUG_NAMED(
-+          "type_support_dispatch", "Searching for symbol %s", map->symbol_name[i]);
-+        // First call to determine how many modules are loaded.
-+        EnumProcessModules(hProcess, nullptr, 0, &cbNeeded);
-+        if (cbNeeded > 0) {
-+          size_t num_modules = cbNeeded / sizeof(HMODULE);
-+          auto hModules = std::make_unique<HMODULE[]>(num_modules);
-+          if (EnumProcessModules(hProcess, hModules.get(), cbNeeded, &cbNeeded)) {
-+            num_modules = cbNeeded / sizeof(HMODULE);
-+            for (size_t module_idx = 0; module_idx < num_modules; ++module_idx) {
-+              sym = GetProcAddress(hModules[module_idx], map->symbol_name[i]);
-+              if (sym) {
-+                RCUTILS_LOG_DEBUG_NAMED(
-+                  "type_support_dispatch", "Actually found symbol %s", map->symbol_name[i]);
-+                break;
-+              }
-+            }
-+          }
-+        }
- 
--      try {
--        if (!lib->has_symbol(map->symbol_name[i])) {
-+        if (sym == nullptr) {
-+          RCUTILS_LOG_DEBUG_NAMED(
-+            "type_support_dispatch", "Did not found symbol %s", map->symbol_name[i]);
-           RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
--            "Failed to find symbol '%s' in library", map->symbol_name[i]);
-+            "Failed to get symbol '%s' in global scope: %d",
-+            map->symbol_name[i], GetLastError());
            return nullptr;
          }
 -        sym = lib->get_symbol(map->symbol_name[i]);
@@ -180,16 +152,16 @@ index c662ffc..4bf9cc8 100644
 -        RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
 -          "Failed to get symbol '%s' in library: %s",
 -          map->symbol_name[i], e.what());
--        return nullptr;
-+#endif  // _WIN32
++      } else {
++        sym = get_typesupport_symbol_from_process(map->symbol_name[i]);
++      }
++
++      if (sym == nullptr) {
++        // The error message was already set by whichever lookup failed.
+         return nullptr;
        }
  
-       typedef const TypeSupport * (* funcSignature)(void);
-       funcSignature func = reinterpret_cast<funcSignature>(sym);
-       const TypeSupport * ts = func();
-+      RCUTILS_LOG_DEBUG_NAMED(
-+        "type_support_dispatch", "Returning symbol %x", sym);
-       return ts;
+@@ -112,8 +202,8 @@ get_typesupport_handle_function(
      }
    }
    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(

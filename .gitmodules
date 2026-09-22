@@ -4,155 +4,155 @@
 [submodule "Source/rclcpp/Fast-DDS"]
 	path = Source/rclcpp/Fast-DDS
 	url = https://github.com/eProsima/Fast-DDS.git
-	branch = 2.6.x
+	branch = 2.14.x
 [submodule "Source/rclcpp/console_bridge_vendor"]
 	path = Source/rclcpp/console_bridge_vendor
 	url = https://github.com/ros2/console_bridge_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/osrf_testing_tools_cpp"]
 	path = Source/rclcpp/osrf_testing_tools_cpp
 	url = https://github.com/osrf/osrf_testing_tools_cpp.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rcutils"]
 	path = Source/rclcpp/rcutils
 	url = https://github.com/ros2/rcutils.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl_typesupport"]
 	path = Source/rclcpp/rosidl_typesupport
 	url = https://github.com/ros2/rosidl_typesupport.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/performance_test_fixture"]
 	path = Source/rclcpp/performance_test_fixture
 	url = https://github.com/ros2/performance_test_fixture.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rmw"]
 	path = Source/rclcpp/rmw
 	url = https://github.com/ros2/rmw.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl_typesupport_fastrtps"]
 	path = Source/rclcpp/rosidl_typesupport_fastrtps
 	url = https://github.com/ros2/rosidl_typesupport_fastrtps.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ament_cmake"]
 	path = Source/rclcpp/ament_cmake
 	url = https://github.com/ament/ament_cmake.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/google_benchmark_vendor"]
 	path = Source/rclcpp/google_benchmark_vendor
 	url = https://github.com/ament/google_benchmark_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rmw_dds_common"]
 	path = Source/rclcpp/rmw_dds_common
 	url = https://github.com/ros2/rmw_dds_common.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rpyutils"]
 	path = Source/rclcpp/rpyutils
 	url = https://github.com/ros2/rpyutils.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ament_cmake_ros"]
 	path = Source/rclcpp/ament_cmake_ros
 	url = https://github.com/ros2/ament_cmake_ros.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/googletest"]
 	path = Source/rclcpp/googletest
 	url = https://github.com/ament/googletest.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/python_cmake_module"]
 	path = Source/rclcpp/python_cmake_module
 	url = https://github.com/ros2/python_cmake_module.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rmw_fastrtps"]
 	path = Source/rclcpp/rmw_fastrtps
 	url = https://github.com/ros2/rmw_fastrtps.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/spdlog_vendor"]
 	path = Source/rclcpp/spdlog_vendor
 	url = https://github.com/ros2/spdlog_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ament_index"]
 	path = Source/rclcpp/ament_index
 	url = https://github.com/ament/ament_index.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/launch"]
 	path = Source/rclcpp/launch
 	url = https://github.com/ros2/launch.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rcl"]
 	path = Source/rclcpp/rcl
 	url = https://github.com/ros2/rcl.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rmw_implementation"]
 	path = Source/rclcpp/rmw_implementation
 	url = https://github.com/ros2/rmw_implementation.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/test_interface_files"]
 	path = Source/rclcpp/test_interface_files
 	url = https://github.com/ros2/test_interface_files.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ament_lint"]
 	path = Source/rclcpp/ament_lint
 	url = https://github.com/ament/ament_lint.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/libstatistics_collector"]
 	path = Source/rclcpp/libstatistics_collector
 	url = https://github.com/ros-tooling/libstatistics_collector.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rcl_interfaces"]
 	path = Source/rclcpp/rcl_interfaces
 	url = https://github.com/ros2/rcl_interfaces.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ros2_tracing"]
 	path = Source/rclcpp/ros2_tracing
 	url = https://github.com/ros2/ros2_tracing.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/unique_identifier_msgs"]
 	path = Source/rclcpp/unique_identifier_msgs
 	url = https://github.com/ros2/unique_identifier_msgs.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ament_package"]
 	path = Source/rclcpp/ament_package
 	url = https://github.com/ament/ament_package.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/libyaml_vendor"]
 	path = Source/rclcpp/libyaml_vendor
 	url = https://github.com/ros2/libyaml_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rcl_logging"]
 	path = Source/rclcpp/rcl_logging
 	url = https://github.com/ros2/rcl_logging.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl"]
 	path = Source/rclcpp/rosidl
 	url = https://github.com/ros2/rosidl.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/class_loader"]
 	path = Source/rclcpp/class_loader
 	url = https://github.com/ros/class_loader.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rclcpp"]
 	path = Source/rclcpp/rclcpp
 	url = https://github.com/ros2/rclcpp.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl_defaults"]
 	path = Source/rclcpp/rosidl_defaults
 	url = https://github.com/ros2/rosidl_defaults.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/common_interfaces"]
 	path = Source/rclcpp/common_interfaces
 	url = https://github.com/ros2/common_interfaces.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/mimick_vendor"]
 	path = Source/rclcpp/mimick_vendor
 	url = https://github.com/ros2/mimick_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rcpputils"]
 	path = Source/rclcpp/rcpputils
 	url = https://github.com/ros2/rcpputils.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl_python"]
 	path = Source/rclcpp/rosidl_python
 	url = https://github.com/ros2/rosidl_python.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/foonathan_memory_vendor"]
 	path = Source/rclcpp/foonathan_memory_vendor
 	url = https://github.com/eProsima/foonathan_memory_vendor.git
@@ -166,43 +166,43 @@
 [submodule "Source/rclcpp/image_common"]
 	path = Source/rclcpp/image_common
 	url = https://github.com/ros-perception/image_common.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/message_filters"]
 	path = Source/rclcpp/message_filters
 	url = https://github.com/ros2/message_filters.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/pluginlib"]
 	path = Source/rclcpp/pluginlib
 	url = https://github.com/ros/pluginlib.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/pybind11_vendor"]
 	path = Source/rclcpp/pybind11_vendor
 	url = https://github.com/ros2/pybind11_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rmw_cyclonedds"]
 	path = Source/rclcpp/rmw_cyclonedds
 	url = https://github.com/ros2/rmw_cyclonedds.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rclpy"]
 	path = Source/rclcpp/rclpy
 	url = https://github.com/ros2/rclpy.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/ros2cli"]
 	path = Source/rclcpp/ros2cli
 	url = https://github.com/ros2/ros2cli.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/rosidl_runtime_py"]
 	path = Source/rclcpp/rosidl_runtime_py
 	url = https://github.com/ros2/rosidl_runtime_py.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/tinyxml2_vendor"]
 	path = Source/rclcpp/tinyxml2_vendor
 	url = https://github.com/ros2/tinyxml2_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/yaml_cpp_vendor"]
 	path = Source/rclcpp/yaml_cpp_vendor
 	url = https://github.com/ros2/yaml_cpp_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/tinyxml2"]
 	path = Source/rclcpp/tinyxml2
 	url = https://github.com/leethomason/tinyxml2.git
@@ -210,11 +210,11 @@
 [submodule "Source/rclcpp/image_transport_plugins"]
 	path = Source/rclcpp/image_transport_plugins
 	url = https://github.com/ros-perception/image_transport_plugins.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/vision_opencv"]
 	path = Source/rclcpp/vision_opencv
 	url = https://github.com/ros-perception/vision_opencv.git
-	branch = humble
+	branch = rolling
 [submodule "Source/rclcpp/opencv"]
 	path = Source/rclcpp/opencv
 	url = https://github.com/opencv/opencv.git
@@ -230,21 +230,22 @@
 [submodule "Source/rclcpp/geometry2"]
 	path = Source/rclcpp/geometry2
 	url = https://github.com/ros2/geometry2.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/eigen3_cmake_module"]
 	path = Source/rclcpp/eigen3_cmake_module
 	url = https://github.com/ros2/eigen3_cmake_module.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/orocos_kdl_vendor"]
 	path = Source/rclcpp/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
-	branch = humble
+	branch = jazzy
 [submodule "Source/rclcpp/vorbis"]
 	path = Source/rclcpp/vorbis
 	url = git@github.com:xiph/vorbis.git
 [submodule "Source/rclcpp/asio"]
 	path = Source/rclcpp/asio
 	url = https://github.com/chriskohlhoff/asio.git
+	branch = asio-1-28-0
 [submodule "Source/rclcpp/iceoryx"]
 	path = Source/rclcpp/iceoryx
 	url = https://github.com/eclipse-iceoryx/iceoryx.git
@@ -252,3 +253,15 @@
 [submodule "Source/rclcpp/acl"]
 	path = Source/rclcpp/acl
 	url = https://github.com/philips/acl.git
+[submodule "Source/rclcpp/rosidl_core"]
+	path = Source/rclcpp/rosidl_core
+	url = https://github.com/ros2/rosidl_core.git
+	branch = jazzy
+[submodule "Source/rclcpp/rosidl_dynamic_typesupport"]
+	path = Source/rclcpp/rosidl_dynamic_typesupport
+	url = https://github.com/ros2/rosidl_dynamic_typesupport.git
+	branch = jazzy
+[submodule "Source/rclcpp/rosidl_dynamic_typesupport_fastrtps"]
+	path = Source/rclcpp/rosidl_dynamic_typesupport_fastrtps
+	url = https://github.com/ros2/rosidl_dynamic_typesupport_fastrtps.git
+	branch = jazzy

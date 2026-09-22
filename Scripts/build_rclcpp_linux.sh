@@ -30,11 +30,14 @@ if ! which pip; then
     exit 1
 fi
 
-# Check for tag
-TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
-if [ "$TAG" = "undefined" ]; then
-    echo "Could not find git tag"
-    exit 1
+# Check for tag. TAG can be set in the environment to build from an untagged
+# commit; release builds should still run from a tagged commit.
+if [ -z "${TAG+x}" ]; then
+  TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+  if [ "$TAG" = "undefined" ]; then
+      echo "Could not find git tag. Set TAG=<name> to build from an untagged commit."
+      exit 1
+  fi
 fi
 
 # Check for UNREAL_ENGINE_PATH
@@ -102,71 +105,15 @@ rm -rf "$ROOT_DIR/Source/rclcpp/log"
 NUM_JOBS="$(nproc --all)"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Applying Tempo patches..."
-cd "$ROOT_DIR/Source/rclcpp/rcpputils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
-cd "$ROOT_DIR/Source/rclcpp/rclcpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw"
-git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcutils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
-cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
-git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
-cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_transport_plugins"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_transport_plugins.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-CDR"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-CDR.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/pluginlib"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
-cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/class_loader"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
-cd "$ROOT_DIR/Source/rclcpp/geometry2"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
-cd "$ROOT_DIR/Source/rclcpp/theora"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
-cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
-cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
-cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
-cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+# Tempo patches. The list lives in Scripts/patches.sh so the three platform
+# scripts cannot drift apart again (they already had: yaml_cpp_vendor was
+# applied on Windows only, and ros2cli.patch was applied nowhere).
+#
+# PATCH_TIERS selects which groups to apply:
+#   B base (non-ROS third party)   E env (needed to build under Unreal)
+#   R rtti / single process image  P std::pmr allocator conversion
+# Override it to bisect a build, e.g. PATCH_TIERS=BE for stock ROS 2.
+"$SCRIPT_DIR/patches.sh" apply --tier "${PATCH_TIERS:-BERP}"
 
 echo "Building acl"
 # Unreal's Linux image doesn't have acl, but iceoryx needs it. So build it and copy it there.
@@ -233,7 +180,13 @@ source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
 pip install empy==3.3.4
 pip install lark==1.1.1
-pip install numpy
+# numpy 2.x is an ABI break for rosidl_generator_py's extension modules and for
+# cv_bridge, both of which are compiled against whatever numpy is present here.
+pip install "numpy<2"
+# New in Jazzy: ament_cmake_vendor_package's ament_vendor() shells out to "vcs" to fetch the
+# sources it vendors (foonathan_memory, yaml-cpp, pybind11, orocos_kdl, mimick, ...). Humble used
+# ExternalProject's own GIT_REPOSITORY and needed no such tool.
+pip install vcstool
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 # Python3.11 instead.
@@ -259,6 +212,8 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=17" \
+ " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -Dvcs_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/vcs'" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
