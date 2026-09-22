@@ -1,368 +1,48 @@
-diff --git a/rosidl_typesupport_fastrtps_c/CMakeLists.txt b/rosidl_typesupport_fastrtps_c/CMakeLists.txt
-index 314f933..0ca9ec0 100644
---- a/rosidl_typesupport_fastrtps_c/CMakeLists.txt
-+++ b/rosidl_typesupport_fastrtps_c/CMakeLists.txt
-@@ -41,8 +41,7 @@ ament_export_dependencies(rosidl_runtime_c)
- ament_python_install_package(${PROJECT_NAME})
- 
- add_library(${PROJECT_NAME}
--  src/identifier.cpp
--  src/wstring_conversion.cpp)
-+  src/identifier.cpp)
- set_property(TARGET ${PROJECT_NAME}
-   PROPERTY DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_FASTRTPS_C_BUILDING_DLL")
- target_include_directories(${PROJECT_NAME} PUBLIC
-diff --git a/rosidl_typesupport_fastrtps_c/cmake/rosidl_typesupport_fastrtps_c_generate_interfaces.cmake b/rosidl_typesupport_fastrtps_c/cmake/rosidl_typesupport_fastrtps_c_generate_interfaces.cmake
-index 4a761ad..9f904b4 100644
---- a/rosidl_typesupport_fastrtps_c/cmake/rosidl_typesupport_fastrtps_c_generate_interfaces.cmake
-+++ b/rosidl_typesupport_fastrtps_c/cmake/rosidl_typesupport_fastrtps_c_generate_interfaces.cmake
-@@ -110,7 +110,7 @@ endif()
- set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
-   PROPERTIES
-     DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_FASTRTPS_C_BUILDING_DLL_${PROJECT_NAME}"
--    CXX_STANDARD 14)
-+    CXX_STANDARD 17)
- 
- target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix} PUBLIC
-   fastcdr
-diff --git a/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp b/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
-index ce85914..0891052 100644
---- a/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
-+++ b/rosidl_typesupport_fastrtps_c/include/rosidl_typesupport_fastrtps_c/wstring_conversion.hpp
-@@ -16,6 +16,7 @@
- #define ROSIDL_TYPESUPPORT_FASTRTPS_C__WSTRING_CONVERSION_HPP_
- 
- #include <string>
-+#include <memory_resource>
- 
- #include "rosidl_runtime_c/u16string.h"
- #include "rosidl_typesupport_fastrtps_c/visibility_control.h"
-@@ -28,9 +29,15 @@ namespace rosidl_typesupport_fastrtps_c
-  * \param[in] u16str The 16-bit character string to copy from.
-  * \param[in,out] wstr The std::wstring to copy to.
-  */
--ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC
-+template <class Allocator>
- void u16string_to_wstring(
--  const rosidl_runtime_c__U16String & u16str, std::wstring & wstr);
-+  const rosidl_runtime_c__U16String & u16str, std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & wstr)
-+{
-+  wstr.resize(u16str.size);
-+  for (size_t i = 0; i < u16str.size; ++i) {
-+    wstr[i] = static_cast<wchar_t>(u16str.data[i]);
-+  }
-+}
- 
- /// Convert a std::wstring into a `rosidl_runtime_c__U16String`.
- /**
-@@ -38,9 +45,19 @@ void u16string_to_wstring(
-  * \param[in,out] u16str The u16string to copy to.
-  * \return true if resizing u16str and assignment succeeded, otherwise false.
-  */
--ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC
-+template <class Allocator>
- bool wstring_to_u16string(
--  const std::wstring & wstr, rosidl_runtime_c__U16String & u16str);
-+  const std::basic_string<wchar_t, std::char_traits<wchar_t>, Allocator> & wstr, rosidl_runtime_c__U16String & u16str)
-+{
-+  bool succeeded = rosidl_runtime_c__U16String__resize(&u16str, wstr.size());
-+  if (!succeeded) {
-+    return false;
-+  }
-+  for (size_t i = 0; i < wstr.size(); ++i) {
-+    u16str.data[i] = static_cast<char16_t>(wstr[i]);
-+  }
-+  return true;
-+}
- 
- }  // namespace rosidl_typesupport_fastrtps_c
- 
-diff --git a/rosidl_typesupport_fastrtps_c/resource/msg__type_support_c.cpp.em b/rosidl_typesupport_fastrtps_c/resource/msg__type_support_c.cpp.em
-index 7ca24f9..03eac67 100644
---- a/rosidl_typesupport_fastrtps_c/resource/msg__type_support_c.cpp.em
-+++ b/rosidl_typesupport_fastrtps_c/resource/msg__type_support_c.cpp.em
-@@ -201,7 +201,7 @@ if isinstance(type_, AbstractNestedType):
-       cdr << str->data;
-     }
- @[    elif isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     for (size_t i = 0; i < size; ++i) {
-       const rosidl_runtime_c__U16String * str = &array_ptr[i];
-       if (str->capacity == 0 || str->capacity <= str->size) {
-@@ -246,7 +246,7 @@ if isinstance(type_, AbstractNestedType):
-     }
-     cdr << str->data;
- @[  elif isinstance(member.type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     rosidl_typesupport_fastrtps_c::u16string_to_wstring(ros_message->@(member.name), wstr);
-     cdr << wstr;
- @[  elif isinstance(member.type, BasicType) and member.type.typename == 'boolean']@
-@@ -327,7 +327,7 @@ else:
- @[    end if]@
- @[    if isinstance(member.type.value_type, AbstractString)]@
-     for (size_t i = 0; i < size; ++i) {
--      std::string tmp;
-+      std::pmr::string tmp;
-       cdr >> tmp;
-       auto & ros_i = array_ptr[i];
-       if (!ros_i.data) {
-@@ -342,7 +342,7 @@ else:
-       }
-     }
- @[    elif isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     for (size_t i = 0; i < size; ++i) {
-       auto & ros_i = array_ptr[i];
-       if (!ros_i.data) {
-@@ -380,7 +380,7 @@ else:
-     }
- @[    end if]@
- @[   elif isinstance(member.type, AbstractString)]@
--    std::string tmp;
-+    std::pmr::string tmp;
-     cdr >> tmp;
-     if (!ros_message->@(member.name).data) {
-       rosidl_runtime_c__String__init(&ros_message->@(member.name));
-@@ -396,7 +396,7 @@ else:
-     if (!ros_message->@(member.name).data) {
-       rosidl_runtime_c__U16String__init(&ros_message->@(member.name));
-     }
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     cdr >> wstr;
-     bool succeeded = rosidl_typesupport_fastrtps_c::wstring_to_u16string(wstr, ros_message->@(member.name));
-     if (!succeeded) {
-diff --git a/rosidl_typesupport_fastrtps_c/src/wstring_conversion.cpp b/rosidl_typesupport_fastrtps_c/src/wstring_conversion.cpp
-deleted file mode 100644
-index 3b9924f..0000000
---- a/rosidl_typesupport_fastrtps_c/src/wstring_conversion.cpp
-+++ /dev/null
-@@ -1,42 +0,0 @@
--// Copyright 2019 Open Source Robotics Foundation, Inc.
--//
--// Licensed under the Apache License, Version 2.0 (the "License");
--// you may not use this file except in compliance with the License.
--// You may obtain a copy of the License at
--//
--//     http://www.apache.org/licenses/LICENSE-2.0
--//
--// Unless required by applicable law or agreed to in writing, software
--// distributed under the License is distributed on an "AS IS" BASIS,
--// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--// See the License for the specific language governing permissions and
--// limitations under the License.
--
--#include <rosidl_typesupport_fastrtps_c/wstring_conversion.hpp>
--
--#include "rosidl_runtime_c/u16string_functions.h"
--
--namespace rosidl_typesupport_fastrtps_c
--{
--
--void u16string_to_wstring(const rosidl_runtime_c__U16String & u16str, std::wstring & wstr)
--{
--  wstr.resize(u16str.size);
--  for (size_t i = 0; i < u16str.size; ++i) {
--    wstr[i] = static_cast<wchar_t>(u16str.data[i]);
--  }
--}
--
--bool wstring_to_u16string(const std::wstring & wstr, rosidl_runtime_c__U16String & u16str)
--{
--  bool succeeded = rosidl_runtime_c__U16String__resize(&u16str, wstr.size());
--  if (!succeeded) {
--    return false;
--  }
--  for (size_t i = 0; i < wstr.size(); ++i) {
--    u16str.data[i] = static_cast<char16_t>(wstr[i]);
--  }
--  return true;
--}
--
--}  // namespace rosidl_typesupport_fastrtps_c
-diff --git a/rosidl_typesupport_fastrtps_cpp/CMakeLists.txt b/rosidl_typesupport_fastrtps_cpp/CMakeLists.txt
-index d42ce68..c4ecbf0 100644
---- a/rosidl_typesupport_fastrtps_cpp/CMakeLists.txt
-+++ b/rosidl_typesupport_fastrtps_cpp/CMakeLists.txt
-@@ -43,8 +43,7 @@ ament_export_dependencies(fastcdr)
- ament_python_install_package(${PROJECT_NAME})
- 
- add_library(${PROJECT_NAME} SHARED
--  src/identifier.cpp
--  src/wstring_conversion.cpp)
-+  src/identifier.cpp)
- set_property(TARGET ${PROJECT_NAME}
-   PROPERTY DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL")
- target_include_directories(${PROJECT_NAME} PUBLIC
-diff --git a/rosidl_typesupport_fastrtps_cpp/cmake/rosidl_typesupport_fastrtps_cpp_generate_interfaces.cmake b/rosidl_typesupport_fastrtps_cpp/cmake/rosidl_typesupport_fastrtps_cpp_generate_interfaces.cmake
-index bfb6c9d..cf136a3 100644
---- a/rosidl_typesupport_fastrtps_cpp/cmake/rosidl_typesupport_fastrtps_cpp_generate_interfaces.cmake
-+++ b/rosidl_typesupport_fastrtps_cpp/cmake/rosidl_typesupport_fastrtps_cpp_generate_interfaces.cmake
-@@ -125,7 +125,7 @@ endif()
- set_target_properties(${rosidl_generate_interfaces_TARGET}${_target_suffix}
-   PROPERTIES
-     DEFINE_SYMBOL "ROSIDL_TYPESUPPORT_FASTRTPS_CPP_BUILDING_DLL_${PROJECT_NAME}"
--    CXX_STANDARD 14)
-+    CXX_STANDARD 17)
- 
- # Set compiler flags
- if(NOT WIN32)
-diff --git a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
-index 35bc7c3..750be66 100644
---- a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
-+++ b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp
-@@ -18,6 +18,7 @@
- #include <rosidl_typesupport_fastrtps_cpp/visibility_control.h>
- 
- #include <string>
-+#include <memory_resource>
- 
+diff --git a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/serialization_helpers.hpp b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/serialization_helpers.hpp
+index 0b70af5..411d5d6 100644
+--- a/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/serialization_helpers.hpp
++++ b/rosidl_typesupport_fastrtps_cpp/include/rosidl_typesupport_fastrtps_cpp/serialization_helpers.hpp
+@@ -27,9 +27,13 @@
  namespace rosidl_typesupport_fastrtps_cpp
  {
-@@ -27,8 +28,14 @@ namespace rosidl_typesupport_fastrtps_cpp
-  * \param[in] u16str The std::u16string character string to copy from.
-  * \param[in,out] wstr The std::wstring to copy to.
-  */
--ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC
--void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr);
-+template <class u16Allocator, class wAllocator>
-+void u16string_to_wstring(const std::basic_string<char16_t, std::char_traits<char16_t>, u16Allocator> & u16str, std::basic_string<wchar_t, std::char_traits<wchar_t>, wAllocator> & wstr)
-+{
-+  wstr.resize(u16str.size());
-+  for (size_t i = 0; i < u16str.size(); ++i) {
-+    wstr[i] = static_cast<wchar_t>(u16str[i]);
-+  }
-+}
  
- /// Convert a std::wstring into a std::u16string.
- /**
-@@ -36,8 +43,19 @@ void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr);
-  * \param[in,out] u16str The std::u16string to copy to.
-  * \return true if resizing u16str and assignment succeeded, otherwise false.
-  */
--ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC
--bool wstring_to_u16string(const std::wstring & wstr, std::u16string & u16str);
-+template <class u16Allocator, class wAllocator>
-+bool wstring_to_u16string(const std::basic_string<wchar_t, std::char_traits<wchar_t>, u16Allocator> & wstr, std::basic_string<char16_t, std::char_traits<char16_t>, wAllocator> & u16str)
-+{
-+  try {
-+    u16str.resize(wstr.size());
-+  } catch (...) {
-+    return false;
-+  }
-+  for (size_t i = 0; i < wstr.size(); ++i) {
-+    u16str[i] = static_cast<char16_t>(wstr[i]);
-+  }
-+  return true;
-+}
- 
- }  // namespace rosidl_typesupport_fastrtps_cpp
- 
-diff --git a/rosidl_typesupport_fastrtps_cpp/resource/msg__type_support.cpp.em b/rosidl_typesupport_fastrtps_cpp/resource/msg__type_support.cpp.em
-index 39dc452..fbef3e6 100644
---- a/rosidl_typesupport_fastrtps_cpp/resource/msg__type_support.cpp.em
-+++ b/rosidl_typesupport_fastrtps_cpp/resource/msg__type_support.cpp.em
-@@ -102,7 +102,7 @@ cdr_serialize(
-     cdr << ros_message.@(member.name);
- @[      else]@
- @[        if isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
- @[        end if]@
-     for (size_t i = 0; i < @(member.type.size); i++) {
- @[        if isinstance(member.type.value_type, NamespacedType)]@
-@@ -134,7 +134,7 @@ cdr_serialize(
-     }
- @[        else]@
- @[            if isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
- @[            end if]@
-     for (size_t i = 0; i < size; i++) {
- @[            if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'boolean']@
-@@ -162,7 +162,7 @@ cdr_serialize(
-   cdr << static_cast<wchar_t>(ros_message.@(member.name));
- @[  elif isinstance(member.type, AbstractWString)]@
-   {
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     rosidl_typesupport_fastrtps_cpp::u16string_to_wstring(ros_message.@(member.name), wstr);
-     cdr << wstr;
++// Tempo change: templated on the allocator. Generated messages default to
++// std::pmr::polymorphic_allocator, so wstring fields arrive as std::pmr::u16string rather than
++// std::u16string. std::u16string still matches, so this replaces the original overload.
++template<typename _Traits, typename _Allocator>
+ inline void cdr_serialize(
+   eprosima::fastcdr::Cdr & cdr,
+-  const std::u16string & u16str)
++  const std::basic_string<char16_t, _Traits, _Allocator> & u16str)
+ {
+   if (u16str.size() > std::numeric_limits<uint32_t>::max()) {
+     throw std::overflow_error("String length exceeds does not fit in CDR serialization format");
+@@ -46,10 +50,13 @@ inline void cdr_serialize(
    }
-@@ -192,7 +192,7 @@ cdr_deserialize(
-     cdr >> ros_message.@(member.name);
- @[      else]@
- @[        if isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
- @[        end if]@
-     for (size_t i = 0; i < @(member.type.size); i++) {
- @[        if isinstance(member.type.value_type, NamespacedType)]@
-@@ -223,7 +223,7 @@ cdr_deserialize(
+ }
+ 
++// Tempo change: see cdr_serialize above.
++template<typename _Traits, typename _Allocator>
+ inline bool cdr_deserialize(
+   eprosima::fastcdr::Cdr & cdr,
+-  std::u16string & u16str)
++  std::basic_string<char16_t, _Traits, _Allocator> & u16str)
+ {
++  using u16string_type = std::basic_string<char16_t, _Traits, _Allocator>;
+   uint32_t len;
+   cdr >> len;
+   try {
+@@ -63,11 +70,11 @@ inline bool cdr_deserialize(
+     // serialized values would fit in the destination type.
+     uint32_t c;
+     cdr >> c;
+-    if (c > std::numeric_limits<std::u16string::value_type>::max()) {
++    if (c > std::numeric_limits<typename u16string_type::value_type>::max()) {
+       throw eprosima::fastcdr::exception::BadParamException(
+               "Character value exceeds maximum value");
      }
- @[        else]@
- @[            if isinstance(member.type.value_type, AbstractWString)]@
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
- @[            end if]@
-     for (size_t i = 0; i < size; i++) {
- @[            if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'boolean']@
-@@ -266,7 +266,7 @@ cdr_deserialize(
+-    u16str[i] = static_cast<std::u16string::value_type>(c);
++    u16str[i] = static_cast<typename u16string_type::value_type>(c);
    }
- @[  elif isinstance(member.type, AbstractWString)]@
-   {
--    std::wstring wstr;
-+    std::pmr::wstring wstr;
-     cdr >> wstr;
-     bool succeeded = rosidl_typesupport_fastrtps_cpp::wstring_to_u16string(wstr, ros_message.@(member.name));
-     if (!succeeded) {
-diff --git a/rosidl_typesupport_fastrtps_cpp/src/wstring_conversion.cpp b/rosidl_typesupport_fastrtps_cpp/src/wstring_conversion.cpp
-deleted file mode 100644
-index 387359d..0000000
---- a/rosidl_typesupport_fastrtps_cpp/src/wstring_conversion.cpp
-+++ /dev/null
-@@ -1,41 +0,0 @@
--// Copyright 2019 Open Source Robotics Foundation, Inc.
--//
--// Licensed under the Apache License, Version 2.0 (the "License");
--// you may not use this file except in compliance with the License.
--// You may obtain a copy of the License at
--//
--//     http://www.apache.org/licenses/LICENSE-2.0
--//
--// Unless required by applicable law or agreed to in writing, software
--// distributed under the License is distributed on an "AS IS" BASIS,
--// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--// See the License for the specific language governing permissions and
--// limitations under the License.
--
--#include <rosidl_typesupport_fastrtps_cpp/wstring_conversion.hpp>
--
--namespace rosidl_typesupport_fastrtps_cpp
--{
--
--void u16string_to_wstring(const std::u16string & u16str, std::wstring & wstr)
--{
--  wstr.resize(u16str.size());
--  for (size_t i = 0; i < u16str.size(); ++i) {
--    wstr[i] = static_cast<wchar_t>(u16str[i]);
--  }
--}
--
--bool wstring_to_u16string(const std::wstring & wstr, std::u16string & u16str)
--{
--  try {
--    u16str.resize(wstr.size());
--  } catch (...) {
--    return false;
--  }
--  for (size_t i = 0; i < wstr.size(); ++i) {
--    u16str[i] = static_cast<char16_t>(wstr[i]);
--  }
--  return true;
--}
--
--}  // namespace rosidl_typesupport_fastrtps_cpp
+ 
+   return true;
