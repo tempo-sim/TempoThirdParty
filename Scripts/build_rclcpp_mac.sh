@@ -114,11 +114,27 @@ echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-echo -e "Removing stale Outputs and Builds\n"
-rm -rf "$ROOT_DIR/Outputs/rclcpp"
-rm -rf "$ROOT_DIR/Builds/rclcpp"
-rm -rf "$ROOT_DIR/Source/rclcpp/install"
-rm -rf "$ROOT_DIR/Source/rclcpp/log"
+INSTALL_DIR="$ROOT_DIR/Source/rclcpp/install"
+
+# The Boost/ogg/theora/OpenCV prelude is independent of which ROS distro we are building.
+# SKIP_PREBUILT=1 reuses whatever is already installed into Source/rclcpp/install and keeps the
+# colcon build tree, which is what makes the patch/compile/fix loop workable. Release builds must
+# not set it.
+if [ -n "${SKIP_PREBUILT+x}" ]; then
+  if [ ! -d "$INSTALL_DIR" ]; then
+    echo "SKIP_PREBUILT is set but $INSTALL_DIR does not exist."
+    echo "Run once without SKIP_PREBUILT to build the third party prelude first."
+    exit 1
+  fi
+  echo -e "SKIP_PREBUILT is set: reusing prebuilt Boost/ogg/theora/OpenCV.\n"
+  rm -rf "$ROOT_DIR/Outputs/rclcpp"
+else
+  echo -e "Removing stale Outputs and Builds\n"
+  rm -rf "$ROOT_DIR/Outputs/rclcpp"
+  rm -rf "$ROOT_DIR/Builds/rclcpp"
+  rm -rf "$INSTALL_DIR"
+  rm -rf "$ROOT_DIR/Source/rclcpp/log"
+fi
 
 NUM_JOBS="$(sysctl -n hw.ncpu)"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
@@ -134,10 +150,18 @@ echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 # Override it to bisect a build, e.g. PATCH_TIERS=BE for stock ROS 2.
 "$SCRIPT_DIR/patches.sh" apply --tier "${PATCH_TIERS:-BERP}"
 
+# asio is a header-only copy, so it is cheap enough to refresh on every run -- and it must be,
+# because Fast DDS version-checks asio/version.hpp. Leaving a stale copy behind SKIP_PREBUILT
+# would silently keep an old asio in the prefix and fail the check.
 echo -e "Copying asio"
+rm -rf "$ROOT_DIR/Source/rclcpp/install/include/asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
+
+# ---- third party prelude: Boost, ogg, theora, OpenCV ----
+# Identical across ROS distros, so SKIP_PREBUILT reuses it.
+if [ -z "${SKIP_PREBUILT+x}" ]; then
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -194,10 +218,18 @@ cmake \
  "$ROOT_DIR/Source/rclcpp/opencv"
 cmake --build . -t install -j "$NUM_JOBS"
 
-echo -e "Creating Python virtual environment for colcon build.\n"
-cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+fi
+# ---- end third party prelude ----
+
+if [ ! -f "$ROOT_DIR/Builds/rclcpp/venv/bin/activate" ]; then
+  echo -e "Creating Python virtual environment for colcon build.\n"
+  cd "$UNREAL_ENGINE_PATH"
+  ./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+fi
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
+# Run every time, not just on create: these are cheap no-ops once satisfied, and the venv
+# survives across runs when SKIP_PREBUILT is set, so a newly added dependency would otherwise
+# never get installed into an existing environment.
 pip install colcon-common-extensions
 pip install empy==3.3.4
 pip install lark==1.1.1
@@ -221,6 +253,14 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
+# CMake ships three separate Python find modules with three separate variable namespaces:
+# FindPython3 (Python3_*), the deprecated FindPythonLibs/FindPythonInterp (PYTHON_*), and
+# FindPython (Python_*). Which one a package uses is its own choice, so pin all three to the venv
+# (which is Unreal's Python 3.11). *_FIND_FRAMEWORK=NEVER matters on Mac: FindPython searches
+# framework installs before anything else by default, so tf2_py -- which calls
+# find_package(Python3 COMPONENTS Development) without going through PythonExtra first -- picked up
+# Homebrew's /opt/homebrew/Frameworks/Python.framework 3.13 and then failed to find its headers.
+#
 # To inspect compiler/linker commands
 # export VERBOSE=1
 # --cmake-clean-cache \
@@ -235,6 +275,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=20" \
  " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF" \
  " -Dvcs_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/vcs'" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
@@ -269,7 +310,15 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
+ " -DPython3_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPython3_FIND_FRAMEWORK=NEVER" \
+ " -DPython_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
+ " -DPython_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPython_FIND_FRAMEWORK=NEVER" \
+ " -DPYTHON_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
  " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
