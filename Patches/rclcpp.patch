@@ -587,6 +587,42 @@ index 55892867..7a0b8efb 100644
  class Publisher : public PublisherBase
  {
  public:
+diff --git a/rclcpp/include/rclcpp/publisher_base.hpp b/rclcpp/include/rclcpp/publisher_base.hpp
+index 9a6c398e..18938c54 100644
+--- a/rclcpp/include/rclcpp/publisher_base.hpp
++++ b/rclcpp/include/rclcpp/publisher_base.hpp
+@@ -22,6 +22,7 @@
+ #include <functional>
+ #include <iostream>
+ #include <memory>
++#include <memory_resource>
+ #include <sstream>
+ #include <string>
+ #include <unordered_map>
+@@ -124,7 +125,7 @@ public:
+   /** \return The map of QoS event handlers. */
+   RCLCPP_PUBLIC
+   const
+-  std::unordered_map<rcl_publisher_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
++  std::pmr::unordered_map<rcl_publisher_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
+   get_event_handlers() const;
+ 
+   /// Get subscription count
+@@ -363,7 +364,13 @@ protected:
+ 
+   std::shared_ptr<rcl_publisher_t> publisher_handle_;
+ 
+-  std::unordered_map<rcl_publisher_event_type_t,
++  // Tempo change: std::pmr, so that this map's nodes are allocated and freed through the one
++  // process-wide default memory resource no matter which binary runs the code. add_event_handler()
++  // is a header template, so it can be instantiated outside librclcpp, while ~PublisherBase() frees the
++  // nodes inside it. On Windows each Unreal module has its own operator new/delete (FMemory), so a
++  // std::allocator node allocated in one and freed in the other corrupts the heap. See
++  // tempo-sim/TempoROS#82.
++  std::pmr::unordered_map<rcl_publisher_event_type_t,
+     std::shared_ptr<rclcpp::EventHandlerBase>> event_handlers_;
+ 
+   using IntraProcessManagerWeakPtr =
 diff --git a/rclcpp/include/rclcpp/publisher_options.hpp b/rclcpp/include/rclcpp/publisher_options.hpp
 index d3070138..24bdfaee 100644
 --- a/rclcpp/include/rclcpp/publisher_options.hpp
@@ -650,6 +686,52 @@ index b0fa2285..69f9d046 100644
    /// MessageT::custom_type if MessageT is a TypeAdapter,
    /// otherwise just MessageT.
    typename SubscribedT = typename rclcpp::TypeAdapter<MessageT>::custom_type,
+diff --git a/rclcpp/include/rclcpp/subscription_base.hpp b/rclcpp/include/rclcpp/subscription_base.hpp
+index 615f3852..c35865d2 100644
+--- a/rclcpp/include/rclcpp/subscription_base.hpp
++++ b/rclcpp/include/rclcpp/subscription_base.hpp
+@@ -17,6 +17,7 @@
+ 
+ #include <atomic>
+ #include <memory>
++#include <memory_resource>
+ #include <mutex>
+ #include <string>
+ #include <unordered_map>
+@@ -140,7 +141,7 @@ public:
+   /** \return The map of QoS event handlers. */
+   RCLCPP_PUBLIC
+   const
+-  std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
++  std::pmr::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
+   get_event_handlers() const;
+ 
+   /// Get the actual QoS settings, after the defaults have been determined.
+@@ -657,7 +658,13 @@ protected:
+   std::shared_ptr<rcl_subscription_t> intra_process_subscription_handle_;
+   rclcpp::Logger node_logger_;
+ 
+-  std::unordered_map<rcl_subscription_event_type_t,
++  // Tempo change: std::pmr, so that this map's nodes are allocated and freed through the one
++  // process-wide default memory resource no matter which binary runs the code. add_event_handler()
++  // is a header template, so it can be instantiated outside librclcpp, while ~SubscriptionBase() frees the
++  // nodes inside it. On Windows each Unreal module has its own operator new/delete (FMemory), so a
++  // std::allocator node allocated in one and freed in the other corrupts the heap. See
++  // tempo-sim/TempoROS#82.
++  std::pmr::unordered_map<rcl_subscription_event_type_t,
+     std::shared_ptr<rclcpp::EventHandlerBase>> event_handlers_;
+ 
+   bool use_intra_process_;
+@@ -675,7 +682,8 @@ private:
+ 
+   std::atomic<bool> subscription_in_use_by_wait_set_{false};
+   std::atomic<bool> intra_process_subscription_waitable_in_use_by_wait_set_{false};
+-  std::unordered_map<rclcpp::EventHandlerBase *,
++  // Tempo change: std::pmr for the same reason as event_handlers_.
++  std::pmr::unordered_map<rclcpp::EventHandlerBase *,
+     std::atomic<bool>> qos_events_in_use_by_wait_set_;
+ };
+ 
 diff --git a/rclcpp/include/rclcpp/subscription_options.hpp b/rclcpp/include/rclcpp/subscription_options.hpp
 index 12dc1b45..ebb5e36b 100644
 --- a/rclcpp/include/rclcpp/subscription_options.hpp
@@ -1130,6 +1212,32 @@ index ee46e776..945e282d 100644
    value_.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
  }
  
+diff --git a/rclcpp/src/rclcpp/publisher_base.cpp b/rclcpp/src/rclcpp/publisher_base.cpp
+index 111246ed..37267ba6 100644
+--- a/rclcpp/src/rclcpp/publisher_base.cpp
++++ b/rclcpp/src/rclcpp/publisher_base.cpp
+@@ -222,7 +222,7 @@ PublisherBase::get_publisher_handle() const
+ }
+ 
+ const
+-std::unordered_map<rcl_publisher_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
++std::pmr::unordered_map<rcl_publisher_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
+ PublisherBase::get_event_handlers() const
+ {
+   return event_handlers_;
+diff --git a/rclcpp/src/rclcpp/subscription_base.cpp b/rclcpp/src/rclcpp/subscription_base.cpp
+index f7c238a9..87ce9927 100644
+--- a/rclcpp/src/rclcpp/subscription_base.cpp
++++ b/rclcpp/src/rclcpp/subscription_base.cpp
+@@ -190,7 +190,7 @@ SubscriptionBase::get_subscription_handle() const
+ }
+ 
+ const
+-std::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
++std::pmr::unordered_map<rcl_subscription_event_type_t, std::shared_ptr<rclcpp::EventHandlerBase>> &
+ SubscriptionBase::get_event_handlers() const
+ {
+   return event_handlers_;
 diff --git a/rclcpp_components/src/component_manager.cpp b/rclcpp_components/src/component_manager.cpp
 index 7b77af9c..6bc6c5ac 100644
 --- a/rclcpp_components/src/component_manager.cpp
