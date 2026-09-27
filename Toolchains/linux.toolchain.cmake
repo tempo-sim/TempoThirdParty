@@ -32,12 +32,12 @@ set(CMAKE_AR 			${CLANG_TOOLCHAIN_BIN}/x86_64-unknown-linux-gnu-ar		CACHE PATH "
 set(CMAKE_SYSTEM_INCLUDE_PATH "")
 set(CMAKE_INCLUDE_PATH  "")
 # set(CMAKE_SYSROOT "${CLANG_TOOLCHAIN_ROOT}")
-include_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/include/c++/v1")
+include_directories("$ENV{LIBCXX_INCLUDE_DIR}")
 include_directories("${CLANG_TOOLCHAIN_ROOT}/usr/include")
 
 # Library paths (use libc++, specifically the one that comes with Unreal)
 set(CMAKE_CXX_STANDARD_LIBRARIES "-stdlib=libc++ -nostdlib++ -lc++ -lc++abi")
-link_directories("${UE_THIRD_PARTY_PATH}/Unix/LibCxx/lib/Unix/${LINUX_ARCH_NAME}")
+link_directories("$ENV{LIBCXX_LIB_DIR}")
 
 # Compiler flags (chosen to match those Unreal uses as closely as possible)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -47,6 +47,7 @@ set(COMPILER_FLAGS " -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-len
                      --sysroot=${CLANG_TOOLCHAIN_ROOT} -fno-math-errno -fdiagnostics-format=msvc \
                      -funwind-tables -gdwarf-3 -pthread -Wno-unused-command-line-argument \
                      -Wno-error=deprecated-declarations -Wno-strict-prototypes -Wno-deprecated-copy \
+                     -Wno-error=deprecated-literal-operator \
                      -Wl,--allow-shlib-undefined")
 
 string(CONCAT CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_INIT} ${COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")

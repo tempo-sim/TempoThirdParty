@@ -36,11 +36,15 @@ if ! which cl; then
   exit 1
 fi
 
-# Check for tag
-TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
-if [ "$TAG" = "undefined" ]; then
-    echo "Could not find git tag"
-    exit 1
+# Check for tag. TAG can be set in the environment to build from an untagged
+# commit, which is what the Jazzy upgrade work needs; release builds should
+# still run from a tagged commit and get the tag from git.
+if [ -z "${TAG+x}" ]; then
+  TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+  if [ "$TAG" = "undefined" ]; then
+      echo "Could not find git tag. Set TAG=<name> to build from an untagged commit."
+      exit 1
+  fi
 fi
 
 # Check for UNREAL_ENGINE_PATH
@@ -59,7 +63,20 @@ if [ ! -d "${UE_THIRD_PARTY_PATH}" ]; then
   echo "ThirdParty directory does not exist: $UE_THIRD_PARTY_PATH";
   exit 1
 fi
-export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
+
+# Native (C:/...) forms for everything we hand to cmake.exe. UNREAL_ENGINE_PATH arrives as an MSYS
+# path (/c/Program Files/...), and MSYS does not rewrite it inside the quoted "-DVAR='...'" strings
+# we pass through colcon --cmake-args. CMake then stores the /c/... value verbatim and the setting
+# silently does nothing: every -DZLIB_LIBRARY / -DPNG_LIBRARY / -DOPENSSL_* / -DPython3_LIBRARY we
+# thought we were pinning was landing in the cache as an unusable path. That is why the OpenSSL
+# pinning never actually took hold, and it only became a hard error in Jazzy, where lttngpy is the
+# first package to require Python3 COMPONENTS Development.
+#
+# C:/... works fine in bash too, so the exported value is the native one -- cmake/Modules/*/
+# FindOpenSSL.cmake reads it back out of the environment.
+NATIVE_UNREAL_ENGINE_PATH=$(cygpath -m "$UNREAL_ENGINE_PATH")
+NATIVE_UE_THIRD_PARTY_PATH=$(cygpath -m "$UE_THIRD_PARTY_PATH")
+export UE_THIRD_PARTY_PATH="$NATIVE_UE_THIRD_PARTY_PATH"
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
@@ -68,90 +85,54 @@ echo -e "Using git tag: $TAG\n"
 echo -e "All prerequisites satisfied. Starting build.\n"
 
 BUILD_DIR="/c/rclbld"
+INSTALL_DIR="$ROOT_DIR/Source/rclcpp/install"
 
-echo -e "Removing stale Outputs and Builds\n"
-rm -rf "$ROOT_DIR/Outputs/rclcpp"
-rm -rf "$BUILD_DIR"
-rm -rf "$ROOT_DIR/Source/rclcpp/install"
-rm -rf "$ROOT_DIR/Source/rclcpp/log"
+# The Boost/ogg/vorbis/theora/OpenCV prelude takes hours and is independent of
+# which ROS distro we are building. SKIP_PREBUILT=1 reuses whatever is already
+# installed into Source/rclcpp/install and keeps the colcon build tree, which is
+# what makes the patch/compile/fix loop workable. Release builds must not set it.
+if [ -n "${SKIP_PREBUILT+x}" ]; then
+  if [ ! -d "$INSTALL_DIR" ]; then
+    echo "SKIP_PREBUILT is set but $INSTALL_DIR does not exist."
+    echo "Run once without SKIP_PREBUILT to build the third party prelude first."
+    exit 1
+  fi
+  echo -e "SKIP_PREBUILT is set: reusing prebuilt Boost/ogg/vorbis/theora/OpenCV.\n"
+else
+  echo -e "Removing stale Outputs and Builds\n"
+  rm -rf "$ROOT_DIR/Outputs/rclcpp"
+  rm -rf "$BUILD_DIR"
+  rm -rf "$INSTALL_DIR"
+  rm -rf "$ROOT_DIR/Source/rclcpp/log"
+fi
 
 mkdir -p $BUILD_DIR
 
 NUM_JOBS=$(nproc --all)
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Applying Tempo patches..."
-cd "$ROOT_DIR/Source/rclcpp/rcpputils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
-cd "$ROOT_DIR/Source/rclcpp/rclcpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw"
-git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcutils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
-cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
-git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
-cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_transport_plugins"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_transport_plugins.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-CDR"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-CDR.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/pluginlib"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
-cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/class_loader"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
-cd "$ROOT_DIR/Source/rclcpp/geometry2"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
-cd "$ROOT_DIR/Source/rclcpp/theora"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
-cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
-cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
-cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
-cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
-cd "$ROOT_DIR/Source/rclcpp/yaml_cpp_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/yaml_cpp_vendor.patch"
+# Tempo patches. The list lives in Scripts/patches.sh so the three platform
+# scripts cannot drift apart again (they already had: yaml_cpp_vendor was
+# applied on Windows only, and ros2cli.patch was applied nowhere).
+#
+# PATCH_TIERS selects which groups to apply:
+#   B base (non-ROS third party)   E env (needed to build under Unreal)
+#   R rtti / single process image  P std::pmr allocator conversion
+# Override it to bisect a build, e.g. PATCH_TIERS=BE for stock ROS 2.
+"$SCRIPT_DIR/patches.sh" apply --tier "${PATCH_TIERS:-BERP}"
 
+# asio is a header-only copy, so it is cheap enough to refresh on every run -- and it must be,
+# because Fast DDS version-checks asio/version.hpp. Leaving a stale copy behind SKIP_PREBUILT
+# would silently keep an old asio in the prefix and fail the check.
 echo -e "Copying asio"
+rm -rf "$ROOT_DIR/Source/rclcpp/install/include/asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
+
+# ---- third party prelude: Boost, ogg, vorbis, theora, OpenCV ----
+# Hours of work that is identical across ROS distros, so SKIP_PREBUILT reuses it.
+if [ -z "${SKIP_PREBUILT+x}" ]; then
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -216,6 +197,9 @@ cmake -G "Visual Studio 17 2022" \
  "$ROOT_DIR/Source/rclcpp/opencv"
 cmake --build . -t install --config Release -j "$NUM_JOBS"
 
+fi
+# ---- end third party prelude ----
+
 # Remove the root-level "Windows Pack" OpenCVConfig, which is only a forwarder that guesses the
 # runtime subdirectory from MSVC_VERSION. We point OpenCV_DIR straight at the real config instead.
 rm -f "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig.cmake" "$ROOT_DIR/Source/rclcpp/install/OpenCVConfig-version.cmake"
@@ -230,16 +214,84 @@ fi
 NATIVE_OPENCV_CMAKE_DIR=$(cygpath -m "$OPENCV_CMAKE_DIR")
 echo -e "Using OpenCV cmake config: $NATIVE_OPENCV_CMAKE_DIR\n"
 
-cp -r "$UE_THIRD_PARTY_PATH/Eigen" "$BUILD_DIR/eigen-cp"
+if [ ! -d "$BUILD_DIR/eigen-cp" ]; then
+  cp -r "$UE_THIRD_PARTY_PATH/Eigen" "$BUILD_DIR/eigen-cp"
+fi
 
-echo -e "Creating Python virtual environment for colcon build.\n"
-cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Win64/python.exe -m venv "$BUILD_DIR/venv"
+# Unreal ships Eigen as headers with no Eigen3Config.cmake, so find_package(Eigen3 CONFIG) cannot
+# see it. Several packages reach Eigen through ROS's eigen3_cmake_module, whose FindEigen3.cmake
+# *only* does a config-mode find and then requires EIGEN3_FOUND -- our own Modules/Windows/
+# FindEigen3.cmake never gets a look in, because eigen3_cmake_module puts its module directory
+# ahead of ours. Generate the config package next to the headers instead, which satisfies config
+# mode, module mode and the Eigen3::Eigen target for everyone.
+#
+# Until this existed the gap was being filled by whatever Eigen the machine had registered with
+# CMake -- here, Chocolatey's Eigen 3.3.4 rather than the 3.4.0 Unreal is built against.
+_eigen_macros="$BUILD_DIR/eigen-cp/Eigen/src/Core/util/Macros.h"
+if [ ! -f "$_eigen_macros" ]; then
+  echo "Could not find Eigen headers at $BUILD_DIR/eigen-cp"
+  exit 1
+fi
+_eigen_world=$(grep -oP '#define\s+EIGEN_WORLD_VERSION\s+\K[0-9]+' "$_eigen_macros")
+_eigen_major=$(grep -oP '#define\s+EIGEN_MAJOR_VERSION\s+\K[0-9]+' "$_eigen_macros")
+_eigen_minor=$(grep -oP '#define\s+EIGEN_MINOR_VERSION\s+\K[0-9]+' "$_eigen_macros")
+EIGEN_VERSION="$_eigen_world.$_eigen_major.$_eigen_minor"
+echo -e "Using Unreal Eigen $EIGEN_VERSION\n"
+
+cat > "$BUILD_DIR/eigen-cp/Eigen3Config.cmake" <<EOF
+# Generated by build_rclcpp_windows.sh for Unreal's header-only Eigen. Do not edit.
+get_filename_component(EIGEN3_INCLUDE_DIR "\${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+set(EIGEN3_INCLUDE_DIRS "\${EIGEN3_INCLUDE_DIR}")
+set(EIGEN3_ROOT_DIR "\${EIGEN3_INCLUDE_DIR}")
+set(Eigen3_INCLUDE_DIR "\${EIGEN3_INCLUDE_DIR}")
+set(Eigen3_INCLUDE_DIRS "\${EIGEN3_INCLUDE_DIR}")
+set(Eigen3_ROOT_DIR "\${EIGEN3_INCLUDE_DIR}")
+set(EIGEN3_VERSION_STRING "$EIGEN_VERSION")
+set(EIGEN3_VERSION "$EIGEN_VERSION")
+set(Eigen3_VERSION "$EIGEN_VERSION")
+set(EIGEN3_DEFINITIONS "")
+set(EIGEN3_FOUND TRUE)
+set(Eigen3_FOUND TRUE)
+if(NOT TARGET Eigen3::Eigen)
+  add_library(Eigen3::Eigen INTERFACE IMPORTED)
+  set_target_properties(Eigen3::Eigen PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "\${EIGEN3_INCLUDE_DIR}")
+endif()
+EOF
+
+cat > "$BUILD_DIR/eigen-cp/Eigen3ConfigVersion.cmake" <<EOF
+# Generated by build_rclcpp_windows.sh. Do not edit.
+set(PACKAGE_VERSION "$EIGEN_VERSION")
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+  set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+    set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
+EOF
+
+if [ ! -f "$BUILD_DIR/venv/Scripts/activate" ]; then
+  echo -e "Creating Python virtual environment for colcon build.\n"
+  cd "$UNREAL_ENGINE_PATH"
+  ./Engine/Binaries/ThirdParty/Python3/Win64/python.exe -m venv "$BUILD_DIR/venv"
+fi
 source "$BUILD_DIR/venv/Scripts/activate"
+
+# Run every time, not just on create: these are cheap no-ops once satisfied, and the venv now
+# survives across runs when SKIP_PREBUILT is set, so a newly added dependency would otherwise
+# never get installed into an existing environment.
 pip install colcon-common-extensions
 pip install empy==3.3.4
 pip install lark==1.1.1
-pip install numpy
+## numpy 2.x is an ABI break for rosidl_generator_py's extension modules and for
+## cv_bridge, both of which are compiled against whatever numpy is present here.
+pip install "numpy<2"
+## New in Jazzy: ament_cmake_vendor_package's ament_vendor() shells out to "vcs" to fetch the
+## sources it vendors (foonathan_memory, yaml-cpp, pybind11, orocos_kdl, mimick, ...). Humble used
+## ExternalProject's own GIT_REPOSITORY and needed no such tool.
+pip install vcstool
 ## 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 ## paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 ## Python3.11 instead.
@@ -263,15 +315,106 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # " -DCMAKE_CXX_STANDARD_REQUIRED=ON" \
 # " -DCMAKE_CXX_EXTENSIONS=OFF" \
 # " -DBoost_NO_BOOST_CMAKE=ON" \
+# CMake ships three separate Python find modules with three separate variable namespaces:
+# FindPython3 (Python3_*), the deprecated FindPythonLibs/FindPythonInterp (PYTHON_*), and
+# FindPython (Python_*). Which one a package uses is its own choice, so pin all three. PyKDL,
+# reached through python_orocos_kdl_vendor's FetchContent, is the one that asks for plain
+# find_package(Python COMPONENTS Development) and fails if only the other two are set.
+#
+# THIRDPARTY_Asio=FORCE / Asio_INCLUDE_DIR below is what Linux and Mac have always passed, and
+# Windows never did. Without it Fast DDS does find_package(Asio CONFIG) first, which happily picks
+# up whatever Asio the machine has installed -- on this build host, a Chocolatey asio 1.12.1, which
+# is older than the 1.13.0 Fast DDS 2.14 requires, so the build fails on a package we vendor
+# ourselves. FORCE skips the system search and uses the copy we install above.
+#
+# The ZLIB/PNG/JPEG settings below pass both the plural result variables and the singular *cache*
+# variables (ZLIB_INCLUDE_DIR, PNG_PNG_INCLUDE_DIR, JPEG_INCLUDE_DIR). Only the singular ones are
+# what CMake's Find modules actually look for; the plural ones are outputs those modules compute.
+# Passing only the plural form looks right and does nothing, which went unnoticed until Jazzy added
+# zstd_image_transport -- the first package here to call find_package(ZLIB) and therefore the first
+# to fail on it.
+#
+# CMAKE_CXX_STANDARD stays at 17 here (Mac uses 20; that is a compiler difference, not drift).
+# Jazzy is released and tested at C++17, and MSVC turns /permissive- on by default for /std:c++20,
+# which then rejects rclcpp's own source: context.cpp defines Context::remove_shutdown_callback
+# outside namespace rclcpp and names ShutdownCallbackHandle unqualified in the parameter list. The
+# non-template overload right above it compiles fine; only the template trips MSVC's two-phase
+# lookup. clang accepts both, which is why the Mac build has been on C++20 all along. Packages that
+# genuinely need C++20 set it themselves, which is what the Tempo patches have always done.
+#
+# The three CMAKE_FIND_USE_* settings below make the build hermetic, which matters because this
+# repo exists to produce a reproducible bundle and CMake will otherwise happily prefer whatever the
+# build machine happens to have installed:
+#
+#  - SYSTEM_ENVIRONMENT_PATH: CMake derives a find_package prefix from every entry in PATH, and a
+#    machine with the Tempo plugin deployed has the *shipped* bundle on PATH -- which contains
+#    share/<pkg>/cmake/ configs, because packaging copies "share" into Binaries/Windows.
+#    find_package(foonathan_memory) resolved against the previously released bundle.
+#  - PACKAGE_REGISTRY / SYSTEM_PACKAGE_REGISTRY: HKCU/HKLM \Software\Kitware\CMake\Packages. On this
+#    host Chocolatey had registered Asio, Bullet, CUnit, Eigen3, TinyXML and TinyXML2 there, so
+#    find_package silently preferred those over the copies we vendor -- Asio 1.12.1 (too old for
+#    Fast DDS 2.14) and Eigen 3.3.4 (which still uses std::unary_negate, removed in C++20) both
+#    came from there, and tinyxml2 was being shadowed the same way without anyone noticing.
+#
+# Everything this build genuinely needs is either passed explicitly below or reachable through
+# CMAKE_PREFIX_PATH, so none of those discovery mechanisms are load bearing. CMake derives a
+# find_package search prefix from every entry in PATH, and a machine with the Tempo plugin deployed
+# has the *shipped* bundle on PATH -- which contains share/<pkg>/cmake/ config files, because the
+# packaging step copies "share" into Binaries/Windows. find_package(foonathan_memory) then resolves
+# against the previously released bundle instead of the one we are building, and fails pointing at a
+# lib/ directory that a runtime-only bundle does not have. Everything this build genuinely needs is
+# passed explicitly or comes through CMAKE_PREFIX_PATH, so PATH-derived prefixes are pure contamination.
+#
 # cmake.exe is a native Windows program, so every path we hand it has to be a Windows path. MSYS only
 # rewrites arguments it recognizes as paths, and it does not rewrite the quoted "-DVAR='...'" strings
 # we pass through colcon's --cmake-args, so anything derived from $ROOT_DIR must be converted here.
 # Getting this wrong fails silently: CMake stores the unusable /c/... value and then either reports
 # the package as NOTFOUND or ignores the setting entirely.
 NATIVE_ROOT_DIR=$(cygpath -m "$ROOT_DIR")
-NATIVE_EIGEN_PATH=$(cygpath -w "$BUILD_DIR/eigen-cp")
+# -m, not -w: this value gets embedded in a CMake string that ament_vendor() re-parses with
+# cmake_parse_arguments when forwarding it to the nested build, and a backslash path blows up
+# there ("Invalid character escape '\e'" for C:\rclbld\eigen-cp). -m yields C:/... which CMake
+# and MSVC both accept, and is what the rest of this script already uses.
+NATIVE_EIGEN_PATH=$(cygpath -m "$BUILD_DIR/eigen-cp")
 NATIVE_PYTHON_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/python.exe")
-export CMAKE_PREFIX_PATH="$NATIVE_ROOT_DIR/Source/rclcpp/cmake"
+# ament_vendor() does find_program(vcs_EXECUTABLE NAMES vcs), which searches PATH -- and we turn
+# PATH searching off below to keep the build hermetic. Point it at the venv copy explicitly, the
+# same way every other tool and library here is pinned rather than discovered.
+NATIVE_VCS_PATH=$(cygpath -w "$BUILD_DIR/venv/Scripts/vcs.exe")
+if [ ! -f "$BUILD_DIR/venv/Scripts/vcs.exe" ]; then
+  echo "vcs was not installed into the build venv; ament_vendor() cannot fetch vendored sources."
+  exit 1
+fi
+
+# Same story for pkg-config, which theora_image_transport uses via pkg_check_modules to find
+# theora.pc/ogg.pc: find_program looks on PATH, and PATH searching is off.
+PKG_CONFIG_BIN=$(which pkg-config 2>/dev/null)
+if [ -z "$PKG_CONFIG_BIN" ]; then
+  echo "Couldn't find pkg-config (expected a native Windows build, e.g. C:\\PkgConfig\\pkg-config.exe)"
+  exit 1
+fi
+NATIVE_PKG_CONFIG_PATH=$(cygpath -m "$PKG_CONFIG_BIN")
+# Every ament_vendor() package installs its payload to install/opt/<project> and then relies on an
+# environment hook (share/<pkg>/environment/vendor_package_cmake_prefix.dsv, which says
+# "prepend-non-duplicate;CMAKE_PREFIX_PATH;opt/<pkg>") to make that prefix findable. That hook is
+# not taking effect in this build, so a package fails to find what the vendor package it depends on
+# has just built -- lttngpy could not find pybind11, python_orocos_kdl_vendor could not find
+# orocos_kdl, and so on for every vendor package. Rather than pin each one by hand, work out the
+# vendor prefixes from the source tree and put them on CMAKE_PREFIX_PATH ourselves.
+#
+# Enumerating from the *source* tree matters: on a clean build install/opt is still empty at this
+# point. Prefixes that do not exist yet are simply ignored by CMake, and by the time a dependent
+# package configures, colcon has already built the vendor package it needs.
+VENDOR_OPT_PREFIXES=""
+while IFS= read -r _cml; do
+  [ -z "$_cml" ] && continue
+  _pname=$(grep -m1 -E '^[[:space:]]*project\(' "$_cml" | sed -E 's/^[[:space:]]*project\(([A-Za-z0-9_-]+).*/\1/')
+  [ -n "$_pname" ] && VENDOR_OPT_PREFIXES="$VENDOR_OPT_PREFIXES;$NATIVE_ROOT_DIR/Source/rclcpp/install/opt/$_pname"
+done <<< "$(grep -rlE '^[[:space:]]*ament_vendor\(' "$ROOT_DIR/Source/rclcpp" \
+             --include=CMakeLists.txt --exclude-dir=install --exclude-dir=log --exclude-dir=build 2>/dev/null)"
+echo -e "Vendor prefixes:$VENDOR_OPT_PREFIXES\n"
+
+export CMAKE_PREFIX_PATH="$NATIVE_ROOT_DIR/Source/rclcpp/cmake;$NATIVE_EIGEN_PATH$VENDOR_OPT_PREFIXES"
 # pkg-config here is a native Windows build (C:\PkgConfig\pkg-config.exe), so PKG_CONFIG_PATH needs
 # Windows paths separated by ";" -- a "/c/..." entry is unreadable to it, and ":" would in any case
 # split "C:/..." at the drive letter. This is what theora_image_transport's pkg_check_modules(theora)
@@ -296,23 +439,33 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-args \
  " -G Visual Studio 17 2022" \
  " -DCMAKE_CXX_STANDARD=17" \
+ " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF" \
+ " -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF" \
+ " -Dvcs_EXECUTABLE='$NATIVE_VCS_PATH'" \
+ " -DPKG_CONFIG_EXECUTABLE='$NATIVE_PKG_CONFIG_PATH'" \
+ " -DAsio_INCLUDE_DIR='$NATIVE_ROOT_DIR/Source/rclcpp/install/include/asio'" \
+ " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_SHARED_LIBS=ON" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
  " -DEIGEN3_INCLUDE_DIR='$NATIVE_EIGEN_PATH'" \
  " -DCMAKE_C_COMPILER_WORKS=ON" \
  " -DCMAKE_CXX_COMPILER_WORKS=ON" \
- " -DZLIB_LIBRARY='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
- " -DZLIB_LIBRARIES='$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
- " -DZLIB_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
+ " -DZLIB_LIBRARY='$NATIVE_UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
+ " -DZLIB_LIBRARIES='$NATIVE_UE_THIRD_PARTY_PATH/zlib/1.3/lib/Win64/Release/zlibstatic.lib'" \
+ " -DZLIB_INCLUDE_DIRS='$NATIVE_UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
+ " -DZLIB_INCLUDE_DIR='$NATIVE_UE_THIRD_PARTY_PATH/zlib/1.3/include'" \
  " -DZLIB_USE_STATIC_LIBS=ON" \
  " -DZLIB_FOUND=ON" \
- " -DPNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
- " -DPNG_PNG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
- " -DPNG_LIBRARIES='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
- " -DPNG_LIBRARY='$UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
+ " -DPNG_INCLUDE_DIRS='$NATIVE_UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_PNG_INCLUDE_DIRS='$NATIVE_UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_PNG_INCLUDE_DIR='$NATIVE_UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44'" \
+ " -DPNG_LIBRARIES='$NATIVE_UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
+ " -DPNG_LIBRARY='$NATIVE_UE_THIRD_PARTY_PATH/libPNG/libPNG-1.6.44/lib/Win64/x64/Release/libpng.lib'" \
  " -DPNG_FOUND=ON" \
- " -DJPEG_INCLUDE_DIRS='$UE_THIRD_PARTY_PATH/libJPG'" \
+ " -DJPEG_INCLUDE_DIRS='$NATIVE_UE_THIRD_PARTY_PATH/libJPG'" \
+ " -DJPEG_INCLUDE_DIR='$NATIVE_UE_THIRD_PARTY_PATH/libJPG'" \
  " -DOPENCV_MAP_IMPORTED_CONFIG='RELWITHDEBINFO=Release;MINSIZEREL=Release'" \
  " -DOpenCV_DIR='$NATIVE_OPENCV_CMAKE_DIR'" \
  " -DBOOST_ROOT='$NATIVE_ROOT_DIR/Source/rclcpp/install'" \
@@ -324,25 +477,32 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DSM_RUN_RESULT__TRYRUN_OUTPUT=''" \
  " -DCMAKE_MODULE_PATH='$NATIVE_ROOT_DIR/Source/rclcpp/cmake/Modules/Windows'" \
  " -DOPENSSL_USE_STATIC_LIBS=ON" \
- " -DOPENSSL_ROOT_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t'" \
- " -DOPENSSL_INCLUDE_DIR='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Win64/VS2015'" \
- " -DOPENSSL_CRYPTO_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libcrypto.lib'" \
- " -DOPENSSL_SSL_LIBRARY='$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libssl.lib'" \
+ " -DOPENSSL_ROOT_DIR='$NATIVE_UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t'" \
+ " -DOPENSSL_INCLUDE_DIR='$NATIVE_UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Win64/VS2015'" \
+ " -DOPENSSL_CRYPTO_LIBRARY='$NATIVE_UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libcrypto.lib'" \
+ " -DOPENSSL_SSL_LIBRARY='$NATIVE_UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Win64/VS2015/Release/libssl.lib'" \
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DTRACETOOLS_DISABLED=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
- " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
- " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
+ " -DPython3_LIBRARY='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
+ " -DPython3_INCLUDE_DIR='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
  " -DPYTHON_EXECUTABLE='$NATIVE_PYTHON_PATH'" \
- " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
- " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
+ " -DPYTHON_LIBRARY='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
+ " -DPYTHON_INCLUDE_DIR='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
+ " -DPython_EXECUTABLE='$NATIVE_PYTHON_PATH'" \
+ " -DPython_LIBRARY='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/libs/python311.lib'" \
+ " -DPython_INCLUDE_DIR='$NATIVE_UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Win64/include'" \
  " --no-warn-unused-cli"
 
 DEST="$ROOT_DIR/Outputs/rclcpp"
 
-# Copy the binaries
+# Copy the binaries.
+# theora.dll and boost_python*.dll are named explicitly because they land in install/lib: the
+# theora prelude copies the DLL there by hand, and b2 installs Boost's runtime alongside its import
+# libraries. Everything CMake installs puts its DLL in install/bin (RUNTIME) and only the import
+# library in install/lib (ARCHIVE), so those are covered by the bin/* copy below -- tf2_eigen_kdl
+# used to be listed here as well, which broke the build the moment it was not in install/lib.
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/theora.dll" "$DEST/Binaries/Windows/libtheora.dll"
-cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/tf2_eigen_kdl.dll" "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/lib/boost_python311-"*".dll" "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/bin"/* "$DEST/Binaries/Windows"
 cp -r -P "$ROOT_DIR/Source/rclcpp/install/Scripts"/* "$DEST/Binaries/Windows"

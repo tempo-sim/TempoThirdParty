@@ -1,44 +1,25 @@
-diff --git a/compressed_depth_image_transport/CMakeLists.txt b/compressed_depth_image_transport/CMakeLists.txt
-index ded5f73..4faf7fa 100644
---- a/compressed_depth_image_transport/CMakeLists.txt
-+++ b/compressed_depth_image_transport/CMakeLists.txt
-@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
- project(compressed_depth_image_transport)
- 
- # Default to C++14
-+set(CMAKE_CXX_STANDARD 20)
- if(NOT CMAKE_CXX_STANDARD)
-   set(CMAKE_CXX_STANDARD 14)
- endif()
-diff --git a/compressed_depth_image_transport/include/compressed_depth_image_transport/compressed_depth_publisher.h b/compressed_depth_image_transport/include/compressed_depth_image_transport/compressed_depth_publisher.h
-index d67af74..cf2c1d0 100644
---- a/compressed_depth_image_transport/include/compressed_depth_image_transport/compressed_depth_publisher.h
-+++ b/compressed_depth_image_transport/include/compressed_depth_image_transport/compressed_depth_publisher.h
-@@ -53,7 +53,8 @@ protected:
-   virtual void advertiseImpl(
-           rclcpp::Node * node,
-           const std::string &base_topic,
--          rmw_qos_profile_t custom_qos) override final;
-+          rmw_qos_profile_t custom_qos,
-+          const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options) override final;
- 
-   virtual void publish(const sensor_msgs::msg::Image& message,
-                        const PublishFn& publish_fn) const override final;
 diff --git a/compressed_depth_image_transport/src/codec.cpp b/compressed_depth_image_transport/src/codec.cpp
-index 9536d81..09b6358 100644
+index 4430e1c..f719616 100644
 --- a/compressed_depth_image_transport/src/codec.cpp
 +++ b/compressed_depth_image_transport/src/codec.cpp
-@@ -68,7 +68,7 @@ sensor_msgs::msg::Image::SharedPtr decodeCompressedDepthImage(
-   cv_ptr->header = message.header;
+@@ -60,13 +60,13 @@ sensor_msgs::msg::Image::SharedPtr decodeCompressedDepthImage(
  
    // Assign image encoding
--  std::string image_encoding = message.format.substr(0, message.format.find(';'));
-+  std::string image_encoding = std::string(message.format.substr(0, message.format.find(';')).c_str());
-   cv_ptr->encoding = image_encoding;
- 
-   // Decode message data
-@@ -177,8 +177,8 @@ sensor_msgs::msg::CompressedImage::SharedPtr encodeCompressedDepthImage(
-   params.resize(3, 0);
+   const size_t split_pos = message.format.find(';');
+-  const std::string image_encoding = message.format.substr(0, split_pos);
++  const std::string image_encoding = message.format.substr(0, split_pos).c_str();
+   std::string format;
+   // Older version of compressed_depth_image_transport supports only png.
+   if (split_pos == std::string::npos) {
+     format = "png";
+   } else {
+-    std::string format_ending = message.format.substr(split_pos);
++    std::string format_ending = message.format.substr(split_pos).c_str();
+     if (format_ending.find("compressedDepth png") != std::string::npos) {
+       format = "png";
+     } else if (format_ending.find("compressedDepth rvl") != std::string::npos) {
+@@ -221,8 +221,8 @@ sensor_msgs::msg::CompressedImage::SharedPtr encodeCompressedDepthImage(
+   std::vector<int> params;
  
    // Bit depth of image encoding
 -  int bitDepth = enc::bitDepth(message.encoding);
@@ -49,247 +30,337 @@ index 9536d81..09b6358 100644
    // Image compression configuration
    ConfigHeader compressionConfig;
 diff --git a/compressed_depth_image_transport/src/compressed_depth_publisher.cpp b/compressed_depth_image_transport/src/compressed_depth_publisher.cpp
-index 641ce76..bb5e32b 100644
+index c344338..134185f 100644
 --- a/compressed_depth_image_transport/src/compressed_depth_publisher.cpp
 +++ b/compressed_depth_image_transport/src/compressed_depth_publisher.cpp
-@@ -60,10 +60,11 @@ namespace compressed_depth_image_transport
- void CompressedDepthPublisher::advertiseImpl(
-   rclcpp::Node * node,
-   const std::string& base_topic,
--  rmw_qos_profile_t custom_qos)
-+  rmw_qos_profile_t custom_qos,
-+  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+@@ -30,6 +30,7 @@
+ #include "compressed_depth_image_transport/compressed_depth_publisher.hpp"
+ 
+ #include <cstddef>
++#include <cstring>
+ #include <string>
+ 
+ #include <rclcpp/parameter_client.hpp>
+@@ -159,11 +160,11 @@ void CompressedDepthPublisher::declareParameter(
+   // transport scoped parameter (e.g. image_raw.compressedDepth.png_level)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
+ 
+   // deprecated non-scoped parameter name (e.g. image_raw.png_level)
+-  const std::string deprecated_name = base_name + "." + definition.descriptor.name;
++  const std::string deprecated_name = base_name + "." + std::string(definition.descriptor.name.c_str());
+   deprecatedParameters_.push_back(deprecated_name);
+ 
+   rclcpp::ParameterValue param_value;
+@@ -189,7 +190,7 @@ void CompressedDepthPublisher::onParameterEvent(
+   std::string full_name, std::string base_name)
  {
-   typedef image_transport::SimplePublisherPlugin<sensor_msgs::msg::CompressedImage> Base;
--  Base::advertiseImpl(node, base_topic, custom_qos);
-+  Base::advertiseImpl(node, base_topic, custom_qos, options);
+   // filter out events from other nodes
+-  if (event->node != full_name) {
++  if (0 != strcmp(event->node.c_str(), full_name.c_str())) {
+     return;
+   }
  
-   node->get_parameter_or<int>("png_level", config_.png_level, kDefaultPngLevel);
-   node->get_parameter_or<double>("depth_max", config_.depth_max, kDefaultDepthMax);
-diff --git a/compressed_image_transport/CMakeLists.txt b/compressed_image_transport/CMakeLists.txt
-index 314c4ca..cbbba42 100644
---- a/compressed_image_transport/CMakeLists.txt
-+++ b/compressed_image_transport/CMakeLists.txt
-@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
- project(compressed_image_transport)
+@@ -203,7 +204,7 @@ void CompressedDepthPublisher::onParameterEvent(
  
- # Default to C++14
-+set(CMAKE_CXX_STANDARD 20)
- if(NOT CMAKE_CXX_STANDARD)
-   set(CMAKE_CXX_STANDARD 14)
- endif()
-diff --git a/compressed_image_transport/include/compressed_image_transport/compressed_publisher.h b/compressed_image_transport/include/compressed_image_transport/compressed_publisher.h
-index 32da028..79df542 100644
---- a/compressed_image_transport/include/compressed_image_transport/compressed_publisher.h
-+++ b/compressed_image_transport/include/compressed_image_transport/compressed_publisher.h
-@@ -60,7 +60,8 @@ protected:
-   void advertiseImpl(
-       rclcpp::Node* node,
-       const std::string& base_topic,
--      rmw_qos_profile_t custom_qos) override;
-+      rmw_qos_profile_t custom_qos,
-+      const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options) override;
+   // emit warnings for deprecated parameters & sync deprecated parameter value to correct
+   for (auto & it : filter.get_events()) {
+-    const std::string name = it.second->name;
++    const std::string name = it.second->name.c_str();
  
-   void publish(const sensor_msgs::msg::Image& message,
-                const PublishFn& publish_fn) const;
+     // name was generated from base_name, has to succeed
+     size_t baseNameIndex = name.find(base_name);
 diff --git a/compressed_image_transport/src/compressed_publisher.cpp b/compressed_image_transport/src/compressed_publisher.cpp
-index ff9d38e..c728d82 100644
+index e0e22ae..d985eea 100644
 --- a/compressed_image_transport/src/compressed_publisher.cpp
 +++ b/compressed_image_transport/src/compressed_publisher.cpp
-@@ -61,10 +61,11 @@ namespace compressed_image_transport
- void CompressedPublisher::advertiseImpl(
-   rclcpp::Node* node,
-   const std::string& base_topic,
--  rmw_qos_profile_t custom_qos)
-+  rmw_qos_profile_t custom_qos,
-+  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
- {
-   typedef image_transport::SimplePublisherPlugin<sensor_msgs::msg::CompressedImage> Base;
--  Base::advertiseImpl(node, base_topic, custom_qos);
-+  Base::advertiseImpl(node, base_topic, custom_qos, options);
+@@ -29,6 +29,7 @@
  
-   uint ns_len = node->get_effective_namespace().length();
-   std::string param_base_name = base_topic.substr(ns_len);
-@@ -182,7 +183,7 @@ void CompressedPublisher::publish(
+ #include "compressed_image_transport/compressed_publisher.hpp"
+ 
++#include <cstring>
+ #include <sstream>
+ #include <vector>
+ 
+@@ -180,7 +181,7 @@ void CompressedPublisher::publish(
    }
  
    // Bit depth of image encoding
 -  int bitDepth = enc::bitDepth(message.encoding);
 +  int bitDepth = enc::bitDepth(std::string(message.encoding.c_str()));
  
-   switch (encodingFormat)
-   {
-@@ -201,7 +202,7 @@ void CompressedPublisher::publish(
-       {
-         // Target image format
-         std::string targetFormat;
--        if (enc::isColor(message.encoding))
-+        if (enc::isColor(std::string(message.encoding.c_str())))
-         {
-           // convert color images to BGR8 format
-           targetFormat = "bgr8";
-@@ -219,9 +220,10 @@ void CompressedPublisher::publish(
-           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, tracked_object, targetFormat);
+   switch (encodingFormat) {
+     // JPEG Compression
+@@ -197,7 +198,7 @@ void CompressedPublisher::publish(
+         if ((bitDepth == 8) || (bitDepth == 16)) {
+           // Target image format
+           std::string targetFormat;
+-          if (enc::isColor(message.encoding)) {
++          if (enc::isColor(std::string(message.encoding.c_str()))) {
+             // convert color images to BGR8 format
+             targetFormat = "bgr8";
+             compressed.format += targetFormat;
+@@ -214,7 +215,11 @@ void CompressedPublisher::publish(
+               targetFormat);
  
-           // Compress image
--          if (cv::imencode(".jpg", cv_ptr->image, compressed.data, params))
-+          std::vector<uchar> compressed_data;
-+          if (cv::imencode(".jpg", cv_ptr->image, compressed_data, params))
-           {
--
-+            compressed.data.assign(compressed_data.begin(), compressed_data.end());
-             float cRatio = (float)(cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize())
-                 / (float)compressed.data.size();
-             RCLCPP_DEBUG(logger_, "Compressed Image Transport - Codec: jpg, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
-@@ -263,7 +265,7 @@ void CompressedPublisher::publish(
- 
-         // Target image format
-         stringstream targetFormat;
--        if (enc::isColor(message.encoding))
-+        if (enc::isColor(std::string(message.encoding.c_str())))
-         {
+             // Compress image
+-            if (cv::imencode(".jpg", cv_ptr->image, compressed.data, params)) {
++            // Tempo change: compressed.data is a std::pmr::vector<uint8_t>, which cv::imencode has
++            // no overload for. Encode into a plain vector and move the bytes across.
++            std::vector<uint8_t> encode_buffer_jpg;
++            if (cv::imencode(".jpg", cv_ptr->image, encode_buffer_jpg, params)) {
++              compressed.data.assign(encode_buffer_jpg.begin(), encode_buffer_jpg.end());
+               float cRatio = static_cast<float>(cv_ptr->image.rows * cv_ptr->image.cols *
+                 cv_ptr->image.elemSize() / compressed.data.size());
+               RCLCPP_DEBUG(logger_,
+@@ -252,10 +257,10 @@ void CompressedPublisher::publish(
+         if ((bitDepth == 8) || (bitDepth == 16)) {
+           // Target image format
+           std::stringstream targetFormat;
+-          if (enc::isColor(message.encoding)) {
++          if (enc::isColor(std::string(message.encoding.c_str()))) {
            // convert color images to RGB domain
-           targetFormat << "bgr" << bitDepth;
-@@ -277,9 +279,10 @@ void CompressedPublisher::publish(
-           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, tracked_object, targetFormat.str());
+             targetFormat << "bgr";
+-            if (enc::hasAlpha(message.encoding)) {
++            if (enc::hasAlpha(std::string(message.encoding.c_str()))) {
+               targetFormat << "a";
+             }
+             targetFormat << bitDepth;
+@@ -269,7 +274,11 @@ void CompressedPublisher::publish(
+               targetFormat.str());
  
-           // Compress image
--          if (cv::imencode(".png", cv_ptr->image, compressed.data, params))
-+          std::vector<uchar> compressed_data;
-+          if (cv::imencode(".png", cv_ptr->image, compressed_data, params))
-           {
--
-+            compressed.data.assign(compressed_data.begin(), compressed_data.end());
-             float cRatio = (float)(cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize())
-                 / (float)compressed.data.size();
-             RCUTILS_LOG_DEBUG("Compressed Image Transport - Codec: png, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
-@@ -345,8 +348,10 @@ void CompressedPublisher::publish(
-           cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, nullptr, "");
+             // Compress image
+-            if (cv::imencode(".png", cv_ptr->image, compressed.data, params)) {
++            // Tempo change: compressed.data is a std::pmr::vector<uint8_t>, which cv::imencode has
++            // no overload for. Encode into a plain vector and move the bytes across.
++            std::vector<uint8_t> encode_buffer_png;
++            if (cv::imencode(".png", cv_ptr->image, encode_buffer_png, params)) {
++              compressed.data.assign(encode_buffer_png.begin(), encode_buffer_png.end());
+               float cRatio = static_cast<float>(cv_ptr->image.rows * cv_ptr->image.cols *
+                 cv_ptr->image.elemSize() / compressed.data.size());
+               RCUTILS_LOG_DEBUG(
+@@ -330,7 +339,11 @@ void CompressedPublisher::publish(
+             cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(message, nullptr, "");
  
-           // Compress image
--          if (cv::imencode(".tiff", cv_ptr->image, compressed.data, params))
-+          std::vector<uchar> compressed_data;
-+          if (cv::imencode(".tiff", cv_ptr->image, compressed_data, params))
-           {
-+            compressed.data.assign(compressed_data.begin(), compressed_data.end());
-             float cRatio = static_cast<float>((cv_ptr->image.rows * cv_ptr->image.cols * cv_ptr->image.elemSize()))
-                 / static_cast<float>((float)compressed.data.size());
-             RCUTILS_LOG_DEBUG("Compressed Image Transport - Codec: tiff, Compression Ratio: 1:%.2f (%lu bytes)", cRatio, compressed.data.size());
+             // Compress image
+-            if (cv::imencode(".tiff", cv_ptr->image, compressed.data, params)) {
++            // Tempo change: compressed.data is a std::pmr::vector<uint8_t>, which cv::imencode has
++            // no overload for. Encode into a plain vector and move the bytes across.
++            std::vector<uint8_t> encode_buffer_tiff;
++            if (cv::imencode(".tiff", cv_ptr->image, encode_buffer_tiff, params)) {
++              compressed.data.assign(encode_buffer_tiff.begin(), encode_buffer_tiff.end());
+               float cRatio = static_cast<float>(cv_ptr->image.rows * cv_ptr->image.cols *
+                 cv_ptr->image.elemSize() / compressed.data.size());
+               RCUTILS_LOG_DEBUG(
+@@ -371,11 +384,11 @@ void CompressedPublisher::declareParameter(
+   // transport scoped parameter (e.g. image_raw.compressed.format)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
+ 
+   // deprecated non-scoped parameter name (e.g. image_raw.format)
+-  const std::string deprecated_name = base_name + "." + definition.descriptor.name;
++  const std::string deprecated_name = base_name + "." + std::string(definition.descriptor.name.c_str());
+   deprecatedParameters_.push_back(deprecated_name);
+ 
+   rclcpp::ParameterValue param_value;
+@@ -401,7 +414,7 @@ void CompressedPublisher::onParameterEvent(
+   std::string base_name)
+ {
+   // filter out events from other nodes
+-  if (event->node != full_name) {
++  if (0 != strcmp(event->node.c_str(), full_name.c_str())) {
+     return;
+   }
+ 
+@@ -415,7 +428,7 @@ void CompressedPublisher::onParameterEvent(
+ 
+   // emit warnings for deprecated parameters & sync deprecated parameter value to correct
+   for (auto & it : filter.get_events()) {
+-    const std::string name = it.second->name;
++    const std::string name = it.second->name.c_str();
+     // name was generated from base_name, has to succeed
+     size_t baseNameIndex = name.find(base_name);
+     size_t paramNameIndex = baseNameIndex + base_name.size();
 diff --git a/compressed_image_transport/src/compressed_subscriber.cpp b/compressed_image_transport/src/compressed_subscriber.cpp
-index 335bda8..eb545dd 100644
+index b171a79..13fcdad 100644
 --- a/compressed_image_transport/src/compressed_subscriber.cpp
 +++ b/compressed_image_transport/src/compressed_subscriber.cpp
-@@ -118,7 +118,7 @@ void CompressedSubscriber::internalCallback(const CompressedImage::ConstSharedPt
+@@ -29,6 +29,7 @@
+ 
+ #include "compressed_image_transport/compressed_subscriber.hpp"
+ 
++#include <cstring>
+ #include <limits>
+ #include <vector>
+ 
+@@ -109,7 +110,7 @@ void CompressedSubscriber::internalCallback(
+ 
    // Decode color/mono image
-   try
-   {
--    cv_ptr->image = cv::imdecode(cv::Mat(message->data), config_.imdecode_flag);
-+    cv_ptr->image = cv::imdecode(cv::Mat(1, message->data.size(), CV_8UC1, (void*)message->data.data()), config_.imdecode_flag);
+   try {
+-    cv_ptr->image = cv::imdecode(cv::Mat(message->data), cfg_imdecode_flag);
++    cv_ptr->image = cv::imdecode(cv::Mat(std::vector<uint8_t>(message->data.cbegin(), message->data.cend())), cfg_imdecode_flag);
  
      // Assign image encoding string
      const size_t split_pos = message->format.find(';');
-@@ -139,13 +139,13 @@ void CompressedSubscriber::internalCallback(const CompressedImage::ConstSharedPt
+@@ -127,12 +128,12 @@ void CompressedSubscriber::internalCallback(
+           break;
        }
-     } else
-     {
+     } else {
 -      std::string image_encoding = message->format.substr(0, split_pos);
-+      std::string image_encoding = std::string(message->format.substr(0, split_pos).c_str());
++      std::string image_encoding = message->format.substr(0, split_pos).c_str();
  
        cv_ptr->encoding = image_encoding;
  
-       if ( enc::isColor(image_encoding))
-       {
+       if (enc::isColor(image_encoding)) {
 -        std::string compressed_encoding = message->format.substr(split_pos);
-+        std::string compressed_encoding = std::string(message->format.substr(split_pos).c_str());
-         bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") != std::string::npos);
++        std::string compressed_encoding = message->format.substr(split_pos).c_str();
+         bool compressed_bgr_image = (compressed_encoding.find("compressed bgr") !=
+           std::string::npos);
  
-         // Revert color transformation
-diff --git a/theora_image_transport/CMakeLists.txt b/theora_image_transport/CMakeLists.txt
-index 67612f0..232b7c1 100644
---- a/theora_image_transport/CMakeLists.txt
-+++ b/theora_image_transport/CMakeLists.txt
-@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
- project(theora_image_transport)
+@@ -208,11 +209,11 @@ void CompressedSubscriber::declareParameter(
+   // transport scoped parameter (e.g. image_raw.compressed.format)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
  
- # Default to C++14
-+set(CMAKE_CXX_STANDARD 20)
- if(NOT CMAKE_CXX_STANDARD)
-   set(CMAKE_CXX_STANDARD 14)
- endif()
-@@ -69,6 +70,12 @@ target_link_libraries(${LIBRARY_NAME}
-   pluginlib::pluginlib
-   rclcpp::rclcpp
- )
-+target_link_directories(${LIBRARY_NAME} PRIVATE
-+    ${PC_OGG_LIBRARY_DIRS}
-+    ${PC_THEORA_LIBRARY_DIRS}
-+    ${PC_THEORAENC_LIBRARY_DIRS}
-+    ${PC_THEORADEC_LIBRARY_DIRS}
-+)
+   // deprecated non-scoped parameter name (e.g. image_raw.format)
+-  const std::string deprecated_name = base_name + "." + definition.descriptor.name;
++  const std::string deprecated_name = base_name + "." + std::string(definition.descriptor.name.c_str());
+   deprecatedParameters_.push_back(deprecated_name);
  
- add_executable(ogg_saver src/ogg_saver.cpp)
- target_compile_definitions(ogg_saver PRIVATE
-@@ -86,6 +93,12 @@ target_link_libraries(ogg_saver
-   rclcpp::rclcpp
-   rcutils::rcutils
- )
-+target_link_directories(ogg_saver PRIVATE
-+    ${PC_OGG_LIBRARY_DIRS}
-+    ${PC_THEORA_LIBRARY_DIRS}
-+    ${PC_THEORAENC_LIBRARY_DIRS}
-+    ${PC_THEORADEC_LIBRARY_DIRS}
-+)
+   rclcpp::ParameterValue param_value;
+@@ -238,7 +239,7 @@ void CompressedSubscriber::onParameterEvent(
+   std::string base_name)
+ {
+   // filter out events from other nodes
+-  if (event->node != full_name) {
++  if (0 != strcmp(event->node.c_str(), full_name.c_str())) {
+     return;
+   }
  
- ament_export_dependencies(
-   rosidl_default_runtime
-diff --git a/theora_image_transport/include/theora_image_transport/theora_publisher.h b/theora_image_transport/include/theora_image_transport/theora_publisher.h
-index f316a4e..bfcf274 100644
---- a/theora_image_transport/include/theora_image_transport/theora_publisher.h
-+++ b/theora_image_transport/include/theora_image_transport/theora_publisher.h
-@@ -60,7 +60,8 @@ protected:
-     rclcpp::Node* node,
-     const std::string &base_topic,
-     uint32_t queue_size,
--    rmw_qos_profile_t custom_qos);
-+    rmw_qos_profile_t custom_qos,
-+    const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options);
+@@ -252,7 +253,7 @@ void CompressedSubscriber::onParameterEvent(
  
-   // TODO: Callback to send header packets to new clients
-   // virtual void connectCallback(const ros::SingleSubscriberPublisher& pub);
-diff --git a/theora_image_transport/package.xml b/theora_image_transport/package.xml
-index fdfdde2..344e756 100644
---- a/theora_image_transport/package.xml
-+++ b/theora_image_transport/package.xml
-@@ -23,9 +23,6 @@
+   // emit warnings for deprecated parameters & sync deprecated parameter value to correct
+   for (auto & it : filter.get_events()) {
+-    const std::string name = it.second->name;
++    const std::string name = it.second->name.c_str();
  
-   <depend>cv_bridge</depend>
-   <depend>image_transport</depend>
--  <depend>libogg</depend>
--  <depend>libopencv-imgproc-dev</depend>
--  <depend>libtheora</depend>
-   <depend>pluginlib</depend>
-   <depend>rclcpp</depend>
-   <depend>rcutils</depend>
+     // name was generated from base_name, has to succeed
+     size_t baseNameIndex = name.find(base_name);
 diff --git a/theora_image_transport/src/theora_publisher.cpp b/theora_image_transport/src/theora_publisher.cpp
-index 65be97b..8c6de83 100644
+index 3160425..0471e1c 100644
 --- a/theora_image_transport/src/theora_publisher.cpp
 +++ b/theora_image_transport/src/theora_publisher.cpp
-@@ -75,7 +75,8 @@ void TheoraPublisher::advertiseImpl(
-   rclcpp::Node *node,
-   const std::string &base_topic,
-   uint32_t queue_size,
--  rmw_qos_profile_t custom_qos)
-+  rmw_qos_profile_t custom_qos,
-+  const rclcpp::PublisherOptionsWithAllocator<std::pmr::polymorphic_allocator<void>> & options)
+@@ -29,6 +29,7 @@
+ 
+ #include "theora_image_transport/theora_publisher.hpp"
+ 
++#include <cstring>
+ #include <cstdio>
+ #include <string>
+ #include <vector>
+@@ -422,11 +423,11 @@ void TheoraPublisher::declareParameter(
+   // transport scoped parameter (e.g. image_raw.theora.quality)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
+ 
+   // deprecated non-scoped parameter name (e.g. image_raw.quality)
+-  const std::string deprecated_name = base_name + "." + definition.descriptor.name;
++  const std::string deprecated_name = base_name + "." + std::string(definition.descriptor.name.c_str());
+   deprecatedParameters_.push_back(deprecated_name);
+ 
+   rclcpp::ParameterValue param_value;
+@@ -453,7 +454,7 @@ void TheoraPublisher::onParameterEvent(
+   std::string base_name)
  {
-   logger_ = node->get_logger();
-   // queue_size doesn't account for the 3 header packets, so we correct (with a little extra) here.
-@@ -87,7 +88,7 @@ void TheoraPublisher::advertiseImpl(
-   custom_qos.depth = queue_size + 4;
+   // filter out events from other nodes
+-  if (event->node != full_name) {
++  if (0 != strcmp(event->node.c_str(), full_name.c_str())) {
+     return;
+   }
  
-   typedef image_transport::SimplePublisherPlugin<theora_image_transport::msg::Packet> Base;
--  Base::advertiseImpl(node, base_topic, custom_qos);
-+  Base::advertiseImpl(node, base_topic, custom_qos, options);
- }
+@@ -467,7 +468,7 @@ void TheoraPublisher::onParameterEvent(
  
-   // TODO(ros2): this method should be called when configuration change through
+   // emit warnings for deprecated parameters & sync deprecated parameter value to correct
+   for (auto & it : filter.get_events()) {
+-    const std::string name = it.second->name;
++    const std::string name = it.second->name.c_str();
+ 
+     // name was generated from base_name, has to succeed
+     size_t baseNameIndex = name.find(base_name);
+diff --git a/theora_image_transport/src/theora_subscriber.cpp b/theora_image_transport/src/theora_subscriber.cpp
+index b11aa25..e3c8f39 100644
+--- a/theora_image_transport/src/theora_subscriber.cpp
++++ b/theora_image_transport/src/theora_subscriber.cpp
+@@ -29,6 +29,7 @@
+ 
+ #include "theora_image_transport/theora_subscriber.hpp"
+ 
++#include <cstring>
+ #include <string>
+ #include <vector>
+ 
+@@ -312,11 +313,11 @@ void TheoraSubscriber::declareParameter(
+   // transport scoped parameter (e.g. image_raw.theora.post_processing_level)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
+ 
+   // deprecated non-scoped parameter name (e.g. image_raw.post_processing_level)
+-  const std::string deprecated_name = base_name + "." + definition.descriptor.name;
++  const std::string deprecated_name = base_name + "." + std::string(definition.descriptor.name.c_str());
+   deprecatedParameters_.push_back(deprecated_name);
+ 
+   rclcpp::ParameterValue param_value;
+@@ -343,7 +344,7 @@ void TheoraSubscriber::onParameterEvent(
+   std::string base_name)
+ {
+   // filter out events from other nodes
+-  if (event->node != full_name) {
++  if (0 != strcmp(event->node.c_str(), full_name.c_str())) {
+     return;
+   }
+ 
+@@ -357,7 +358,7 @@ void TheoraSubscriber::onParameterEvent(
+ 
+   // emit warnings for deprecated parameters & sync deprecated parameter value to correct
+   for (auto & it : filter.get_events()) {
+-    const std::string name = it.second->name;
++    const std::string name = it.second->name.c_str();
+ 
+     // name was generated from base_name, has to succeed
+     size_t baseNameIndex = name.find(base_name);
+diff --git a/zstd_image_transport/src/zstd_publisher.cpp b/zstd_image_transport/src/zstd_publisher.cpp
+index 2bda8fe..88b223f 100644
+--- a/zstd_image_transport/src/zstd_publisher.cpp
++++ b/zstd_image_transport/src/zstd_publisher.cpp
+@@ -32,6 +32,7 @@
+ 
+ #include "zstd_image_transport/zstd_publisher.hpp"
+ 
++#include <cstring>
+ #include <rclcpp/rclcpp.hpp>
+ 
+ #include "zlib_cpp.hpp"
+@@ -157,7 +158,7 @@ void ZstdPublisher::declareParameter(
+   // transport scoped parameter (e.g. image_raw.zstd.zstd_level)
+   const std::string transport_name = getTransportName();
+   const std::string param_name = base_name + "." + transport_name + "." +
+-    definition.descriptor.name;
++    std::string(definition.descriptor.name.c_str());
+   parameters_.push_back(param_name);
+ 
+   rclcpp::ParameterValue param_value;

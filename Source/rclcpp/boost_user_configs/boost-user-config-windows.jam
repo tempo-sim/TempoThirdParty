@@ -6,5 +6,9 @@ using python
      : 3.11 # version
      : "\"$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Win64/python.exe\"" # cmd-o>
      : "$(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Win64/include" # includes
-     : "$(UNREAL_ENGINE_PATH)/Engine/Binaries/ThirdParty/Python3/Win64" # libraries
+     # The import library lives under Engine/Source, not Engine/Binaries -- Binaries only has
+     # python.exe and python311.dll. Pointing b2 at Binaries makes it link with a bare
+     # "python311.lib" that it never finds: LNK1181: cannot open input file 'python311.lib'.
+     # This is the same path the colcon build passes as -DPython3_LIBRARY.
+     : "$(UNREAL_ENGINE_PATH)/Engine/Source/ThirdParty/Python3/Win64/libs" # libraries
      ;

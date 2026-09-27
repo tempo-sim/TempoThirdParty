@@ -1,20 +1,17 @@
-diff --git a/cv_bridge/CMakeLists.txt b/cv_bridge/CMakeLists.txt
-index c909dd1..e91cd4d 100644
---- a/cv_bridge/CMakeLists.txt
-+++ b/cv_bridge/CMakeLists.txt
-@@ -4,6 +4,7 @@ project(cv_bridge)
- find_package(ament_cmake_ros REQUIRED)
- 
- # Default to C++14
-+set(CMAKE_CXX_STANDARD 20)
- if(NOT CMAKE_CXX_STANDARD)
-   set(CMAKE_CXX_STANDARD 14)
- endif()
 diff --git a/cv_bridge/src/cv_bridge.cpp b/cv_bridge/src/cv_bridge.cpp
-index 0a2e4f5..fe74cf8 100644
+index dd11c78..83b598f 100644
 --- a/cv_bridge/src/cv_bridge.cpp
 +++ b/cv_bridge/src/cv_bridge.cpp
-@@ -276,9 +276,9 @@ const std::vector<int> getConversionCode(std::string src_encoding, std::string d
+@@ -42,6 +42,8 @@
+ #include <sensor_msgs/image_encodings.hpp>
+ #include "rcpputils/endian.hpp"
+ 
++#include <cstring>
++#include <iterator>
+ #include <map>
+ #include <memory>
+ #include <regex>
+@@ -276,9 +278,9 @@ const std::vector<int> getConversionCode(std::string src_encoding, std::string d
  // Converts a ROS Image to a cv::Mat by sharing the data or changing its endianness if needed
  cv::Mat matFromImage(const sensor_msgs::msg::Image & source)
  {
@@ -27,7 +24,7 @@ index 0a2e4f5..fe74cf8 100644
  
    if (source.step < source.width * byte_depth * num_channels) {
      std::stringstream ss;
-@@ -424,7 +424,7 @@ CvImagePtr toCvCopy(
+@@ -424,7 +426,7 @@ CvImagePtr toCvCopy(
    const std::string & encoding)
  {
    // Construct matrix pointing to source data
@@ -36,7 +33,7 @@ index 0a2e4f5..fe74cf8 100644
  }
  
  // Share const data, returnee is immutable
-@@ -441,7 +441,7 @@ CvImageConstPtr toCvShare(
+@@ -441,7 +443,7 @@ CvImageConstPtr toCvShare(
    const std::string & encoding)
  {
    // If the encoding different or the endianness different, you have to copy
@@ -45,7 +42,7 @@ index 0a2e4f5..fe74cf8 100644
      (rcpputils::endian::native != rcpputils::endian::big)))
    {
      return toCvCopy(source, encoding);
-@@ -459,7 +459,7 @@ CvImagePtr cvtColor(
+@@ -459,7 +461,7 @@ CvImagePtr cvtColor(
    const CvImageConstPtr & source,
    const std::string & encoding)
  {
@@ -54,70 +51,53 @@ index 0a2e4f5..fe74cf8 100644
  }
  
  /////////////////////////////////////// CompressedImage ///////////////////////////////////////////
-@@ -531,7 +531,10 @@ void CvImage::toCompressedImageMsg(
+@@ -531,7 +533,13 @@ void CvImage::toCompressedImageMsg(
  
    std::string format = getFormat(dst_format);
    ros_image.format = format;
 -  cv::imencode("." + format, image, ros_image.data);
-+  std::vector<uchar> buf;
-+  cv::imencode("." + format, image, buf);
++  // Tempo change: cv::imencode writes a std::vector<uchar>, but ros_image.data is a
++  // std::pmr::vector<uint8_t>. Encode into a plain vector and move the bytes across.
++  std::vector<uchar> encode_buffer;
++  cv::imencode("." + format, image, encode_buffer);
 +  ros_image.data.clear();
-+  std::move(buf.begin(), buf.end(), std::back_inserter(ros_image.data));
++  ros_image.data.reserve(encode_buffer.size());
++  std::move(encode_buffer.begin(), encode_buffer.end(), std::back_inserter(ros_image.data));
  }
  
  // Deep copy data, returnee is mutable
-diff --git a/cv_bridge/test/utest.cpp b/cv_bridge/test/utest.cpp
-index 3d2a35a..1f6ff78 100644
---- a/cv_bridge/test/utest.cpp
-+++ b/cv_bridge/test/utest.cpp
-@@ -16,7 +16,7 @@ TEST(CvBridgeTest, NonContinuous)
-   sensor_msgs::msg::Image::SharedPtr msg = cvi.toImageMsg();
-   EXPECT_EQ(static_cast<int>(msg->height), 8);
-   EXPECT_EQ(static_cast<int>(msg->width), 3);
--  EXPECT_EQ(msg->encoding, cvi.encoding);
-+  EXPECT_EQ(strcmp(msg->encoding.c_str(), cvi.encoding.c_str()), 0);
-   EXPECT_EQ(static_cast<int>(msg->step), 6);
- }
- 
-@@ -117,7 +117,7 @@ TEST(CvBridgeTest, imageMessageConversion)
-   imgmsg.encoding = "32FC1";
-   imgmsg.step = imgmsg.width * 32 / 8 * 1;
-   imgmsg.data.resize(imgmsg.height * imgmsg.step);
--  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, imgmsg.encoding));
-+  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, std::string(imgmsg.encoding.c_str())));
-   ASSERT_EQ(static_cast<int>(imgmsg.height), cv_ptr->image.rows);
-   ASSERT_EQ(static_cast<int>(imgmsg.width), cv_ptr->image.cols);
-   ASSERT_EQ(1, cv_ptr->image.channels());
-@@ -127,7 +127,7 @@ TEST(CvBridgeTest, imageMessageConversion)
-   imgmsg.encoding = "32FC10";
-   imgmsg.step = imgmsg.width * 32 / 8 * 10;
-   imgmsg.data.resize(imgmsg.height * imgmsg.step);
--  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, imgmsg.encoding));
-+  ASSERT_NO_THROW(cv_ptr = cv_bridge::toCvCopy(imgmsg, std::string(imgmsg.encoding.c_str())));
-   ASSERT_EQ(static_cast<int>(imgmsg.height), cv_ptr->image.rows);
-   ASSERT_EQ(static_cast<int>(imgmsg.width), cv_ptr->image.cols);
-   ASSERT_EQ(10, cv_ptr->image.channels());
-diff --git a/image_geometry/CMakeLists.txt b/image_geometry/CMakeLists.txt
-index 0e33091..ad8d707 100644
---- a/image_geometry/CMakeLists.txt
-+++ b/image_geometry/CMakeLists.txt
-@@ -7,6 +7,7 @@ find_package(ament_cmake_ros REQUIRED)
- ament_python_install_package(${PROJECT_NAME})
- 
- # Default to C++14
-+set(CMAKE_CXX_STANDARD 20)
- if(NOT CMAKE_CXX_STANDARD)
-   set(CMAKE_CXX_STANDARD 14)
- endif()
-diff --git a/image_geometry/include/image_geometry/pinhole_camera_model.h b/image_geometry/include/image_geometry/pinhole_camera_model.h
-index fdbecd7..2a82080 100644
---- a/image_geometry/include/image_geometry/pinhole_camera_model.h
-+++ b/image_geometry/include/image_geometry/pinhole_camera_model.h
-@@ -333,7 +333,7 @@ IMAGE_GEOMETRY_PUBLIC
+diff --git a/cv_bridge/src/cv_mat_sensor_msgs_image_type_adapter.cpp b/cv_bridge/src/cv_mat_sensor_msgs_image_type_adapter.cpp
+index 0633e3d..d3f6ee0 100644
+--- a/cv_bridge/src/cv_mat_sensor_msgs_image_type_adapter.cpp
++++ b/cv_bridge/src/cv_mat_sensor_msgs_image_type_adapter.cpp
+@@ -79,7 +79,7 @@ ROSCvMatContainer::ROSCvMatContainer(
+   frame_(
+     unique_sensor_msgs_image->height,
+     unique_sensor_msgs_image->width,
+-    encoding2mat_type(unique_sensor_msgs_image->encoding),
++    encoding2mat_type(std::string(unique_sensor_msgs_image->encoding.c_str())),
+     unique_sensor_msgs_image->data.data(),
+     unique_sensor_msgs_image->step),
+   storage_(std::move(unique_sensor_msgs_image))
+@@ -91,7 +91,7 @@ ROSCvMatContainer::ROSCvMatContainer(
+   frame_(
+     shared_sensor_msgs_image->height,
+     shared_sensor_msgs_image->width,
+-    encoding2mat_type(shared_sensor_msgs_image->encoding),
++    encoding2mat_type(std::string(shared_sensor_msgs_image->encoding.c_str())),
+     shared_sensor_msgs_image->data.data(),
+     shared_sensor_msgs_image->step),
+   storage_(shared_sensor_msgs_image)
+diff --git a/image_geometry/include/image_geometry/pinhole_camera_model.hpp b/image_geometry/include/image_geometry/pinhole_camera_model.hpp
+index 2bee551..550fc62 100644
+--- a/image_geometry/include/image_geometry/pinhole_camera_model.hpp
++++ b/image_geometry/include/image_geometry/pinhole_camera_model.hpp
+@@ -344,7 +344,8 @@ IMAGE_GEOMETRY_PUBLIC
  inline std::string PinholeCameraModel::tfFrame() const
  {
    assert( initialized() );
 -  return cam_info_.header.frame_id;
++  // Tempo change: frame_id is a std::pmr::string on generated messages.
 +  return std::string(cam_info_.header.frame_id.c_str());
  }
  

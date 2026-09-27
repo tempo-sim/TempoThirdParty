@@ -24,17 +24,27 @@ if ! which cmake; then
     exit 1
 fi
 
+# Check for make. The colcon build turns off CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH, which also
+# stops CMake finding its own build tool on PATH, so it is resolved here and passed explicitly.
+if ! MAKE_PROGRAM=$(which make); then
+    echo "Couldn't find make"
+    exit 1
+fi
+
 # Check for pip
 if ! which pip; then
     echo "Couldn't find pip"
     exit 1
 fi
 
-# Check for tag
-TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
-if [ "$TAG" = "undefined" ]; then
-    echo "Could not find git tag"
-    exit 1
+# Check for tag. TAG can be set in the environment to build from an untagged
+# commit; release builds should still run from a tagged commit.
+if [ -z "${TAG+x}" ]; then
+  TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+  if [ "$TAG" = "undefined" ]; then
+      echo "Could not find git tag. Set TAG=<name> to build from an untagged commit."
+      exit 1
+  fi
 fi
 
 # Check for UNREAL_ENGINE_PATH
@@ -56,11 +66,37 @@ fi
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
-LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v25_clang-18.1.0-rockylinux8"
+# Unreal bundles one clang toolchain per engine version (5.6 shipped v25_clang-18.1.0-rockylinux8,
+# 5.7 ships v26_clang-20.1.8-rockylinux8). Discover it rather than hard-coding one engine's.
+LINUX_MULTIARCH_ROOT=$(find "$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64" -mindepth 1 -maxdepth 1 -type d -name "v*_clang-*" | sort -V | tail -1)
+if [ -z "$LINUX_MULTIARCH_ROOT" ] || [ ! -x "$LINUX_MULTIARCH_ROOT/x86_64-unknown-linux-gnu/bin/clang++" ]; then
+  echo "Couldn't find Unreal's Linux clang toolchain under $UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64";
+  exit 1
+fi
+echo -e "Using Unreal Linux toolchain: $LINUX_MULTIARCH_ROOT\n";
 LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
 export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
 export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
 export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+
+# Unreal links every module against a static libc++. Through 5.6 that libc++ lived in
+# Engine/Source/ThirdParty/Unix/LibCxx; from 5.7 it ships inside the clang toolchain itself
+# (UBT only uses the old location under -ForceUseLegacyLibCxx). Build against whichever one the
+# engine itself uses. linux.toolchain.cmake and boost-user-config-linux.jam read these.
+if [ -f "$UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1/__config" ]; then
+  LIBCXX_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1"
+  LIBCXX_LIB_DIR="$UE_THIRD_PARTY_PATH/Unix/LibCxx/lib/Unix/$LINUX_ARCH_NAME"
+else
+  LIBCXX_INCLUDE_DIR="$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/include/c++/v1"
+  LIBCXX_LIB_DIR="$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/lib64"
+fi
+if [ ! -f "$LIBCXX_INCLUDE_DIR/__config" ] || [ ! -f "$LIBCXX_LIB_DIR/libc++.a" ]; then
+  echo "Couldn't find Unreal's libc++ (looked in $LIBCXX_INCLUDE_DIR and $LIBCXX_LIB_DIR)";
+  exit 1
+fi
+export LIBCXX_INCLUDE_DIR="$LIBCXX_INCLUDE_DIR"
+export LIBCXX_LIB_DIR="$LIBCXX_LIB_DIR"
+echo -e "Using Unreal libc++: $LIBCXX_LIB_DIR\n";
 
 # Unreal bumps its zlib and libPNG versions between engine releases (5.6 shipped zlib 1.2.13 and
 # libPNG-1.5.27, 5.7/5.8 ship zlib 1.3 and libPNG-1.6.44) and the static libraries have moved into
@@ -102,71 +138,15 @@ rm -rf "$ROOT_DIR/Source/rclcpp/log"
 NUM_JOBS="$(nproc --all)"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Applying Tempo patches..."
-cd "$ROOT_DIR/Source/rclcpp/rcpputils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
-cd "$ROOT_DIR/Source/rclcpp/rclcpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw"
-git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcutils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
-cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
-git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
-cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_transport_plugins"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_transport_plugins.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-CDR"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-CDR.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/pluginlib"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
-cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/class_loader"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
-cd "$ROOT_DIR/Source/rclcpp/geometry2"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
-cd "$ROOT_DIR/Source/rclcpp/theora"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
-cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
-cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
-cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
-cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
+# Tempo patches. The list lives in Scripts/patches.sh so the three platform
+# scripts cannot drift apart again (they already had: yaml_cpp_vendor was
+# applied on Windows only, and ros2cli.patch was applied nowhere).
+#
+# PATCH_TIERS selects which groups to apply:
+#   B base (non-ROS third party)   E env (needed to build under Unreal)
+#   R rtti / single process image  P std::pmr allocator conversion
+# Override it to bisect a build, e.g. PATCH_TIERS=BE for stock ROS 2.
+"$SCRIPT_DIR/patches.sh" apply --tier "${PATCH_TIERS:-BERP}"
 
 echo "Building acl"
 # Unreal's Linux image doesn't have acl, but iceoryx needs it. So build it and copy it there.
@@ -233,7 +213,13 @@ source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
 pip install colcon-common-extensions
 pip install empy==3.3.4
 pip install lark==1.1.1
-pip install numpy
+# numpy 2.x is an ABI break for rosidl_generator_py's extension modules and for
+# cv_bridge, both of which are compiled against whatever numpy is present here.
+pip install "numpy<2"
+# New in Jazzy: ament_cmake_vendor_package's ament_vendor() shells out to "vcs" to fetch the
+# sources it vendors (foonathan_memory, yaml-cpp, pybind11, orocos_kdl, mimick, ...). Humble used
+# ExternalProject's own GIT_REPOSITORY and needed no such tool.
+pip install vcstool
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 # Python3.11 instead.
@@ -250,8 +236,17 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # To inspect compiler/linker commands
 # export VERBOSE=1
 # --event-handlers console_direct+ \
+# CMake has three Python find modules with separate variable namespaces: FindPython3 (Python3_*),
+# the deprecated FindPythonLibs/FindPythonInterp (PYTHON_*) and FindPython (Python_*). Pin all three
+# to Unreal's Python 3.11. PyKDL, reached through python_orocos_kdl_vendor's FetchContent, uses
+# plain find_package(Python) and otherwise picks up the host's /usr/include/python3.x.
+#
+# tf2_bullet is skipped because nothing here provides Bullet. Under Humble it could only have found
+# the build host's libbullet-dev (built against libstdc++, and never copied into the bundle); with
+# CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF it no longer finds even that. Its only dependents are
+# test_tf2 and the geometry2 metapackage.
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis \
+colcon build --packages-skip-by-dep python_qt_binding tf2_bullet --packages-skip Boost OpenCV libogg vorbis tf2_bullet \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -259,6 +254,9 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --parallel-workers "$NUM_JOBS" \
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=17" \
+ " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -DCMAKE_MAKE_PROGRAM='$MAKE_PROGRAM'" \
+ " -Dvcs_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/vcs'" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
@@ -288,11 +286,15 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN:\$ORIGIN/../../../../../../../../Engine/Binaries/ThirdParty/Python3/Linux/lib:\$ORIGIN/../../../../../../../../../Engine/Binaries/ThirdParty/Python3/Linux/lib'" \
  " -DTRACETOOLS_DISABLED=ON" \
+ " -DLTTNGPY_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
  " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPython_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPython_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
  " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include' -stdlib=libc++ -fuse-ld=lld" \

@@ -54,11 +54,14 @@ if ! brew ls libtool; then
     exit 1
 fi
 
-# Check for tag
-TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
-if [ "$TAG" = "undefined" ]; then
-    echo "Could not find git tag"
-    exit 1
+# Check for tag. TAG can be set in the environment to build from an untagged
+# commit; release builds should still run from a tagged commit.
+if [ -z "${TAG+x}" ]; then
+  TAG=$(git name-rev --tags --name-only "$(git rev-parse HEAD)")
+  if [ "$TAG" = "undefined" ]; then
+      echo "Could not find git tag. Set TAG=<name> to build from an untagged commit."
+      exit 1
+  fi
 fi
 
 # Check for UNREAL_ENGINE_PATH
@@ -111,94 +114,54 @@ echo -e "Using git tag: $TAG\n"
 
 echo -e "All prerequisites satisfied. Starting build.\n"
 
-echo -e "Removing stale Outputs and Builds\n"
-rm -rf "$ROOT_DIR/Outputs/rclcpp"
-rm -rf "$ROOT_DIR/Builds/rclcpp"
-rm -rf "$ROOT_DIR/Source/rclcpp/install"
-rm -rf "$ROOT_DIR/Source/rclcpp/log"
+INSTALL_DIR="$ROOT_DIR/Source/rclcpp/install"
+
+# The Boost/ogg/theora/OpenCV prelude is independent of which ROS distro we are building.
+# SKIP_PREBUILT=1 reuses whatever is already installed into Source/rclcpp/install and keeps the
+# colcon build tree, which is what makes the patch/compile/fix loop workable. Release builds must
+# not set it.
+if [ -n "${SKIP_PREBUILT+x}" ]; then
+  if [ ! -d "$INSTALL_DIR" ]; then
+    echo "SKIP_PREBUILT is set but $INSTALL_DIR does not exist."
+    echo "Run once without SKIP_PREBUILT to build the third party prelude first."
+    exit 1
+  fi
+  echo -e "SKIP_PREBUILT is set: reusing prebuilt Boost/ogg/theora/OpenCV.\n"
+  rm -rf "$ROOT_DIR/Outputs/rclcpp"
+else
+  echo -e "Removing stale Outputs and Builds\n"
+  rm -rf "$ROOT_DIR/Outputs/rclcpp"
+  rm -rf "$ROOT_DIR/Builds/rclcpp"
+  rm -rf "$INSTALL_DIR"
+  rm -rf "$ROOT_DIR/Source/rclcpp/log"
+fi
 
 NUM_JOBS="$(sysctl -n hw.ncpu)"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
-echo "Applying Tempo patches..."
-cd "$ROOT_DIR/Source/rclcpp/rcpputils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcpputils.patch"
-cd "$ROOT_DIR/Source/rclcpp/rclcpp"
-git reset --hard && git apply "$ROOT_DIR/Patches/rclcpp.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw"
-git reset --hard && git apply "$ROOT_DIR/Patches/rmw.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl"
-git reset --hard && git clean -fd && git apply "$ROOT_DIR/Patches/rosidl.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcutils"
-git reset --hard && git apply "$ROOT_DIR/Patches/rcutils.patch"
-cd "$ROOT_DIR/Source/rclcpp/python_cmake_module"
-git reset --hard && git apply "$ROOT_DIR/Patches/python_cmake_module.patch"
-cd "$ROOT_DIR/Source/rclcpp/pybind11_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pybind11_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/image_transport_plugins"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/image_transport_plugins.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-DDS"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-DDS.patch"
-cd "$ROOT_DIR/Source/rclcpp/Fast-CDR"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/Fast-CDR.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_typesupport_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_typesupport_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/pluginlib"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/pluginlib.patch"
-cd "$ROOT_DIR/Source/rclcpp/cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/class_loader"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/class_loader.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-python.patch"
-cd "$ROOT_DIR/Source/rclcpp/boost/libs/exception"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/boost-exception.patch"
-cd "$ROOT_DIR/Source/rclcpp/geometry2"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/geometry2.patch"
-cd "$ROOT_DIR/Source/rclcpp/theora"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/theora.patch"
-cd "$ROOT_DIR/Source/rclcpp/orocos_kdl_vendor"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/orocos_kdl_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/libstatistics_collector"
-git reset --hard && git clean -df && git apply "$ROOT_DIR/Patches/libstatistics_collector.patch"
-cd "$ROOT_DIR/Source/rclcpp/common_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/common_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/mimick_vendor"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/mimick_vendor.patch"
-cd "$ROOT_DIR/Source/rclcpp/rcl_interfaces"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rcl_interfaces.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_cyclonedds"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_cyclonedds.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_dds_common"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_dds_common.patch"
-cd "$ROOT_DIR/Source/rclcpp/rmw_fastrtps"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rmw_fastrtps.patch"
-cd "$ROOT_DIR/Source/rclcpp/rosidl_python"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/rosidl_python.patch"
-cd "$ROOT_DIR/Source/rclcpp/unique_identifier_msgs"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/unique_identifier_msgs.patch"
-cd "$ROOT_DIR/Source/rclcpp/vision_opencv"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vision_opencv.patch"
-cd "$ROOT_DIR/Source/rclcpp/vorbis"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/vorbis.patch"
-# OpenCV 4.5.4's bundled zlib 1.2.11 and libpng 1.6.37 both take their Classic Mac OS branches
-# whenever TARGET_OS_MAC is defined. The macOS 26 SDK defines it (via TargetConditionals.h) before
-# those headers are reached, so zlib #defines fdopen to NULL - mangling stdio.h's fdopen
-# declaration - and libpng tries to include <fp.h>, which has not existed since Mac OS 9. Both
-# fixes are what upstream did: zlib skips that branch on __APPLE__ (where the __APPLE__ branch
-# right below already sets OS_CODE 19), and libpng 1.6.44 dropped the fp.h block for a plain
-# <math.h> include.
-cd "$ROOT_DIR/Source/rclcpp/opencv"
-git reset --hard && git clean -f && git apply "$ROOT_DIR/Patches/opencv.patch"
+# Tempo patches. The list lives in Scripts/patches.sh so the three platform
+# scripts cannot drift apart again (they already had: yaml_cpp_vendor was
+# applied on Windows only, and ros2cli.patch was applied nowhere). opencv.patch
+# stays Mac-only and patches.sh knows that.
+#
+# PATCH_TIERS selects which groups to apply:
+#   B base (non-ROS third party)   E env (needed to build under Unreal)
+#   R rtti / single process image  P std::pmr allocator conversion
+# Override it to bisect a build, e.g. PATCH_TIERS=BE for stock ROS 2.
+"$SCRIPT_DIR/patches.sh" apply --tier "${PATCH_TIERS:-BERP}"
 
+# asio is a header-only copy, so it is cheap enough to refresh on every run -- and it must be,
+# because Fast DDS version-checks asio/version.hpp. Leaving a stale copy behind SKIP_PREBUILT
+# would silently keep an old asio in the prefix and fail the check.
 echo -e "Copying asio"
+rm -rf "$ROOT_DIR/Source/rclcpp/install/include/asio"
 mkdir -p "$ROOT_DIR/Source/rclcpp/install/include/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio" "$ROOT_DIR/Source/rclcpp/install/include/asio/asio"
 cp -r "$ROOT_DIR/Source/rclcpp/asio/asio/include/asio.hpp" "$ROOT_DIR/Source/rclcpp/install/include/asio"
+
+# ---- third party prelude: Boost, ogg, theora, OpenCV ----
+# Identical across ROS distros, so SKIP_PREBUILT reuses it.
+if [ -z "${SKIP_PREBUILT+x}" ]; then
 
 echo -e "Building boost"
 cd "$ROOT_DIR/Source/rclcpp/boost"
@@ -255,14 +218,28 @@ cmake \
  "$ROOT_DIR/Source/rclcpp/opencv"
 cmake --build . -t install -j "$NUM_JOBS"
 
-echo -e "Creating Python virtual environment for colcon build.\n"
-cd "$UNREAL_ENGINE_PATH"
-./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+fi
+# ---- end third party prelude ----
+
+if [ ! -f "$ROOT_DIR/Builds/rclcpp/venv/bin/activate" ]; then
+  echo -e "Creating Python virtual environment for colcon build.\n"
+  cd "$UNREAL_ENGINE_PATH"
+  ./Engine/Binaries/ThirdParty/Python3/Mac/bin/python3 -m venv "$ROOT_DIR/Builds/rclcpp/venv"
+fi
 source "$ROOT_DIR/Builds/rclcpp/venv/bin/activate"
+# Run every time, not just on create: these are cheap no-ops once satisfied, and the venv
+# survives across runs when SKIP_PREBUILT is set, so a newly added dependency would otherwise
+# never get installed into an existing environment.
 pip install colcon-common-extensions
 pip install empy==3.3.4
 pip install lark==1.1.1
-pip install numpy
+# numpy 2.x is an ABI break for rosidl_generator_py's extension modules and for
+# cv_bridge, both of which are compiled against whatever numpy is present here.
+pip install "numpy<2"
+# New in Jazzy: ament_cmake_vendor_package's ament_vendor() shells out to "vcs" to fetch the
+# sources it vendors (foonathan_memory, yaml-cpp, pybind11, orocos_kdl, mimick, ...). Humble used
+# ExternalProject's own GIT_REPOSITORY and needed no such tool.
+pip install vcstool
 # 'pip install netifaces' builds from source, but Unreal's python config has a bunch of hard-coded
 # paths to some engineer's machine, which makes that difficult. So we use this pre-compiled one for
 # Python3.11 instead.
@@ -276,6 +253,14 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Binaries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Libraries/Mac"
 mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 
+# CMake ships three separate Python find modules with three separate variable namespaces:
+# FindPython3 (Python3_*), the deprecated FindPythonLibs/FindPythonInterp (PYTHON_*), and
+# FindPython (Python_*). Which one a package uses is its own choice, so pin all three to the venv
+# (which is Unreal's Python 3.11). *_FIND_FRAMEWORK=NEVER matters on Mac: FindPython searches
+# framework installs before anything else by default, so tf2_py -- which calls
+# find_package(Python3 COMPONENTS Development) without going through PythonExtra first -- picked up
+# Homebrew's /opt/homebrew/Frameworks/Python.framework 3.13 and then failed to find its headers.
+#
 # To inspect compiler/linker commands
 # export VERBOSE=1
 # --cmake-clean-cache \
@@ -289,6 +274,9 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --event-handlers console_direct+ \
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=20" \
+ " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF" \
+ " -Dvcs_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/vcs'" \
  " -DAsio_INCLUDE_DIR=$ROOT_DIR/Source/rclcpp/install/include/asio" \
  " -DTHIRDPARTY_Asio=FORCE" \
  " -DBUILD_TESTS=OFF" \
@@ -322,7 +310,15 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DTRACETOOLS_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
+ " -DPython3_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPython3_FIND_FRAMEWORK=NEVER" \
+ " -DPython_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
+ " -DPython_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
+ " -DPython_FIND_FRAMEWORK=NEVER" \
+ " -DPYTHON_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
  " -DPythonExtra_INCLUDE_DIRS='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Mac/include'" \
  " -DPythonExtra_LIBRARIES='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \
  " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Mac/libpython3.11.dylib'" \

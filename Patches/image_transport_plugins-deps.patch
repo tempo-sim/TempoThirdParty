@@ -1,0 +1,47 @@
+diff --git a/theora_image_transport/CMakeLists.txt b/theora_image_transport/CMakeLists.txt
+index 654b83f..c88125a 100644
+--- a/theora_image_transport/CMakeLists.txt
++++ b/theora_image_transport/CMakeLists.txt
+@@ -69,6 +69,15 @@ target_link_libraries(${LIBRARY_NAME}
+   pluginlib::pluginlib
+   rclcpp::rclcpp
+ )
++# pkg-config gives us the library names (-logg, -ltheora) but the linker also needs to be told
++# where they are: we build ogg and theora into Source/rclcpp/install rather than installing them
++# system-wide, so without this the link fails with LNK1181: cannot open input file 'ogg.lib'.
++target_link_directories(${LIBRARY_NAME} PRIVATE
++  ${PC_OGG_LIBRARY_DIRS}
++  ${PC_THEORA_LIBRARY_DIRS}
++  ${PC_THEORAENC_LIBRARY_DIRS}
++  ${PC_THEORADEC_LIBRARY_DIRS}
++)
+ 
+ add_executable(ogg_saver src/ogg_saver.cpp)
+ target_compile_definitions(ogg_saver PRIVATE
+@@ -86,6 +95,12 @@ target_link_libraries(ogg_saver
+   rclcpp::rclcpp
+   rcutils::rcutils
+ )
++target_link_directories(ogg_saver PRIVATE
++  ${PC_OGG_LIBRARY_DIRS}
++  ${PC_THEORA_LIBRARY_DIRS}
++  ${PC_THEORAENC_LIBRARY_DIRS}
++  ${PC_THEORADEC_LIBRARY_DIRS}
++)
+ 
+ ament_export_dependencies(
+   rosidl_default_runtime
+diff --git a/theora_image_transport/package.xml b/theora_image_transport/package.xml
+index 629fa0a..1e6176b 100644
+--- a/theora_image_transport/package.xml
++++ b/theora_image_transport/package.xml
+@@ -23,9 +23,6 @@
+ 
+   <depend>cv_bridge</depend>
+   <depend>image_transport</depend>
+-  <depend>libogg</depend>
+-  <depend>libopencv-imgproc-dev</depend>
+-  <depend>libtheora</depend>
+   <depend>pluginlib</depend>
+   <depend>rclcpp</depend>
+   <depend>rcutils</depend>
