@@ -399,10 +399,10 @@ index 7dff6e9a..4130c16c 100644
    on_parameter_event(
      NodeT && node,
 diff --git a/rclcpp/include/rclcpp/parameter_value.hpp b/rclcpp/include/rclcpp/parameter_value.hpp
-index fac896ea..70297398 100644
+index fac896ea..16d60f7a 100644
 --- a/rclcpp/include/rclcpp/parameter_value.hpp
 +++ b/rclcpp/include/rclcpp/parameter_value.hpp
-@@ -178,73 +178,79 @@ public:
+@@ -178,73 +178,80 @@ public:
  
    template<ParameterType type>
    constexpr
@@ -473,8 +473,10 @@ index fac896ea..70297398 100644
 +    return std::vector<double>(value_.double_array_value.cbegin(), value_.double_array_value.cend());
    }
  
++  // Not constexpr, unlike its siblings: it defines a local std::vector, which a constexpr function
++  // may only do from C++20 on, and the Linux build is C++17.
    template<ParameterType type>
-   constexpr
+-  constexpr
    typename std::enable_if<
 -    type == ParameterType::PARAMETER_STRING_ARRAY, const std::vector<std::string> &>::type
 +    type == ParameterType::PARAMETER_STRING_ARRAY, std::vector<std::string>>::type
@@ -494,7 +496,7 @@ index fac896ea..70297398 100644
    }
  
    // The following get() variants allow the use of primitive types
-@@ -276,7 +282,7 @@ public:
+@@ -276,7 +283,7 @@ public:
  
    template<typename type>
    constexpr
@@ -503,7 +505,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_STRING>();
-@@ -286,7 +292,7 @@ public:
+@@ -286,7 +293,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -512,7 +514,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_BYTE_ARRAY>();
-@@ -296,7 +302,7 @@ public:
+@@ -296,7 +303,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -521,7 +523,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_BOOL_ARRAY>();
-@@ -306,7 +312,7 @@ public:
+@@ -306,7 +313,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -530,7 +532,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_INTEGER_ARRAY>();
-@@ -316,7 +322,7 @@ public:
+@@ -316,7 +323,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -539,7 +541,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_INTEGER_ARRAY>();
-@@ -326,7 +332,7 @@ public:
+@@ -326,7 +333,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -548,7 +550,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_DOUBLE_ARRAY>();
-@@ -336,7 +342,7 @@ public:
+@@ -336,7 +343,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<
@@ -557,7 +559,7 @@ index fac896ea..70297398 100644
    get() const
    {
      return get<ParameterType::PARAMETER_DOUBLE_ARRAY>();
-@@ -346,7 +352,7 @@ public:
+@@ -346,7 +353,7 @@ public:
    constexpr
    typename std::enable_if<
      std::is_convertible<

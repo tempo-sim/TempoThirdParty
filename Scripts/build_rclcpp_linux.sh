@@ -24,6 +24,13 @@ if ! which cmake; then
     exit 1
 fi
 
+# Check for make. The colcon build turns off CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH, which also
+# stops CMake finding its own build tool on PATH, so it is resolved here and passed explicitly.
+if ! MAKE_PROGRAM=$(which make); then
+    echo "Couldn't find make"
+    exit 1
+fi
+
 # Check for pip
 if ! which pip; then
     echo "Couldn't find pip"
@@ -59,11 +66,37 @@ fi
 
 echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 
-LINUX_MULTIARCH_ROOT="$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v25_clang-18.1.0-rockylinux8"
+# Unreal bundles one clang toolchain per engine version (5.6 shipped v25_clang-18.1.0-rockylinux8,
+# 5.7 ships v26_clang-20.1.8-rockylinux8). Discover it rather than hard-coding one engine's.
+LINUX_MULTIARCH_ROOT=$(find "$UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64" -mindepth 1 -maxdepth 1 -type d -name "v*_clang-*" | sort -V | tail -1)
+if [ -z "$LINUX_MULTIARCH_ROOT" ] || [ ! -x "$LINUX_MULTIARCH_ROOT/x86_64-unknown-linux-gnu/bin/clang++" ]; then
+  echo "Couldn't find Unreal's Linux clang toolchain under $UNREAL_ENGINE_PATH/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64";
+  exit 1
+fi
+echo -e "Using Unreal Linux toolchain: $LINUX_MULTIARCH_ROOT\n";
 LINUX_ARCH_NAME="x86_64-unknown-linux-gnu"
 export UE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH"
 export LINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT"
 export LINUX_ARCH_NAME="$LINUX_ARCH_NAME"
+
+# Unreal links every module against a static libc++. Through 5.6 that libc++ lived in
+# Engine/Source/ThirdParty/Unix/LibCxx; from 5.7 it ships inside the clang toolchain itself
+# (UBT only uses the old location under -ForceUseLegacyLibCxx). Build against whichever one the
+# engine itself uses. linux.toolchain.cmake and boost-user-config-linux.jam read these.
+if [ -f "$UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1/__config" ]; then
+  LIBCXX_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/Unix/LibCxx/include/c++/v1"
+  LIBCXX_LIB_DIR="$UE_THIRD_PARTY_PATH/Unix/LibCxx/lib/Unix/$LINUX_ARCH_NAME"
+else
+  LIBCXX_INCLUDE_DIR="$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/include/c++/v1"
+  LIBCXX_LIB_DIR="$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/lib64"
+fi
+if [ ! -f "$LIBCXX_INCLUDE_DIR/__config" ] || [ ! -f "$LIBCXX_LIB_DIR/libc++.a" ]; then
+  echo "Couldn't find Unreal's libc++ (looked in $LIBCXX_INCLUDE_DIR and $LIBCXX_LIB_DIR)";
+  exit 1
+fi
+export LIBCXX_INCLUDE_DIR="$LIBCXX_INCLUDE_DIR"
+export LIBCXX_LIB_DIR="$LIBCXX_LIB_DIR"
+echo -e "Using Unreal libc++: $LIBCXX_LIB_DIR\n";
 
 # Unreal bumps its zlib and libPNG versions between engine releases (5.6 shipped zlib 1.2.13 and
 # libPNG-1.5.27, 5.7/5.8 ship zlib 1.3 and libPNG-1.6.44) and the static libraries have moved into
@@ -203,8 +236,17 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # To inspect compiler/linker commands
 # export VERBOSE=1
 # --event-handlers console_direct+ \
+# CMake has three Python find modules with separate variable namespaces: FindPython3 (Python3_*),
+# the deprecated FindPythonLibs/FindPythonInterp (PYTHON_*) and FindPython (Python_*). Pin all three
+# to Unreal's Python 3.11. PyKDL, reached through python_orocos_kdl_vendor's FetchContent, uses
+# plain find_package(Python) and otherwise picks up the host's /usr/include/python3.x.
+#
+# tf2_bullet is skipped because nothing here provides Bullet. Under Humble it could only have found
+# the build host's libbullet-dev (built against libstdc++, and never copied into the bundle); with
+# CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF it no longer finds even that. Its only dependents are
+# test_tf2 and the geometry2 metapackage.
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis \
+colcon build --packages-skip-by-dep python_qt_binding tf2_bullet --packages-skip Boost OpenCV libogg vorbis tf2_bullet \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
@@ -213,6 +255,7 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  --cmake-args \
  " -DCMAKE_CXX_STANDARD=17" \
  " -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF" \
+ " -DCMAKE_MAKE_PROGRAM='$MAKE_PROGRAM'" \
  " -Dvcs_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/vcs'" \
  " -DBUILD_TESTS=OFF" \
  " -DBUILD_TESTING=OFF" \
@@ -243,11 +286,15 @@ colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost Open
  " -DCMAKE_POLICY_DEFAULT_CMP0144=NEW" \
  " -DCMAKE_INSTALL_RPATH='\$ORIGIN:\$ORIGIN/../../../../../../../../Engine/Binaries/ThirdParty/Python3/Linux/lib:\$ORIGIN/../../../../../../../../../Engine/Binaries/ThirdParty/Python3/Linux/lib'" \
  " -DTRACETOOLS_DISABLED=ON" \
+ " -DLTTNGPY_DISABLED=ON" \
  " -DBoost_NO_BOOST_CMAKE=ON" \
  " -DFORCE_BUILD_VENDOR_PKG=ON" \
  " -DPython3_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
  " -DPython3_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
  " -DPython3_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
+ " -DPython_EXECUTABLE='$ROOT_DIR/Builds/rclcpp/venv/bin/python3'" \
+ " -DPython_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
+ " -DPython_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " -DPYTHON_LIBRARY='$UNREAL_ENGINE_PATH/Engine/Binaries/ThirdParty/Python3/Linux/lib/libpython3.11.so'" \
  " -DPYTHON_INCLUDE_DIR='$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include'" \
  " -DCMAKE_CXX_FLAGS=-isystem '$UNREAL_ENGINE_PATH/Engine/Source/ThirdParty/Python3/Linux/include' -stdlib=libc++ -fuse-ld=lld" \
