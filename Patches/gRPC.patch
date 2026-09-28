@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c5123edadf..bd63b9caec 100644
+index c5123edadf..dce588ae30 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -50,6 +50,9 @@ set(gRPC_BUILD_MSVC_MP_COUNT 0 CACHE STRING "The maximum number of processes for
@@ -243,6 +243,22 @@ index c5123edadf..bd63b9caec 100644
      )
    endif()
  endif()
+@@ -36235,3 +36267,15 @@ generate_pkgconfig(
+   "-lgrpc++_unsecure"
+   "-laddress_sorting -lutf8_range_lib -lupb_message_lib -lupb_mem_lib -lupb_base_lib"
+   "grpc++_unsecure.pc")
++
++# Tempo: grpc++'s C++ API (ServerBuilder, CompletionQueue, ...) is not annotated for export, so
++# -fvisibility-ms-compat hides it, and the shared library Tempo links these libraries into
++# (Utils/tempogrpc) could not export it. Build the C++ libraries with default visibility, so that
++# library exports the whole API.
++if(NOT WIN32)
++  foreach(_tempo_cpp_target grpc++ grpc++_alts grpc++_error_details grpc++_reflection grpc++_unsecure grpcpp_channelz)
++    if(TARGET ${_tempo_cpp_target})
++      target_compile_options(${_tempo_cpp_target} PRIVATE -fvisibility=default)
++    endif()
++  endforeach()
++endif()
 diff --git a/examples/cpp/cancellation/client.cc b/examples/cpp/cancellation/client.cc
 index 97c9f1fac4..311d418e49 100644
 --- a/examples/cpp/cancellation/client.cc

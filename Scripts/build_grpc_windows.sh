@@ -151,6 +151,23 @@ eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium \
  --namespaces grpc protobuf upb absl re2 google envoy census telemetry cares xds bloaty benchmark utf8_range \
  --libdir $ROOT_DIR/Outputs/gRPC/Libraries/Windows -o $ROOT_DIR/Outputs/gRPC/Libraries/Windows/exports.def"
 
+echo -e "Linking the shared library...\n"
+# Every Tempo module shares the one copy of gRPC, Protobuf and Abseil in this library (see Utils/tempogrpc).
+mkdir -p "$ROOT_DIR/Builds/gRPC/Windows-tempogrpc" && cd "$ROOT_DIR/Builds/gRPC/Windows-tempogrpc"
+cmake -G "Visual Studio 17 2022" \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
+ -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreadedDLL" \
+ -DTEMPO_GRPC_OUTPUT_DIR="$ROOT_DIR/Outputs/gRPC" -DTEMPO_GRPC_PLATFORM="Windows" \
+ -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
+ "$ROOT_DIR/Utils/tempogrpc"
+cmake --build . --target INSTALL --config Release -j "$NUM_JOBS"
+
+if ! dumpbin //EXPORTS "$ROOT_DIR/Outputs/gRPC/Binaries/Windows/tempogrpc.dll" | grep -q "ServerBuilder"; then
+  echo "tempogrpc.dll does not export gRPC's C++ API"
+  exit 1
+fi
+echo -e "Successfully linked the shared library.\n"
+
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Windows-$TAG.tar.gz"
 rm -rf "$ARCHIVE"

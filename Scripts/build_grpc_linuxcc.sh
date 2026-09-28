@@ -175,6 +175,30 @@ rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant w
 find "$ROOT_DIR/Outputs/gRPC/Libraries/Linux" -type f -name "*.a" ! -name "libgrpc_authorization_provider.a" ! \
   -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/exports.def"
 
+echo -e "Linking the shared library...\n"
+# Every Tempo module shares the one copy of gRPC, Protobuf and Abseil in this library (see Utils/tempogrpc).
+mkdir -p "$ROOT_DIR/Builds/gRPC/Linux-tempogrpc" && cd "$ROOT_DIR/Builds/gRPC/Linux-tempogrpc"
+cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
+ -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
+ -DLINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT" -DLINUX_ARCH_NAME="$LINUX_ARCH_NAME" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/linuxcc.toolchain.cmake" \
+ -DTEMPO_GRPC_OUTPUT_DIR="$ROOT_DIR/Outputs/gRPC" -DTEMPO_GRPC_PLATFORM="Linux" \
+ "$ROOT_DIR/Utils/tempogrpc"
+cmake --build . --target install --config Release -j "$NUM_JOBS"
+
+# Tempo calls gRPC's C++ API through the library, which Patches/gRPC.patch makes exportable.
+NM=$(find "$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/bin" -maxdepth 1 -name "*nm.exe" | head -1)
+if [ -n "$NM" ]; then
+  if ! "$NM" -D --defined-only "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libtempogrpc.so" | grep -q "ServerBuilder13BuildAndStart"; then
+    echo "libtempogrpc.so does not export gRPC's C++ API"
+    exit 1
+  fi
+else
+  echo "Warning: found no nm in the toolchain, so not checking that libtempogrpc.so exports gRPC's C++ API"
+fi
+echo -e "Successfully linked the shared library.\n"
+
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Linux-$TAG.tar.gz"
 rm -rf "$ARCHIVE"
