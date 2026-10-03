@@ -50,6 +50,7 @@ echo -e "Using Unreal Engine ThirdParty: $UE_THIRD_PARTY_PATH\n";
 echo -e "All prerequisites satisfied. Starting build.\n"
 
 NUM_JOBS="$(sysctl -n hw.ncpu)"
+OSX_DEPLOYMENT_TARGET="10.15"
 echo -e "Detected $NUM_JOBS processors. Will use $NUM_JOBS jobs.\n"
 
 echo -e "Removing stale Outputs and Builds\n"
@@ -83,7 +84,7 @@ cmake -G "Unix Makefiles" \
  -DCMAKE_INSTALL_BINDIR="Binaries/Mac" -DCMAKE_INSTALL_LIBDIR="Libraries/Mac" -DCMAKE_INSTALL_INCLUDEDIR="Includes" -DCMAKE_INSTALL_CMAKEDIR="Libraries/Mac/cmake" \
  -DgRPC_INSTALL_BINDIR="Binaries/Mac" -DgRPC_INSTALL_LIBDIR="Libraries/Mac" -DgRPC_INSTALL_INCLUDEDIR="Includes" -DgRPC_INSTALL_CMAKEDIR="Libraries/Mac/cmake" -DgRPC_INSTALL_SHAREDIR="Libraries/Mac/share" \
  \
- -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
+ -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="$OSX_DEPLOYMENT_TARGET" \
  -DCMAKE_MACOSX_BUNDLE=OFF -DCMAKE_SHARED_LINKER_FLAGS=" -ld_classic" \
  -DCMAKE_CXX_EXTENSIONS=OFF -DCMAKE_CXX_STANDARD=20 \
  -DCMAKE_CXX_FLAGS=" -fno-rtti -fexceptions -DPLATFORM_EXCEPTIONS_DISABLED=0 -fmessage-length=0 -fpascal-strings \
@@ -136,6 +137,25 @@ rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Mac/libutf8_range_lib.a" # Redundant wit
 # libgrpc_authorization_provider.a, libupb_json_lib.a, and libupb_textformat_lib.a for some reason have symbols in common with libgrpc.a. So we don't want to force them to load.
 find "$ROOT_DIR/Outputs/gRPC/Libraries/Mac" -type f -name "*.a" ! -name "libgrpc_authorization_provider.a" ! \
   -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Outputs/gRPC/Libraries/Mac/exports.def"
+
+echo -e "Linking the shared library...\n"
+# Every Tempo module shares the one copy of gRPC, Protobuf and Abseil in this library (see Utils/tempogrpc).
+mkdir -p "$ROOT_DIR/Builds/gRPC/Mac-tempogrpc" && cd "$ROOT_DIR/Builds/gRPC/Mac-tempogrpc"
+cmake -G "Unix Makefiles" \
+ -DCMAKE_BUILD_TYPE=Release \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
+ -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="$OSX_DEPLOYMENT_TARGET" \
+ -DTEMPO_GRPC_OUTPUT_DIR="$ROOT_DIR/Outputs/gRPC" -DTEMPO_GRPC_PLATFORM="Mac" \
+ -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
+ "$ROOT_DIR/Utils/tempogrpc"
+cmake --build . --target install --config Release -j "$NUM_JOBS"
+
+# Tempo calls gRPC's C++ API through the library, which Patches/gRPC.patch makes exportable.
+if ! nm -gU "$ROOT_DIR/Outputs/gRPC/Libraries/Mac/libtempogrpc.dylib" | grep -q "ServerBuilder13BuildAndStart"; then
+  echo "libtempogrpc.dylib does not export gRPC's C++ API"
+  exit 1
+fi
+echo -e "Successfully linked the shared library.\n"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Mac-$TAG.tar.gz"

@@ -139,12 +139,12 @@ cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
  -DgRPC_USE_CARES=OFF -DgRPC_USE_PROTO_LITE=OFF \
  -DgRPC_ZLIB_PROVIDER=package \
  -DZLIB_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/zlib/1.3/include" \
- -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/Release/libz.a" \
- -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/Release/libz.a" \
+ -DZLIB_LIBRARY_RELEASE="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a" \
+ -DZLIB_LIBRARY_DEBUG="$UE_THIRD_PARTY_PATH/zlib/1.3/lib/Unix/$LINUX_ARCH_NAME/Release/libz.a" \
  -DgRPC_SSL_PROVIDER=package \
  -DOPENSSL_INCLUDE_DIR="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/include/Unix" \
- -DOPENSSL_SSL_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/libssl.a" \
- -DOPENSSL_CRYPTO_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/libcrypto.a" \
+ -DOPENSSL_SSL_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libssl.a" \
+ -DOPENSSL_CRYPTO_LIBRARY="$UE_THIRD_PARTY_PATH/OpenSSL/1.1.1t/lib/Unix/$LINUX_ARCH_NAME/libcrypto.a" \
  -DgRPC_BUILD_CODEGEN=ON -DgRPC_BUILD_CSHARP_EXT=OFF \
  -DgRPC_BUILD_GRPC_CPP_PLUGIN=ON -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
  -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
@@ -174,6 +174,30 @@ rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libutf8_range_lib.a" # Redundant w
 # libgrpc_authorization_provider.a, libupb_json_lib.a, and libupb_textformat_lib.a for some reason have symbols in common with libgrpc.a. So we don't want to force them to load.
 find "$ROOT_DIR/Outputs/gRPC/Libraries/Linux" -type f -name "*.a" ! -name "libgrpc_authorization_provider.a" ! \
   -name "libupb_json_lib.a" ! -name "libupb_textformat_lib.a" -exec basename {} \; > "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/exports.def"
+
+echo -e "Linking the shared library...\n"
+# Every Tempo module shares the one copy of gRPC, Protobuf and Abseil in this library (see Utils/tempogrpc).
+mkdir -p "$ROOT_DIR/Builds/gRPC/Linux-tempogrpc" && cd "$ROOT_DIR/Builds/gRPC/Linux-tempogrpc"
+cmake -G "Ninja Multi-Config" -DCMAKE_MAKE_PROGRAM="$NINJA_EXE_PATH" \
+ -DCMAKE_INSTALL_PREFIX="$ROOT_DIR/Outputs/gRPC" \
+ -DUE_THIRD_PARTY_PATH="$UE_THIRD_PARTY_PATH" \
+ -DLINUX_MULTIARCH_ROOT="$LINUX_MULTIARCH_ROOT" -DLINUX_ARCH_NAME="$LINUX_ARCH_NAME" \
+ -DCMAKE_TOOLCHAIN_FILE="$ROOT_DIR/Toolchains/linuxcc.toolchain.cmake" \
+ -DTEMPO_GRPC_OUTPUT_DIR="$ROOT_DIR/Outputs/gRPC" -DTEMPO_GRPC_PLATFORM="Linux" \
+ "$ROOT_DIR/Utils/tempogrpc"
+cmake --build . --target install --config Release -j "$NUM_JOBS"
+
+# Tempo calls gRPC's C++ API through the library, which Patches/gRPC.patch makes exportable.
+NM=$(find "$LINUX_MULTIARCH_ROOT/$LINUX_ARCH_NAME/bin" -maxdepth 1 -name "*-nm.exe" ! -name "*gcc-nm.exe" | head -1)
+if [ -n "$NM" ]; then
+  if ! "$NM" -D --defined-only "$ROOT_DIR/Outputs/gRPC/Libraries/Linux/libtempogrpc.so" | grep -q "ServerBuilder13BuildAndStart"; then
+    echo "libtempogrpc.so does not export gRPC's C++ API"
+    exit 1
+  fi
+else
+  echo "Warning: found no nm in the toolchain, so not checking that libtempogrpc.so exports gRPC's C++ API"
+fi
+echo -e "Successfully linked the shared library.\n"
 
 echo -e "Archiving outputs...\n"
 ARCHIVE="$ROOT_DIR/Releases/TempoThirdParty-gRPC-Linux-$TAG.tar.gz"

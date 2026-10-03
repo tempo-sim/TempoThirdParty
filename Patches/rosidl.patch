@@ -35,22 +35,29 @@ index 6e583888..26b1065c 100644
  // constant definitions
  @[for c in message.constants]@
 diff --git a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
-index 5a4773c6..86cd964a 100644
+index 5a4773c6..2f43dedb 100644
 --- a/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
 +++ b/rosidl_runtime_cpp/include/rosidl_runtime_cpp/traits.hpp
-@@ -107,13 +107,19 @@ inline void value_to_yaml(int64_t value, std::ostream & out)
+@@ -15,7 +15,6 @@
+ #ifndef ROSIDL_RUNTIME_CPP__TRAITS_HPP_
+ #define ROSIDL_RUNTIME_CPP__TRAITS_HPP_
+ 
+-#include <codecvt>
+ #include <cstdint>
+ #include <iomanip>
+ #include <iosfwd>
+@@ -107,13 +106,19 @@ inline void value_to_yaml(int64_t value, std::ostream & out)
    out << value;
  }
  
 -inline void value_to_yaml(const std::string & value, std::ostream & out)
--{
 +// Tempo change: templated on the allocator rather than taking std::string, because generated
 +// messages default to std::pmr::polymorphic_allocator and so hold std::pmr::string. std::string
 +// still matches, so this replaces the original overload rather than adding to it.
 +template<typename Allocator>
 +inline void value_to_yaml(
 +  const std::basic_string<char, std::char_traits<char>, Allocator> & value, std::ostream & out)
-+{
+ {
 +  using string_type = std::basic_string<char, std::char_traits<char>, Allocator>;
    out << "\"";
    size_t index = 0;
@@ -61,7 +68,7 @@ index 5a4773c6..86cd964a 100644
        pos = value.size();
      }
      out.write(&value[index], static_cast<std::streamsize>(pos - index));
-@@ -126,7 +132,11 @@ inline void value_to_yaml(const std::string & value, std::ostream & out)
+@@ -126,17 +131,19 @@ inline void value_to_yaml(const std::string & value, std::ostream & out)
    out << "\"";
  }
  
@@ -73,7 +80,18 @@ index 5a4773c6..86cd964a 100644
 +  std::ostream & out)
  {
    out << "\"";
-   std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+-  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+   auto flags = out.flags();
+   size_t index = 0;
+   while (index < value.size()) {
+     uint_least16_t character = static_cast<uint_least16_t>(value[index]);
+     if (!(character & 0xff80)) {  // ASCII
+-      std::string character_as_string = convert.to_bytes(character);
+-      out << std::hex << character_as_string.c_str();
++      out << static_cast<char>(character);
+     } else if (!(character & 0xff00)) {  // only 1 byte set
+       out << "\\x" << std::hex << std::setw(2) << std::setfill('0') << \
+         character;
 diff --git a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em b/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
 index 392fc839..69c97dc3 100644
 --- a/rosidl_typesupport_introspection_cpp/resource/msg__type_support.cpp.em
