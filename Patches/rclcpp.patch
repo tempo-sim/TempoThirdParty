@@ -279,7 +279,7 @@ index dd0e8be9..4343f669 100644
      rclcpp::node_interfaces::NodeBaseInterface * node_base,
      const std::shared_ptr<rcpputils::SharedLibrary> ts_lib,
 diff --git a/rclcpp/include/rclcpp/loaned_message.hpp b/rclcpp/include/rclcpp/loaned_message.hpp
-index 6b30e271..520144fa 100644
+index 6b30e271..27820115 100644
 --- a/rclcpp/include/rclcpp/loaned_message.hpp
 +++ b/rclcpp/include/rclcpp/loaned_message.hpp
 @@ -16,6 +16,7 @@
@@ -299,6 +299,24 @@ index 6b30e271..520144fa 100644
  class LoanedMessage
  {
    using MessageAllocatorTraits = rclcpp::allocator::AllocRebind<MessageT, AllocatorT>;
+@@ -58,7 +59,7 @@ public:
+    */
+   LoanedMessage(
+     const rclcpp::PublisherBase & pub,
+-    std::allocator<MessageT> allocator)
++    std::pmr::polymorphic_allocator<void> allocator)
+   : pub_(pub),
+     message_(nullptr),
+     message_allocator_(std::move(allocator))
+@@ -108,7 +109,7 @@ public:
+   ]]
+   LoanedMessage(
+     const rclcpp::PublisherBase * pub,
+-    std::shared_ptr<std::allocator<MessageT>> allocator)
++    std::shared_ptr<std::pmr::polymorphic_allocator<void>> allocator)
+   : LoanedMessage(*pub, *allocator)
+   {}
+ 
 diff --git a/rclcpp/include/rclcpp/message_memory_strategy.hpp b/rclcpp/include/rclcpp/message_memory_strategy.hpp
 index a5100206..e8c15244 100644
 --- a/rclcpp/include/rclcpp/message_memory_strategy.hpp

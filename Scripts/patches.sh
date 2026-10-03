@@ -37,6 +37,7 @@ PATCH_DIR="$ROOT_DIR/Patches"
 # Platforms is a comma list of windows,linux,mac; empty means all.
 PATCHES=$(cat <<'EOF'
 rclcpp|rclcpp||P|
+rclcpp-rtti|rclcpp||R|
 rmw|rmw||R|
 rosidl|rosidl|-fd|P|
 rcutils|rcutils||E|
@@ -212,10 +213,17 @@ cmd_apply() {
 # Regenerate Patches/<name>.patch from the submodule's current working tree.
 #
 # CAUTION: regen diffs the WHOLE submodule. Where two patches target the same submodule
-# (rcutils, image_transport_plugins) that is wrong -- the regenerated patch will also contain
-# the other patch's changes, and applying both then fails with "patch does not apply". For
-# those, generate the diff scoped to the files that patch owns:
+# (rclcpp, rcutils, image_transport_plugins) that is wrong -- the regenerated patch will also
+# contain the other patch's changes, and applying both then fails with "patch does not apply".
+# For those, generate the diff scoped to the files that patch owns:
 #     git -C Source/rclcpp/<sub> diff --ignore-submodules=all -- <paths> > Patches/<name>.patch
+#
+# rclcpp and rclcpp-rtti additionally overlap on six files (create_publisher.hpp,
+# create_subscription.hpp, experimental/buffers/intra_process_buffer.hpp,
+# experimental/ros_message_intra_process_buffer.hpp, publisher.hpp, subscription.hpp), so even a
+# path-scoped diff cannot separate them. Regenerate either one by resetting the submodule,
+# applying only that patch, editing, and then running regen for it alone -- which is sound
+# because each applies cleanly to pristine upstream on its own.
 #
 # -N (intent-to-add) is what makes newly added files show up in git diff; several
 # patches add files rather than only editing them.

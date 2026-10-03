@@ -1,0 +1,409 @@
+diff --git a/rclcpp/include/rclcpp/context.hpp b/rclcpp/include/rclcpp/context.hpp
+index 4417f4d6..52333022 100644
+--- a/rclcpp/include/rclcpp/context.hpp
++++ b/rclcpp/include/rclcpp/context.hpp
+@@ -337,7 +337,11 @@ public:
+   {
+     std::lock_guard<std::recursive_mutex> lock(sub_contexts_mutex_);
+ 
+-    std::type_index type_i(typeid(SubContext));
++#ifdef _LIBCPP_HAS_NO_RTTI
++    std::string type_i(SubContext::class_name);
++#else
++    std::string type_i(typeid(SubContext).name());
++#endif  // _LIBCPP_HAS_NO_RTTI
+     std::shared_ptr<SubContext> sub_context;
+     auto it = sub_contexts_.find(type_i);
+     if (it == sub_contexts_.end()) {
+@@ -375,7 +379,12 @@ private:
+   // Keep shared ownership of the global logging mutex.
+   std::shared_ptr<std::recursive_mutex> logging_mutex_;
+ 
+-  std::unordered_map<std::type_index, std::shared_ptr<void>> sub_contexts_;
++  // Keyed by a string (SubContext::class_name under -fno-rtti, otherwise typeid(...).name())
++  // rather than std::type_index, so that this member's type does not depend on
++  // _LIBCPP_HAS_NO_RTTI. Otherwise the library (built with RTTI) and Unreal consumers (built
++  // without) would disagree on sizeof(Context) and on the offset of every member below this
++  // one -- an ODR/ABI mismatch that no diagnostic would catch.
++  std::unordered_map<std::string, std::shared_ptr<void>> sub_contexts_;
+   // This mutex is recursive so that the constructor of a sub context may
+   // attempt to acquire another sub context.
+   std::recursive_mutex sub_contexts_mutex_;
+diff --git a/rclcpp/include/rclcpp/create_client.hpp b/rclcpp/include/rclcpp/create_client.hpp
+index 00e6ff3c..b2421659 100644
+--- a/rclcpp/include/rclcpp/create_client.hpp
++++ b/rclcpp/include/rclcpp/create_client.hpp
+@@ -76,7 +76,8 @@ create_client(
+     service_name,
+     options);
+ 
+-  auto cli_base_ptr = std::dynamic_pointer_cast<rclcpp::ClientBase>(cli);
++  // Upcast to a base: static_pointer_cast needs no RTTI.
++  auto cli_base_ptr = std::static_pointer_cast<rclcpp::ClientBase>(cli);
+   node_services->add_client(cli_base_ptr, group);
+   return cli;
+ }
+diff --git a/rclcpp/include/rclcpp/create_publisher.hpp b/rclcpp/include/rclcpp/create_publisher.hpp
+index f6088a33..bafea94e 100644
+--- a/rclcpp/include/rclcpp/create_publisher.hpp
++++ b/rclcpp/include/rclcpp/create_publisher.hpp
+@@ -71,7 +71,9 @@ create_publisher(
+   // Add the publisher to the node topics interface.
+   node_topics_interface->add_publisher(pub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<PublisherT>(pub);
++  // The factory above constructed exactly a PublisherT, so this downcast cannot fail and
++  // does not need RTTI.
++  return std::static_pointer_cast<PublisherT>(pub);
+ }
+ }  // namespace detail
+ 
+diff --git a/rclcpp/include/rclcpp/create_service.hpp b/rclcpp/include/rclcpp/create_service.hpp
+index 42c253a5..c24657a8 100644
+--- a/rclcpp/include/rclcpp/create_service.hpp
++++ b/rclcpp/include/rclcpp/create_service.hpp
+@@ -74,7 +74,8 @@ create_service(
+   auto serv = Service<ServiceT>::make_shared(
+     node_base->get_shared_rcl_node_handle(),
+     service_name, any_service_callback, service_options);
+-  auto serv_base_ptr = std::dynamic_pointer_cast<ServiceBase>(serv);
++  // Upcast to a base: static_pointer_cast needs no RTTI.
++  auto serv_base_ptr = std::static_pointer_cast<ServiceBase>(serv);
+   node_services->add_service(serv_base_ptr, group);
+   return serv;
+ }
+diff --git a/rclcpp/include/rclcpp/create_subscription.hpp b/rclcpp/include/rclcpp/create_subscription.hpp
+index 3a1e4b1a..3e22fb22 100644
+--- a/rclcpp/include/rclcpp/create_subscription.hpp
++++ b/rclcpp/include/rclcpp/create_subscription.hpp
+@@ -135,7 +135,9 @@ create_subscription(
+   auto sub = node_topics_interface->create_subscription(topic_name, factory, actual_qos);
+   node_topics_interface->add_subscription(sub, options.callback_group);
+ 
+-  return std::dynamic_pointer_cast<SubscriptionT>(sub);
++  // The factory above constructed exactly a SubscriptionT, so this downcast cannot fail and
++  // does not need RTTI.
++  return std::static_pointer_cast<SubscriptionT>(sub);
+ }
+ }  // namespace detail
+ 
+diff --git a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+index 268c3f66..7f38bc68 100644
+--- a/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/buffers/intra_process_buffer.hpp
+@@ -178,6 +178,7 @@ private:
+     buffer_->enqueue(std::move(shared_msg));
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename DestinationT>
+   typename std::enable_if<
+@@ -200,6 +201,7 @@ private:
+ 
+     buffer_->enqueue(std::move(unique_msg));
+   }
++#endif  // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageSharedPtr to MessageSharedPtr
+   template<typename OriginT>
+@@ -224,6 +226,7 @@ private:
+     return buffer_->dequeue();
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename OriginT>
+   typename std::enable_if<
+@@ -246,6 +249,7 @@ private:
+ 
+     return unique_msg;
+   }
++#endif  // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageUniquePtr to MessageUniquePtr
+   template<typename OriginT>
+@@ -286,6 +290,7 @@ private:
+     return result;
+   }
+ 
++#ifndef _LIBCPP_HAS_NO_RTTI
+   // MessageSharedPtr to MessageUniquePtr
+   template<typename T = BufferT>
+   typename std::enable_if<
+@@ -311,6 +316,7 @@ private:
+     }
+     return result;
+   }
++#endif  // _LIBCPP_HAS_NO_RTTI
+ 
+   // MessageUniquePtr to MessageUniquePtr
+   template<typename T = BufferT>
+diff --git a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+index a403c20c..0ba901ab 100644
+--- a/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
++++ b/rclcpp/include/rclcpp/experimental/intra_process_manager.hpp
+@@ -22,6 +22,7 @@
+ #include <iterator>
+ #include <memory>
+ #include <stdexcept>
++#include <string>
+ #include <unordered_map>
+ #include <utility>
+ #include <vector>
+@@ -95,6 +96,10 @@ private:
+   RCLCPP_DISABLE_COPY(IntraProcessManager)
+ 
+ public:
++  /// Type tag used by Context::get_sub_context in place of typeid under -fno-rtti.
++  /// Defined in src/rclcpp/intra_process_manager.cpp.
++  static const std::string class_name;
++
+   RCLCPP_SMART_PTR_DEFINITIONS(IntraProcessManager)
+ 
+   RCLCPP_PUBLIC
+@@ -429,6 +434,15 @@ private:
+     if (!publisher_buffer) {
+       throw std::runtime_error("publisher buffer has unexpectedly gone out of scope");
+     }
++#ifdef _LIBCPP_HAS_NO_RTTI
++    auto buffer = std::static_pointer_cast<
++      rclcpp::experimental::buffers::IntraProcessBuffer<
++        ROSMessageType,
++        ROSMessageTypeAllocator,
++        ROSMessageTypeDeleter
++      >
++      >(publisher_buffer);
++#else
+     auto buffer = std::dynamic_pointer_cast<
+       rclcpp::experimental::buffers::IntraProcessBuffer<
+         ROSMessageType,
+@@ -436,6 +450,7 @@ private:
+         ROSMessageTypeDeleter
+       >
+       >(publisher_buffer);
++#endif  // _LIBCPP_HAS_NO_RTTI
+     if (!buffer) {
+       throw std::runtime_error(
+               "failed to dynamic cast publisher's IntraProcessBufferBase to "
+@@ -491,26 +506,31 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
++      const std::string subscription_type = subscription_base->get_type();
++
++      auto subscription =
++        (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<
+         rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+         PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++        >(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         subscription->provide_intra_process_data(message);
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
++      auto ros_message_subscription =
++        (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<
+         rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+         ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++        >(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+         throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
++                "failed to cast SubscriptionIntraProcessBase to "
+                 "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+                 "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++                "ROSMessageTypeDeleter>; subscription reported type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT>::is_specialized::value) {
+@@ -570,10 +590,14 @@ private:
+         continue;
+       }
+ 
+-      auto subscription = std::dynamic_pointer_cast<
++      const std::string subscription_type = subscription_base->get_type();
++
++      auto subscription =
++        (subscription_type == "rclcpp::experimental::SubscriptionIntraProcessBuffer") ?
++        std::static_pointer_cast<
+         rclcpp::experimental::SubscriptionIntraProcessBuffer<PublishedType,
+         PublishedTypeAllocator, PublishedTypeDeleter, ROSMessageType>
+-        >(subscription_base);
++        >(subscription_base) : nullptr;
+       if (subscription != nullptr) {
+         if (std::next(it) == subscription_ids.end()) {
+           // If this is the last subscription, give up ownership
+@@ -592,17 +616,18 @@ private:
+         continue;
+       }
+ 
+-      auto ros_message_subscription = std::dynamic_pointer_cast<
++      auto ros_message_subscription =
++        (subscription_type == "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer") ?
++        std::static_pointer_cast<
+         rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,
+         ROSMessageTypeAllocator, ROSMessageTypeDeleter>
+-        >(subscription_base);
++        >(subscription_base) : nullptr;
+       if (nullptr == ros_message_subscription) {
+         throw std::runtime_error(
+-                "failed to dynamic cast SubscriptionIntraProcessBase to "
++                "failed to cast SubscriptionIntraProcessBase to "
+                 "SubscriptionIntraProcessBuffer<MessageT, Alloc, Deleter>, or to "
+                 "SubscriptionROSMsgIntraProcessBuffer<ROSMessageType,ROSMessageTypeAllocator,"
+-                "ROSMessageTypeDeleter> which can happen when the publisher and "
+-                "subscription use different allocator types, which is not supported");
++                "ROSMessageTypeDeleter>; subscription reported type " + subscription_type);
+       }
+ 
+       if constexpr (rclcpp::TypeAdapter<MessageT, ROSMessageType>::is_specialized::value) {
+diff --git a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+index 7b8b3b83..17aa7830 100644
+--- a/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/ros_message_intra_process_buffer.hpp
+@@ -45,6 +45,12 @@ public:
+   using ConstMessageSharedPtr = std::shared_ptr<const RosMessageT>;
+   using MessageUniquePtr = std::unique_ptr<RosMessageT, ROSMessageTypeDeleter>;
+ 
++  // See SubscriptionIntraProcessBase::get_type.
++  std::string get_type() const override
++  {
++    return "rclcpp::experimental::SubscriptionROSMsgIntraProcessBuffer";
++  }
++
+   SubscriptionROSMsgIntraProcessBuffer(
+     rclcpp::Context::SharedPtr context,
+     const std::string & topic_name,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+index 74792e87..e6c9d440 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_base.hpp
+@@ -38,6 +38,19 @@ class SubscriptionIntraProcessBase : public rclcpp::Waitable
+ public:
+   RCLCPP_SMART_PTR_ALIASES_ONLY(SubscriptionIntraProcessBase)
+ 
++  /// Identify the concrete subscription type without RTTI.
++  /**
++   * Unreal consumers compile this header with -fno-rtti, so IntraProcessManager cannot use
++   * std::dynamic_pointer_cast to discover which buffer flavour a SubscriptionIntraProcessBase
++   * really is. It compares this tag and then static_pointer_casts instead. Declared
++   * unconditionally rather than under #ifdef because it is virtual: guarding it would give the
++   * library (built with RTTI) and Unreal consumers different vtable layouts.
++   */
++  virtual std::string get_type() const
++  {
++    return "rclcpp::experimental::SubscriptionIntraProcessBase";
++  }
++
+   enum class EntityType : std::size_t
+   {
+     Subscription,
+diff --git a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+index 2f384f35..1ccbd862 100644
+--- a/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
++++ b/rclcpp/include/rclcpp/experimental/subscription_intra_process_buffer.hpp
+@@ -75,6 +75,12 @@ public:
+     SubscribedTypeDeleter
+     >::UniquePtr;
+ 
++  // See SubscriptionIntraProcessBase::get_type.
++  std::string get_type() const override
++  {
++    return "rclcpp::experimental::SubscriptionIntraProcessBuffer";
++  }
++
+   SubscriptionIntraProcessBuffer(
+     std::shared_ptr<Alloc> allocator,
+     rclcpp::Context::SharedPtr context,
+diff --git a/rclcpp/include/rclcpp/node_options.hpp b/rclcpp/include/rclcpp/node_options.hpp
+index 1fe916c0..51e2bbc8 100644
+--- a/rclcpp/include/rclcpp/node_options.hpp
++++ b/rclcpp/include/rclcpp/node_options.hpp
+@@ -202,9 +202,11 @@ public:
+    * Defaults to false for now, as there are still some cases where it is not
+    * desirable.
+    */
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+   RCLCPP_PUBLIC
+   NodeOptions &
+   use_intra_process_comms(bool use_intra_process_comms);
++#endif  // RCLCPP_INTRA_PROCESS_DISABLED
+ 
+   /// Return the enable_topic_statistics flag.
+   RCLCPP_PUBLIC
+diff --git a/rclcpp/include/rclcpp/publisher.hpp b/rclcpp/include/rclcpp/publisher.hpp
+index 55892867..aa34420a 100644
+--- a/rclcpp/include/rclcpp/publisher.hpp
++++ b/rclcpp/include/rclcpp/publisher.hpp
+@@ -165,6 +165,7 @@ public:
+     (void)qos;
+     (void)options;
+ 
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+     // If needed, setup intra process communication.
+     if (rclcpp::detail::resolve_use_intra_process(options_, *node_base)) {
+       auto context = node_base->get_context();
+@@ -195,6 +196,7 @@ public:
+         intra_process_publisher_id,
+         ipm);
+     }
++#endif  // RCLCPP_INTRA_PROCESS_DISABLED
+   }
+ 
+   virtual ~Publisher()
+diff --git a/rclcpp/include/rclcpp/subscription.hpp b/rclcpp/include/rclcpp/subscription.hpp
+index b0fa2285..35b32830 100644
+--- a/rclcpp/include/rclcpp/subscription.hpp
++++ b/rclcpp/include/rclcpp/subscription.hpp
+@@ -151,6 +151,7 @@ public:
+     message_memory_strategy_(message_memory_strategy)
+   // *INDENT-ON*
+   {
++#ifndef RCLCPP_INTRA_PROCESS_DISABLED
+     // Setup intra process publishing if requested.
+     if (rclcpp::detail::resolve_use_intra_process(options_, *node_base)) {
+       using rclcpp::detail::resolve_intra_process_buffer_type;
+@@ -197,6 +198,7 @@ public:
+         ROSMessageType, ROSMessageTypeAllocator>(subscription_intra_process_);
+       this->setup_intra_process(intra_process_subscription_id, ipm);
+     }
++#endif  // RCLCPP_INTRA_PROCESS_DISABLED
+ 
+     if (subscription_topic_statistics != nullptr) {
+       this->subscription_topic_statistics_ = std::move(subscription_topic_statistics);
+diff --git a/rclcpp/include/rclcpp/subscription_factory.hpp b/rclcpp/include/rclcpp/subscription_factory.hpp
+index 0e9d9fef..063baccf 100644
+--- a/rclcpp/include/rclcpp/subscription_factory.hpp
++++ b/rclcpp/include/rclcpp/subscription_factory.hpp
+@@ -116,7 +116,8 @@ create_subscription_factory(
+       // require this->shared_from_this() which cannot be called from
+       // the constructor.
+       sub->post_init_setup(node_base, qos, options);
+-      auto sub_base_ptr = std::dynamic_pointer_cast<SubscriptionBase>(sub);
++      // Upcast to a base: static_pointer_cast needs no RTTI.
++      auto sub_base_ptr = std::static_pointer_cast<SubscriptionBase>(sub);
+       return sub_base_ptr;
+     }
+   };
+diff --git a/rclcpp/src/rclcpp/intra_process_manager.cpp b/rclcpp/src/rclcpp/intra_process_manager.cpp
+index 831ffdf2..b651fbe6 100644
+--- a/rclcpp/src/rclcpp/intra_process_manager.cpp
++++ b/rclcpp/src/rclcpp/intra_process_manager.cpp
+@@ -23,6 +23,8 @@ namespace rclcpp
+ namespace experimental
+ {
+ 
++const std::string IntraProcessManager::class_name = "rclcpp::experimental::IntraProcessManager";
++
+ static std::atomic<uint64_t> _next_unique_id {1};
+ 
+ IntraProcessManager::IntraProcessManager()
