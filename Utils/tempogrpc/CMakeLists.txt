@@ -46,18 +46,29 @@ else()
   # of those, and are only searched for what is still missing.
   file(STRINGS "${LIBRARIES_DIR}/exports.def" WHOLE_LIBRARIES)
   list(TRANSFORM WHOLE_LIBRARIES STRIP)
+  set(WHOLE_STATIC_LIBRARIES)
+  set(SEARCHED_STATIC_LIBRARIES)
   foreach(STATIC_LIBRARY ${STATIC_LIBRARIES})
     get_filename_component(STATIC_LIBRARY_NAME "${STATIC_LIBRARY}" NAME)
     if(STATIC_LIBRARY_NAME IN_LIST WHOLE_LIBRARIES)
       if(APPLE)
         target_link_options(tempogrpc PRIVATE "LINKER:-force_load,${STATIC_LIBRARY}")
       else()
-        target_link_options(tempogrpc PRIVATE "LINKER:--whole-archive,${STATIC_LIBRARY},--no-whole-archive")
+        list(APPEND WHOLE_STATIC_LIBRARIES "${STATIC_LIBRARY}")
       endif()
     else()
-      target_link_libraries(tempogrpc PRIVATE "${STATIC_LIBRARY}")
+      list(APPEND SEARCHED_STATIC_LIBRARIES "${STATIC_LIBRARY}")
     endif()
   endforeach()
+  if(WHOLE_STATIC_LIBRARIES)
+    # One group, passed as libraries rather than options: libraries go in the linker's response file,
+    # while options go on the command line, which for this many paths outgrows cmd.exe's 8191
+    # character limit when cross-compiling from Windows. It comes before the searched libraries, so
+    # they can supply what it is still missing.
+    target_link_libraries(tempogrpc PRIVATE
+      "-Wl,--whole-archive" ${WHOLE_STATIC_LIBRARIES} "-Wl,--no-whole-archive")
+  endif()
+  target_link_libraries(tempogrpc PRIVATE ${SEARCHED_STATIC_LIBRARIES})
 
   if(APPLE)
     target_link_libraries(tempogrpc PRIVATE
@@ -73,9 +84,9 @@ else()
       # A few of the libraries taken whole define the same symbol. Any of the definitions will do.
       LINKER:--allow-multiple-definition)
     target_link_libraries(tempogrpc PRIVATE
-      "${UE_THIRD_PARTY_PATH}/OpenSSL/1.1.1t/lib/Unix/libssl.a"
-      "${UE_THIRD_PARTY_PATH}/OpenSSL/1.1.1t/lib/Unix/libcrypto.a"
-      "${UE_THIRD_PARTY_PATH}/zlib/1.3/lib/Unix/Release/libz.a"
+      "${UE_THIRD_PARTY_PATH}/OpenSSL/1.1.1t/lib/Unix/${LINUX_ARCH_NAME}/libssl.a"
+      "${UE_THIRD_PARTY_PATH}/OpenSSL/1.1.1t/lib/Unix/${LINUX_ARCH_NAME}/libcrypto.a"
+      "${UE_THIRD_PARTY_PATH}/zlib/1.3/lib/Unix/${LINUX_ARCH_NAME}/Release/libz.a"
       pthread dl rt m)
   endif()
 endif()
