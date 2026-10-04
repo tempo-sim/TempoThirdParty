@@ -246,14 +246,23 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF it no longer finds even that. Its only dependents are
 # test_tf2 and the geometry2 metapackage.
 #
-# osrf_testing_tools_cpp and performance_test_fixture are test-only (every user finds them under
-# BUILD_TESTING). They must not ship: osrf_testing_tools_cpp builds libmemory_tools_interpose.so,
-# which defines malloc/realloc/calloc/free. rclcpp.Build.cs links every .so in Libraries/Linux, so
-# it would replace the process allocator in Unreal and abort with "StaticAllocator::reallocate():
-# asked to reallocate extra-allocator memory" on a realloc of memory glibc handed out first.
+# osrf_testing_tools_cpp, its test package and performance_test_fixture are test-only (every user
+# finds them under BUILD_TESTING). They must not ship: osrf_testing_tools_cpp builds
+# libmemory_tools_interpose.so, which defines malloc/realloc/calloc/free. rclcpp.Build.cs links
+# every .so in Libraries/Linux, so it would replace the process allocator in Unreal and abort with
+# "StaticAllocator::reallocate(): asked to reallocate extra-allocator memory" on a realloc of
+# memory glibc handed out first.
+#
+# They have to go in --packages-ignore, not --packages-skip: a skipped package is only deselected,
+# so it stays in its dependents' recursive dependency lists and colcon still insists on
+# install/share/<pkg>/package.sh before building any of them. Nothing writes that file, so every
+# dependent fails -- over half the workspace, rclcpp included, because the ROS core test_depends on
+# osrf_testing_tools_cpp. --packages-ignore drops them from the graph instead. (A pre-existing
+# install prefix hides this: the stale package.sh from an earlier build satisfies the check.)
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
 colcon build --packages-skip-by-dep python_qt_binding tf2_bullet \
- --packages-skip Boost OpenCV libogg vorbis tf2_bullet osrf_testing_tools_cpp performance_test_fixture \
+ --packages-skip Boost OpenCV libogg vorbis tf2_bullet \
+ --packages-ignore osrf_testing_tools_cpp test_osrf_testing_tools_cpp performance_test_fixture \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \

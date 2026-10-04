@@ -266,12 +266,18 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # --cmake-clean-cache \
 # --event-handlers console_direct+ \
 #
-# osrf_testing_tools_cpp and performance_test_fixture are test-only (every user finds them under
-# BUILD_TESTING). Skipped to match Linux, where osrf_testing_tools_cpp's libmemory_tools_interpose
-# replaces the process allocator once rclcpp.Build.cs links it (see build_rclcpp_linux.sh).
+# osrf_testing_tools_cpp, its test package and performance_test_fixture are test-only (every user
+# finds them under BUILD_TESTING). Dropped to match Linux, where osrf_testing_tools_cpp's
+# libmemory_tools_interpose replaces the process allocator once rclcpp.Build.cs links it (see
+# build_rclcpp_linux.sh). They have to go in --packages-ignore, not --packages-skip: a skipped
+# package is only deselected, so it stays in its dependents' recursive dependency lists and colcon
+# still insists on install/share/<pkg>/package.sh before building any of them. Nothing writes that
+# file, so every dependent fails -- 124 of the 228 packages here, rclcpp included, because the ROS
+# core test_depends on osrf_testing_tools_cpp. --packages-ignore drops them from the graph instead.
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
 colcon build --packages-skip-by-dep python_qt_binding \
- --packages-skip Boost OpenCV libogg vorbis iceoryx osrf_testing_tools_cpp performance_test_fixture \
+ --packages-skip Boost OpenCV libogg vorbis iceoryx \
+ --packages-ignore osrf_testing_tools_cpp test_osrf_testing_tools_cpp performance_test_fixture \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \
