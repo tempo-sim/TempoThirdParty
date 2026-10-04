@@ -44,6 +44,22 @@ def dumpbin_get_symbols(lib):
             yield match.group(1)
     process.wait()
 
+# Symbols a library's objects mark __declspec(dllexport), as the linker directives
+# /EXPORT:<symbol> or /EXPORT:<symbol>,DATA. Yields (symbol, is_data).
+def dumpbin_get_dllexports(lib):
+    process = subprocess.Popen(['dumpbin','/directives',lib], bufsize=1,
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
+    process.stdin.close()
+    for line in process.stdout:
+        match = re.match('^\s*/EXPORT:"?([^",\s]+)"?(,DATA)?', line, re.IGNORECASE)
+        if match:
+            yield match.group(1), match.group(2) is not None
+    process.wait()
+
+def extract_dllexports(lib):
+    return dict(dumpbin_get_dllexports(lib))
+
 def nm_get_symbols(lib):
     process = subprocess.Popen(['nm',lib], bufsize=1,
                                stdout=subprocess.PIPE, stdin=subprocess.PIPE,
@@ -367,6 +383,9 @@ if __name__ == '__main__':
                         help='Extract symbols from all libraries found at this path')
     parser.add_argument('--namespaces', type=str, nargs='*',
                       help='Only include symbols that include these namespaces')
+    parser.add_argument('--dllexports', action='store_true',
+                        help='Also export, without pruning, every symbol the libraries'
+                        ' mark __declspec(dllexport) (requires dumpbin)')
     parser.add_argument('-o', metavar='file', type=str, help='output to file')
     args = parser.parse_args()
 
@@ -459,8 +478,11 @@ if __name__ == '__main__':
         # KeyboardInterrupt gets caught correctly (see
         # http://bugs.python.org/issue8296)
         result = pool.map_async(extract_symbols, vals)
+        if args.dllexports:
+            dllexports_result = pool.map_async(extract_dllexports, libs)
         pool.close()
         libs_symbols = result.get(3600)
+        libs_dllexports = dllexports_result.get(3600) if args.dllexports else []
     except KeyboardInterrupt:
         # On Ctrl-C terminate everything and exit
         pool.terminate()
@@ -529,8 +551,19 @@ if __name__ == '__main__':
         outfile = open(args.o,'w')
     else:
         outfile = sys.stdout
+    # Symbols the libraries mark __declspec(dllexport) are what headers compiled
+    # against them will __declspec(dllimport), so they are kept regardless of the
+    # pruning above, which assumes an importer defines such symbols itself.
+    dllexports = dict()
+    for this_lib_dllexports in libs_dllexports:
+        for k,is_data in list(this_lib_dllexports.items()):
+            dllexports[k] = is_data or dllexports.get(k, False)
     print("EXPORTS", file=outfile)
     for k,v in list(symbols.items()):
+        if k in dllexports:
+            continue
         template_count = template_function_count[template_function_mapping[k]]
         if v == 1 and template_count < 100:
             print(k, file=outfile)
+    for k,is_data in list(dllexports.items()):
+        print(k + (' DATA' if is_data else ''), file=outfile)

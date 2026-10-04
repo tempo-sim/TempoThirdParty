@@ -146,8 +146,10 @@ rm -f "$ROOT_DIR/Outputs/gRPC/Libraries/Windows/utf8_range_lib.lib" # Redundant 
 # MSVC LINK has /WHOLEARCHIVE which supposedly "can" do exactly that but in practice does not seem to.
 # However LINK does support the /DEF option which allows you to supply a .def file specifying all the dll's exports.
 # So, on Windows only, we generate a full list of symbols to give to the linker in a .def file.
+# The .def file alone decides what the dll exports, so it must also name every symbol the libraries mark
+# __declspec(dllexport) (--dllexports): headers compiled with PROTOBUF_USE_DLLS import those from the dll.
 echo -e "Extracting symbols from all libraries...\n"
-eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium \
+eval "$ROOT_DIR/Utils/extract_symbols.py --tools dumpbin --mangling itanium --dllexports \
  --namespaces grpc protobuf upb absl re2 google envoy census telemetry cares xds bloaty benchmark utf8_range \
  --libdir $ROOT_DIR/Outputs/gRPC/Libraries/Windows -o $ROOT_DIR/Outputs/gRPC/Libraries/Windows/exports.def"
 
