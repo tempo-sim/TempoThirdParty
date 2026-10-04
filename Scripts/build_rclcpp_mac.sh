@@ -265,8 +265,13 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # export VERBOSE=1
 # --cmake-clean-cache \
 # --event-handlers console_direct+ \
+#
+# osrf_testing_tools_cpp and performance_test_fixture are test-only (every user finds them under
+# BUILD_TESTING). Skipped to match Linux, where osrf_testing_tools_cpp's libmemory_tools_interpose
+# replaces the process allocator once rclcpp.Build.cs links it (see build_rclcpp_linux.sh).
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding --packages-skip Boost OpenCV libogg vorbis iceoryx \
+colcon build --packages-skip-by-dep python_qt_binding \
+ --packages-skip Boost OpenCV libogg vorbis iceoryx osrf_testing_tools_cpp performance_test_fixture \
  --build-base "$ROOT_DIR/Builds/rclcpp/Mac" \
  --merge-install \
  --catkin-skip-building-tests \

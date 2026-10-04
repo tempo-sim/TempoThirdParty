@@ -245,8 +245,15 @@ mkdir -p "$ROOT_DIR/Outputs/rclcpp/Includes"
 # the build host's libbullet-dev (built against libstdc++, and never copied into the bundle); with
 # CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF it no longer finds even that. Its only dependents are
 # test_tf2 and the geometry2 metapackage.
+#
+# osrf_testing_tools_cpp and performance_test_fixture are test-only (every user finds them under
+# BUILD_TESTING). They must not ship: osrf_testing_tools_cpp builds libmemory_tools_interpose.so,
+# which defines malloc/realloc/calloc/free. rclcpp.Build.cs links every .so in Libraries/Linux, so
+# it would replace the process allocator in Unreal and abort with "StaticAllocator::reallocate():
+# asked to reallocate extra-allocator memory" on a realloc of memory glibc handed out first.
 export PKG_CONFIG_PATH="$ROOT_DIR/Source/rclcpp/pkgconfig:$PKG_CONFIG_PATH"
-colcon build --packages-skip-by-dep python_qt_binding tf2_bullet --packages-skip Boost OpenCV libogg vorbis tf2_bullet \
+colcon build --packages-skip-by-dep python_qt_binding tf2_bullet \
+ --packages-skip Boost OpenCV libogg vorbis tf2_bullet osrf_testing_tools_cpp performance_test_fixture \
  --build-base "$ROOT_DIR/Builds/rclcpp/Linux" \
  --merge-install \
  --catkin-skip-building-tests \
