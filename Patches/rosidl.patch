@@ -1,3 +1,19 @@
+diff --git a/rosidl_cli/rosidl_cli/command/helpers.py b/rosidl_cli/rosidl_cli/command/helpers.py
+index 4a615e07..af42d1a0 100644
+--- a/rosidl_cli/rosidl_cli/command/helpers.py
++++ b/rosidl_cli/rosidl_cli/command/helpers.py
+@@ -106,7 +106,10 @@ def build_type_description_tuples(idl_interface_files, type_description_files):
+         if type_description_file is None:
+             raise ValueError(f'Type description file not found for {idl_file}')
+         _, path = interface_path_as_tuple(idl_file)
+-        type_description_tuples.append(f'{path}:{type_description_file}')
++        # Match idl_tuples_from_interface_files, which keys by path.as_posix(). Using str(path)
++        # here gives backslashes on Windows, and the lookup in rosidl_pycommon.generate_files
++        # then fails with KeyError: 'msg/Foo.idl'.
++        type_description_tuples.append(f'{path.as_posix()}:{type_description_file}')
+     return type_description_tuples
+ 
+ 
 diff --git a/rosidl_generator_cpp/resource/idl__struct.hpp.em b/rosidl_generator_cpp/resource/idl__struct.hpp.em
 index b8f98561..3eb39eaa 100644
 --- a/rosidl_generator_cpp/resource/idl__struct.hpp.em
