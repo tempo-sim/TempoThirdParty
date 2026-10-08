@@ -17098,7 +17098,7 @@ index 1975ba74..38fde0c9 100644
  
  #endif  // ABSL_DEBUGGING_INTERNAL_STACKTRACE_X86_INL_INC_
 diff --git a/absl/debugging/internal/symbolize.h b/absl/debugging/internal/symbolize.h
-index 5593fde6..723e9189 100644
+index 5593fde6..d342fd39 100644
 --- a/absl/debugging/internal/symbolize.h
 +++ b/absl/debugging/internal/symbolize.h
 @@ -37,7 +37,7 @@
@@ -17146,6 +17146,19 @@ index 5593fde6..723e9189 100644
  
  #endif  // __cplusplus
  
+@@ -145,9 +145,8 @@ ABSL_NAMESPACE_END
+ #ifdef __cplusplus
+ extern "C"
+ #endif  // __cplusplus
+-
+-    bool
+-    AbslInternalGetFileMappingHint(const void** start, const void** end,
+-                                   uint64_t* offset, const char** filename);
++    bool ABSL_INTERNAL_C_SYMBOL(AbslInternalGetFileMappingHint)(
++        const void** start, const void** end, uint64_t* offset,
++        const char** filename);
+ 
+ #endif  // ABSL_DEBUGGING_INTERNAL_SYMBOLIZE_H_
 diff --git a/absl/debugging/internal/vdso_support.cc b/absl/debugging/internal/vdso_support.cc
 index 8a588eaf..50bbc8c1 100644
 --- a/absl/debugging/internal/vdso_support.cc
@@ -17574,7 +17587,7 @@ index cf63d191..6cdfc5ac 100644
 -}  // namespace absl
 +}  // namespace absl_tempo
 diff --git a/absl/debugging/symbolize_elf.inc b/absl/debugging/symbolize_elf.inc
-index ae75cd41..634d90eb 100644
+index ae75cd41..faa0d457 100644
 --- a/absl/debugging/symbolize_elf.inc
 +++ b/absl/debugging/symbolize_elf.inc
 @@ -81,7 +81,7 @@
@@ -17640,10 +17653,13 @@ index ae75cd41..634d90eb 100644
 -}  // namespace absl
 +}  // namespace absl_tempo
  
- extern "C" bool AbslInternalGetFileMappingHint(const void **start,
-                                                const void **end, uint64_t *offset,
-                                                const char **filename) {
+-extern "C" bool AbslInternalGetFileMappingHint(const void **start,
+-                                               const void **end, uint64_t *offset,
+-                                               const char **filename) {
 -  return absl::debugging_internal::GetFileMappingHint(start, end, offset,
++extern "C" bool ABSL_INTERNAL_C_SYMBOL(AbslInternalGetFileMappingHint)(
++    const void **start, const void **end, uint64_t *offset,
++    const char **filename) {
 +  return absl_tempo::debugging_internal::GetFileMappingHint(start, end, offset,
                                                        filename);
  }
