@@ -97,3 +97,68 @@ index 66c7d7f..421238c 100644
  }
  
  void CameraPublisher::shutdown()
+diff --git a/image_transport/src/image_transport.cpp b/image_transport/src/image_transport.cpp
+index dfddcb9..fffb35b 100644
+--- a/image_transport/src/image_transport.cpp
++++ b/image_transport/src/image_transport.cpp
+@@ -54,7 +54,16 @@ struct Impl
+   }
+ };
+ 
+-static Impl * kImpl = new Impl();
++// Constructed on first use rather than as a static initializer. Impl's pluginlib ClassLoaders
++// query the ament index, which throws when AMENT_PREFIX_PATH is unset, and a host that links this
++// library into its executable (e.g. a monolithic Unreal build) cannot set it before static
++// initializers run: the exception escapes the initializer and aborts the process at launch.
++// Leaked on purpose, as kImpl always was, so no plugin library is unloaded during static teardown.
++static Impl * GetImpl()
++{
++  static Impl * impl = new Impl();
++  return impl;
++}
+ 
+ Publisher create_publisher(
+   rclcpp::Node * node,
+@@ -62,7 +71,7 @@ Publisher create_publisher(
+   rmw_qos_profile_t custom_qos,
+   rclcpp::PublisherOptions options)
+ {
+-  return Publisher(node, base_topic, kImpl->pub_loader_, custom_qos, options);
++  return Publisher(node, base_topic, GetImpl()->pub_loader_, custom_qos, options);
+ }
+ 
+ Subscriber create_subscription(
+@@ -73,7 +82,7 @@ Subscriber create_subscription(
+   rmw_qos_profile_t custom_qos,
+   rclcpp::SubscriptionOptions options)
+ {
+-  return Subscriber(node, base_topic, callback, kImpl->sub_loader_, transport, custom_qos, options);
++  return Subscriber(node, base_topic, callback, GetImpl()->sub_loader_, transport, custom_qos, options);
+ }
+ 
+ CameraPublisher create_camera_publisher(
+@@ -97,7 +106,7 @@ CameraSubscriber create_camera_subscription(
+ 
+ std::vector<std::string> getDeclaredTransports()
+ {
+-  std::vector<std::string> transports = kImpl->sub_loader_->getDeclaredClasses();
++  std::vector<std::string> transports = GetImpl()->sub_loader_->getDeclaredClasses();
+   // Remove the "_sub" at the end of each class name.
+   for (std::string & transport : transports) {
+     transport = erase_last_copy(transport, "_sub");
+@@ -109,13 +118,13 @@ std::vector<std::string> getLoadableTransports()
+ {
+   std::vector<std::string> loadableTransports;
+ 
+-  for (const std::string & transportPlugin : kImpl->sub_loader_->getDeclaredClasses() ) {
++  for (const std::string & transportPlugin : GetImpl()->sub_loader_->getDeclaredClasses() ) {
+     // If the plugin loads without throwing an exception, add its
+     // transport name to the list of valid plugins, otherwise ignore
+     // it.
+     try {
+       std::shared_ptr<image_transport::SubscriberPlugin> sub =
+-        kImpl->sub_loader_->createUniqueInstance(transportPlugin);
++        GetImpl()->sub_loader_->createUniqueInstance(transportPlugin);
+       // Remove the "_sub" at the end of each class name.
+       loadableTransports.push_back(erase_last_copy(transportPlugin, "_sub"));
+     } catch (const pluginlib::LibraryLoadException & e) {
