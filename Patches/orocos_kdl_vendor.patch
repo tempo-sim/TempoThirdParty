@@ -1,8 +1,8 @@
 diff --git a/orocos_kdl_vendor/CMakeLists.txt b/orocos_kdl_vendor/CMakeLists.txt
-index ae3739a..5ab017d 100644
+index ae3739a..012e4cf 100644
 --- a/orocos_kdl_vendor/CMakeLists.txt
 +++ b/orocos_kdl_vendor/CMakeLists.txt
-@@ -13,6 +13,20 @@ if(NOT CMAKE_CXX_STANDARD)
+@@ -13,6 +13,28 @@ if(NOT CMAKE_CXX_STANDARD)
    set(CMAKE_CXX_STANDARD_REQUIRED ON)
  endif()
  
@@ -20,10 +20,18 @@ index ae3739a..5ab017d 100644
 +  list(APPEND _orocos_kdl_extra_cmake_args "-DEIGEN3_INCLUDE_DIR=${_orocos_kdl_eigen_dir}")
 +endif()
 +
++# CMAKE_CXX_STANDARD is not on ament_vendor()'s forwarding list either, so the nested build sets no
++# standard and MSVC falls back to its C++14 default. The Eigen in Unreal 5.8's ThirdParty uses inline
++# variables (Eigen/src/Core/util/IndexedViewHelper.h), which fail with C7525 below C++17. clang and gcc
++# default to C++17 already, which is why only Windows hits this.
++list(APPEND _orocos_kdl_extra_cmake_args
++  "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}"
++  "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
++
  ament_vendor(orocos_kdl_vendor
    SATISFIED ${orocos_kdl_FOUND}
    VCS_URL https://github.com/orocos/orocos_kinematics_dynamics.git
-@@ -22,6 +36,7 @@ ament_vendor(orocos_kdl_vendor
+@@ -22,6 +44,7 @@ ament_vendor(orocos_kdl_vendor
    CMAKE_ARGS
      -DENABLE_TESTS:BOOL=OFF
      -DENABLE_EXAMPLES:BOOL=OFF
