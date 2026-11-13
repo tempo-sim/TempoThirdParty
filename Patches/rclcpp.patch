@@ -644,7 +644,7 @@ index 9a6c398e..18938c54 100644
  
    using IntraProcessManagerWeakPtr =
 diff --git a/rclcpp/include/rclcpp/publisher_options.hpp b/rclcpp/include/rclcpp/publisher_options.hpp
-index d3070138..24bdfaee 100644
+index d3070138..cbdb2b20 100644
 --- a/rclcpp/include/rclcpp/publisher_options.hpp
 +++ b/rclcpp/include/rclcpp/publisher_options.hpp
 @@ -16,6 +16,7 @@
@@ -655,7 +655,21 @@ index d3070138..24bdfaee 100644
  #include <string>
  #include <type_traits>
  #include <vector>
-@@ -143,7 +144,7 @@ private:
+@@ -128,8 +129,11 @@ private:
+     }
+ 
+     if (!plain_allocator_storage_) {
+-      plain_allocator_storage_ =
+-        std::make_shared<PlainAllocator>(*this->get_allocator());
++      // Never deleted (Tempo): rcl keeps a pointer to this in the entity's handle and uses it
++      // in rcl_*_fini, which runs in the base class destructor, after the entity's own copy of
++      // these options (a derived-class member) has already been destroyed.
++      plain_allocator_storage_ = std::shared_ptr<PlainAllocator>(
++        new PlainAllocator(*this->get_allocator()), [](PlainAllocator *) {});
+     }
+     return rclcpp::allocator::get_rcl_allocator<char>(*plain_allocator_storage_);
+   }
+@@ -143,7 +147,7 @@ private:
    mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
  };
  
@@ -753,7 +767,7 @@ index 615f3852..c35865d2 100644
  };
  
 diff --git a/rclcpp/include/rclcpp/subscription_options.hpp b/rclcpp/include/rclcpp/subscription_options.hpp
-index 12dc1b45..ebb5e36b 100644
+index 12dc1b45..2014eef3 100644
 --- a/rclcpp/include/rclcpp/subscription_options.hpp
 +++ b/rclcpp/include/rclcpp/subscription_options.hpp
 @@ -17,6 +17,7 @@
@@ -764,7 +778,21 @@ index 12dc1b45..ebb5e36b 100644
  #include <string>
  #include <type_traits>
  #include <vector>
-@@ -187,7 +188,7 @@ private:
+@@ -171,8 +172,11 @@ private:
+       return rcl_get_default_allocator();
+     } else {
+       if (!plain_allocator_storage_) {
+-        plain_allocator_storage_ =
+-          std::make_shared<PlainAllocator>(*this->get_allocator());
++        // Never deleted (Tempo): rcl keeps a pointer to this in the entity's handle and uses it
++        // in rcl_*_fini, which runs in the base class destructor, after the entity's own copy of
++        // these options (a derived-class member) has already been destroyed.
++        plain_allocator_storage_ = std::shared_ptr<PlainAllocator>(
++          new PlainAllocator(*this->get_allocator()), [](PlainAllocator *) {});
+       }
+       return rclcpp::allocator::get_rcl_allocator<char>(*plain_allocator_storage_);
+     }
+@@ -187,7 +191,7 @@ private:
    mutable std::shared_ptr<PlainAllocator> plain_allocator_storage_;
  };
  
