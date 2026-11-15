@@ -26,6 +26,9 @@ if(NOT STATIC_LIBRARIES)
 endif()
 
 add_library(tempogrpc SHARED tempogrpc.cpp)
+# The standard the static libraries were built with. tempogrpc.cpp defines the aligned operator new
+# and delete overloads, which need at least C++17.
+target_compile_features(tempogrpc PRIVATE cxx_std_20)
 
 if(WIN32)
   # The linker only takes from a static library what something refers to, and /WHOLEARCHIVE does
